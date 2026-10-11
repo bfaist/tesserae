@@ -82,19 +82,29 @@ def test_build_payload_shape(tmp_path: Path, test_install_uuid: Any) -> None:
     assert p["arch"] in ("x86_64", "arm64", "arm", "other")
     assert p["deploy"] in ("ha_addon", "docker", "lxc", "source", "pip")
     assert p["ui"] == "classic"  # Paper is opt-in
+    assert p["ui_chosen"] is False  # nobody touched the switch
 
 
 @pytest.mark.parametrize(
-    ("stored", "sent"),
-    [("paper", "paper"), ("classic", "classic"), ("something-else", "classic"), (None, "classic")],
+    ("stored", "sent", "chosen"),
+    [
+        ("paper", "paper", True),
+        ("classic", "classic", True),
+        ("something-else", "classic", False),
+        (None, "classic", False),
+    ],
 )
 def test_build_payload_ui_design(
-    tmp_path: Path, test_install_uuid: Any, stored: str | None, sent: str
+    tmp_path: Path, test_install_uuid: Any, stored: str | None, sent: str, chosen: bool
 ) -> None:
     """Adoption of the opt-in Paper design rides the heartbeat as one of two
-    values; anything unexpected in settings reads as classic."""
+    values; anything unexpected in settings reads as classic. ``ui_chosen``
+    says whether the design was set by hand rather than being the default, so
+    a switch back can be told from an install that never saw the other one."""
     app, _ = _app(tmp_path, install=test_install_uuid(), ui_design=stored)
-    assert heartbeat.build_payload(app)["ui"] == sent  # type: ignore[arg-type]
+    payload = heartbeat.build_payload(app)  # type: ignore[arg-type]
+    assert payload["ui"] == sent
+    assert payload["ui_chosen"] is chosen
 
 
 def test_build_payload_no_devices(tmp_path: Path, test_install_uuid: Any) -> None:

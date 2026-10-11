@@ -8,6 +8,12 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ### Added
 
+- **Heartbeat: was the design chosen?** The daily heartbeat's `ui` field
+  (classic or Paper) gains `ui_chosen`, true when somebody set the design by
+  hand rather than leaving the default. It lets a later change of default be
+  measured by people switching back, instead of by who happens to be on
+  which design. Privacy doc updated.
+
 - **What panel is this for?** Making a dashboard on an install with no panel
   registered now asks for the size to design at: the common panel shapes
   (7.5" landscape and portrait, 4.2", Inky Impression 4", M5Paper, 6"
@@ -150,6 +156,13 @@ All notable changes to Tesserae are recorded here. Format loosely follows
   (40px, 44px on phones, 32px inside list rows).
 
 ### Fixed
+
+- **A page's Auto-update lands on the clock.** A page refreshing every N
+  minutes now renders once per N-minute slot of the wall clock, just after it
+  starts, and the scheduler checks on the clock rather than 30 s after its
+  last check finished. Before, each refresh came N minutes after the previous
+  render ended, so a 1-minute clock page crept a few seconds every minute and
+  skipped a minute every few.
 
 - **Touch-v3 labels draw as text, not as boxes** (#360). The server packed
   touch atlases the overlay's way (0 = black) while touch-v3 reads 0 as paper,
