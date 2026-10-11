@@ -135,7 +135,7 @@ It also carries a **bucketed** count of paired companion apps (same buckets,
 never a client name, install id, or app version), a **bucketed** count of
 lineups, four feature booleans (cloud relay linked, touch in use, an MCP
 agent connected, quiet hours set: whether the feature is used at all, never how), which
-admin design the install has switched on (`classic`, or `paper` for the opt-in redesign, plus `ui_chosen`: whether that design was set by hand or is just the default, so a change of default can be told from a choice), and a
+admin design the install has switched on (`classic`, or `paper`, the default since 0.449, plus `ui_chosen`: whether that design was set by hand or is just the default, so a change of default can be told from a choice), and a
 **bucketed** OTA rollout snapshot (devices offered a firmware release,
 devices already on it, devices whose last report was a failure). The device
 count and kinds cover only the devices you've actually added, not the

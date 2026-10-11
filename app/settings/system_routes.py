@@ -555,8 +555,8 @@ def system_online_features_toggle() -> Response:
 
 @bp.post("/settings/ui-design", endpoint="settings_ui_design")
 def system_ui_design() -> Response:
-    """Switch the admin between the classic design and Paper, the opt-in
-    redesign (``settings.app.ui_design``). Posted from the switch in the
+    """Switch the admin between Paper, the default design, and the classic
+    one (``settings.app.ui_design``). Posted from the switch in the
     header / sidebar on every page, so it returns to that page. The value is
     install-wide; with online features on, the daily heartbeat reports which
     design the install runs (``ui``) so adoption can be counted."""

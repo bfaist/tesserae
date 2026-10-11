@@ -81,7 +81,7 @@ def test_build_payload_shape(tmp_path: Path, test_install_uuid: Any) -> None:
     assert p["os"] in ("linux", "macos", "windows", "other")
     assert p["arch"] in ("x86_64", "arm64", "arm", "other")
     assert p["deploy"] in ("ha_addon", "docker", "lxc", "source", "pip")
-    assert p["ui"] == "classic"  # Paper is opt-in
+    assert p["ui"] == "paper"  # the default since 0.449
     assert p["ui_chosen"] is False  # nobody touched the switch
 
 
@@ -90,15 +90,15 @@ def test_build_payload_shape(tmp_path: Path, test_install_uuid: Any) -> None:
     [
         ("paper", "paper", True),
         ("classic", "classic", True),
-        ("something-else", "classic", False),
-        (None, "classic", False),
+        ("something-else", "paper", False),
+        (None, "paper", False),
     ],
 )
 def test_build_payload_ui_design(
     tmp_path: Path, test_install_uuid: Any, stored: str | None, sent: str, chosen: bool
 ) -> None:
-    """Adoption of the opt-in Paper design rides the heartbeat as one of two
-    values; anything unexpected in settings reads as classic. ``ui_chosen``
+    """Which design is on rides the heartbeat as one of two values; anything
+    unexpected in settings reads as the default, Paper. ``ui_chosen``
     says whether the design was set by hand rather than being the default, so
     a switch back can be told from an install that never saw the other one."""
     app, _ = _app(tmp_path, install=test_install_uuid(), ui_design=stored)

@@ -4,20 +4,20 @@
    paper.css decides which one shows at which width. Posts to the toggle
    route and comes back to the same page. #}
 {% macro ui_switch(variant) %}
-{% set _on = app_settings is defined and app_settings.get('ui_design') == 'paper' %}
+{% set _on = app_settings is defined and app_settings.get('ui_design') != 'classic' %}
 <form method="post" action="{{ url_for('auth.settings_ui_design') }}" class="ui-switch-form">
   <input type="hidden" name="ui_design" value="{{ 'classic' if _on else 'paper' }}">
   <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
   <button type="submit" class="ui-switch ui-switch--{{ variant }}" role="switch"
           aria-checked="{{ 'true' if _on else 'false' }}"
-          title="{{ 'Go back to the classic design' if _on else 'Try the new Paper design. You can switch back at any time.' }}">
+          title="{{ 'Go back to the classic design' if _on else 'Back to the Paper design.' }}">
     {% if variant == 'nav' %}
     <span class="ui-switch-label">New design</span>
     <span class="ui-switch-track" aria-hidden="true"></span>
     {% elif _on %}
     <span class="ui-switch-track" aria-hidden="true"></span><span>New design</span>
     {% else %}
-    <i class="ph ph-sparkle" aria-hidden="true"></i><span>Try the new design</span>
+    <i class="ph ph-sparkle" aria-hidden="true"></i><span>New design</span>
     {% endif %}
   </button>
 </form>

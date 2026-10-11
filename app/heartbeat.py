@@ -437,11 +437,11 @@ def build_payload(app: Flask) -> dict[str, Any]:
     try:
         app_section = settings.get_section("app") if settings is not None else {}
         ha = bool(app_section.get("ha_discovery_enabled"))
-        # Which admin design is on (Paper is opt-in): one of two values. The
+        # Which admin design is on (Paper is the default): one of two values. The
         # flag says whether somebody set it: a design that is merely the
         # default tells nothing about preference, and once the default
         # changes, "classic and chosen" is exactly a switch back.
-        ui = "paper" if app_section.get("ui_design") == "paper" else "classic"
+        ui = "classic" if app_section.get("ui_design") == "classic" else "paper"
         ui_chosen = app_section.get("ui_design") in ("classic", "paper")
     except Exception:
         ha = False

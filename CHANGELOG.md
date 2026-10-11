@@ -6,6 +6,16 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Paper is the default design.** New installs, and installs that never
+  touched the design switch, now get Paper; the switch in the header (and
+  the phone menu) goes back to the classic design in one click, and an
+  install that already chose classic stays on it. Opt-in since 0.437,
+  Paper was chosen by about half of the installs that could see it and
+  nobody who tried it went back. The heartbeat's `ui_chosen` flag tells a
+  switch back from an install that never saw the other design.
+
 ### Added
 
 - **Heartbeat: was the design chosen?** The daily heartbeat's `ui` field
