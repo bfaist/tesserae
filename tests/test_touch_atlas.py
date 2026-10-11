@@ -49,6 +49,100 @@ def test_build_touch_atlas_descriptor(tmp_path: Path) -> None:
     assert (tmp_path / f"touch-atlas-{desc['digest']}.bin").is_file()
 
 
+def _ink_rasterize(px: int, weight: int, charset: str) -> tuple[bytes, list[dict[str, Any]]]:
+    """Paper (255) strip whose glyph cells each carry one black (0) column."""
+    cell = max(4, px // 2)
+    img = Image.new("L", (cell * len(charset) + 2, px + 4), 255)
+    for i in range(len(charset)):
+        for y in range(2, px + 2):
+            img.putpixel((i * cell + 1, y), 0)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    boxes = [{"ch": ch, "x": i * cell, "y": 2, "w": cell, "h": px} for i, ch in enumerate(charset)]
+    return buf.getvalue(), boxes
+
+
+def test_touch_atlas_is_ink_scale_overlay_stays_luminance(tmp_path: Path) -> None:
+    """touch-v3 reads 0 as paper and 15 as full ink (schema/atlas.schema.json);
+    the overlay path copies nibbles as luminance. Packing touch strips as
+    luminance drew every label as white text in a black box (#360)."""
+    from app.overlay_sync import build_atlas
+
+    desc = build_touch_atlas("l20", renders_dir=tmp_path, rasterize=_ink_rasterize)
+    assert desc is not None
+    touch = (tmp_path / f"touch-atlas-{desc['digest']}.bin").read_bytes()
+    g = desc["glyphs"]["A"]
+    # Row 0 of the strip: byte for pixels (x, x+1) of glyph A's cell, whose
+    # column x+1 is the black stroke.
+    b = touch[g["x"] // 2]
+    assert (b >> 4, b & 0x0F) == (0x0, 0xF)  # paper -> 0, ink -> 15
+
+    over = build_atlas(20, 400, renders_dir=tmp_path, rasterize=_ink_rasterize)
+    assert over is not None
+    lum = (tmp_path / f"overlay-atlas-{over['digest']}.bin").read_bytes()
+    first = next(iter(over["glyphs"].values()))  # the overlay charset is values only
+    b = lum[first["x"] // 2]
+    assert (b >> 4, b & 0x0F) == (0xF, 0x0)  # white -> 15, black -> 0
+
+
+def test_cached_atlas_from_an_older_build_is_rebuilt(tmp_path: Path) -> None:
+    """A meta sidecar written before the build tag (an inverted touch strip on
+    a server that had it cached) is rebuilt, and the strip it named goes."""
+    desc = build_touch_atlas("l20", renders_dir=tmp_path, rasterize=_ink_rasterize)
+    assert desc is not None
+    meta_path = tmp_path / "touch-atlas-20-400.json"
+    meta = json.loads(meta_path.read_text())
+    stale = "00000000deadbeef"
+    (tmp_path / f"touch-atlas-{stale}.bin").write_bytes(b"old")
+    meta.pop("build")
+    meta["digest"] = stale
+    meta_path.write_text(json.dumps(meta))
+    # Cache-only refuses the stale entry rather than serving it.
+    assert build_touch_atlas("l20", renders_dir=tmp_path, rasterize=None) is None
+    again = build_touch_atlas("l20", renders_dir=tmp_path, rasterize=_ink_rasterize)
+    assert again is not None and again["digest"] == desc["digest"]
+    assert not (tmp_path / f"touch-atlas-{stale}.bin").exists()
+    assert build_touch_atlas("l20", renders_dir=tmp_path, rasterize=None) is not None
+
+
+def test_atlas_warm_shares_one_guard(app: Flask, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Startup, post-render and poll-time warms share one de-dup guard, and a
+    queued job lands in the cache."""
+    import threading
+
+    from app import atlas_warm
+
+    started = threading.Event()
+    release = threading.Event()
+    calls: list[tuple[int, int]] = []
+
+    def slow(px: int, weight: int, charset: str) -> tuple[bytes, list[dict[str, Any]]]:
+        calls.append((px, weight))
+        started.set()
+        release.wait(5)
+        return _fake_rasterize(px, weight, charset)
+
+    app.config["OVERLAY_ATLAS_RASTERIZER"] = slow
+    atlas_warm.schedule(app, [("touch", "l20")], "http://localhost/")
+    assert started.wait(5)
+    atlas_warm.schedule(app, [("touch", "l20")], "http://localhost/")  # in flight: skipped
+    release.set()
+    for _ in range(100):
+        if not atlas_warm._warming:
+            break
+        threading.Event().wait(0.05)
+    assert calls == [(20, 400)]
+    rd = Path(app.config["RENDERS_DIR"])
+    assert build_touch_atlas("l20", renders_dir=rd, rasterize=None) is not None
+
+
+def test_overlay_jobs_from_slots() -> None:
+    from app.atlas_warm import overlay_jobs
+
+    slots = [{"px": 32, "weight": 700}, {"px": "18", "weight": 400}, {"px": 9}, "junk"]
+    assert overlay_jobs(slots) == [("overlay", 32, 700), ("overlay", 18, 400)]
+
+
 def test_unknown_role_is_none(tmp_path: Path) -> None:
     assert build_touch_atlas("zzz", renders_dir=tmp_path, rasterize=_fake_rasterize) is None
 

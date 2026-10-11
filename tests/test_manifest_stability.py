@@ -140,6 +140,11 @@ def dash_app(app: Flask) -> tuple[Flask, Any, str]:
     _advertise_v2(client, token)
     app.config["PAGE_STORE"].save(Page(id="dash", name="Dash", device_id="e1003"))
     app.config["OVERLAY_ATLAS_RASTERIZER"] = _fake_atlas
+    # Device requests are cache-only for atlases (#359); prime the one the
+    # dashboard's value slot uses, as the post-render warm would.
+    from app.overlay_sync import build_atlas
+
+    build_atlas(32, 700, renders_dir=Path(app.config["RENDERS_DIR"]), rasterize=_fake_atlas)
     return app, client, token
 
 

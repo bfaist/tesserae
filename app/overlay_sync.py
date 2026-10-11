@@ -217,16 +217,44 @@ def _panel_geometry(panel: dict[str, Any]) -> dict[str, Any] | None:
 
 # -- glyph atlases ---------------------------------------------------------
 
+# Bumped whenever what an atlas file holds changes (packing, polarity, glyph
+# metrics), so a cached atlas from an older build is rebuilt instead of being
+# served for good. Atlases outlive renders (the prune spares them, #359), which
+# is why the cache cannot rely on files simply ageing out.
+ATLAS_FORMAT = 2
+
+
+def _atlas_build_tag(ink_scale: bool) -> str:
+    """What a cached atlas must match to be reused: the format above, its
+    polarity, and the Tesserae version (fonts and the strip page ship with it,
+    so an update rebuilds each atlas once)."""
+    try:
+        from importlib import metadata as _metadata
+
+        version = _metadata.version("tesserae")
+    except Exception:
+        version = "dev"
+    return f"{ATLAS_FORMAT}:{'ink' if ink_scale else 'lum'}:{version}"
+
 
 def pack_atlas_strip(
     glyphs: list[tuple[str, Any]],
+    *,
+    ink_scale: bool = False,
 ) -> tuple[bytes, dict[str, dict[str, int]], int, int]:
     """Pack per-glyph grayscale PIL images (equal heights) into one
     horizontal 4bpp-gray strip: ``(bin_bytes, glyph_table, strip_w,
     height)``. Firmware contract: rows packed at exactly
     max(glyph.x + glyph.w) pixels, 2 px/byte, high nibble = left pixel,
-    0x0 black / 0xF white, so the strip width is forced even by
-    widening the final glyph's declared width when needed."""
+    so the strip width is forced even by widening the final glyph's
+    declared width when needed.
+
+    Two polarities, one per consumer. The overlay and proto2 paths copy
+    nibbles into the framebuffer, so their strips are luminance: 0x0 black,
+    0xF white (the default). Touch-v3 composites glyphs as ink over paper and
+    skips 0 as transparent (``schema/atlas.schema.json``: 0 = paper .. 15 =
+    full ink), so its strips pass ``ink_scale=True``; luminance there drew
+    every label as white text in a black box (#360)."""
     import numpy as np
 
     if not glyphs:
@@ -250,6 +278,8 @@ def pack_atlas_strip(
         x += w
 
     nibbles = np.clip(np.rint(arr.astype(np.float32) / 17.0), 0, 15).astype(np.uint8)
+    if ink_scale:
+        nibbles = (15 - nibbles).astype(np.uint8)
     packed = ((nibbles[:, 0::2] << 4) | nibbles[:, 1::2]).astype(np.uint8).tobytes()
     return packed, table, strip_w, height
 
@@ -262,6 +292,7 @@ def build_atlas(
     rasterize: Any = None,
     charset: str = ATLAS_CHARSET,
     prefix: str = "overlay",
+    ink_scale: bool = False,
 ) -> dict[str, Any] | None:
     """Build (or reuse) the glyph atlas for one (px, weight) pair:
     ``{digest, format, height, glyphs}``, with the strip bytes persisted
@@ -283,14 +314,18 @@ def build_atlas(
     from PIL import Image
 
     meta_path = renders_dir / f"{prefix}-atlas-{px}-{weight}.json"
+    tag = _atlas_build_tag(ink_scale)
+    old_digest: str | None = None
     try:
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
-        if (
-            isinstance(meta, dict)
-            and meta.get("charset") == charset
-            and (renders_dir / f"{prefix}-atlas-{meta.get('digest')}.bin").is_file()
-        ):
-            return {k: meta[k] for k in ("digest", "format", "height", "glyphs")}
+        if isinstance(meta, dict):
+            old_digest = str(meta.get("digest") or "") or None
+            if (
+                meta.get("charset") == charset
+                and meta.get("build") == tag
+                and (renders_dir / f"{prefix}-atlas-{old_digest}.bin").is_file()
+            ):
+                return {k: meta[k] for k in ("digest", "format", "height", "glyphs")}
     except (OSError, json.JSONDecodeError, KeyError):
         pass
 
@@ -319,17 +354,37 @@ def build_atlas(
                 continue
             x0 = max(0, int(box["x"]))
             glyph_imgs.append((ch, img.crop((x0, top, x0 + int(box["w"]), bottom))))
-        packed, table, _strip_w, height = pack_atlas_strip(glyph_imgs)
+        packed, table, _strip_w, height = pack_atlas_strip(glyph_imgs, ink_scale=ink_scale)
         import hashlib as _hashlib
 
         digest = _hashlib.sha256(packed).hexdigest()[:16]
         (renders_dir / f"{prefix}-atlas-{digest}.bin").write_bytes(packed)
         atlas = {"digest": digest, "format": "4bpp-gray", "height": height, "glyphs": table}
-        meta_path.write_text(json.dumps({**atlas, "charset": charset}), encoding="utf-8")
+        meta_path.write_text(
+            json.dumps({**atlas, "charset": charset, "build": tag}), encoding="utf-8"
+        )
+        if old_digest and old_digest != digest:
+            _drop_superseded_atlas(renders_dir, prefix, old_digest)
         return atlas
     except Exception:
         logger.exception("overlay atlas build failed px=%d weight=%d", px, weight)
         return None
+
+
+def _drop_superseded_atlas(renders_dir: Path, prefix: str, digest: str) -> None:
+    """Delete a strip a rebuild replaced, unless another size's meta still
+    names it. The render prune spares atlas files, so this is what keeps old
+    strips from piling up across updates."""
+    for meta in renders_dir.glob(f"{prefix}-atlas-*.json"):
+        try:
+            if json.loads(meta.read_text(encoding="utf-8")).get("digest") == digest:
+                return
+        except (OSError, json.JSONDecodeError, AttributeError):
+            continue
+    import contextlib
+
+    with contextlib.suppress(OSError):
+        (renders_dir / f"{prefix}-atlas-{digest}.bin").unlink(missing_ok=True)
 
 
 def browser_rasterizer(base_url: str, timezone_id: str | None = None) -> Any:

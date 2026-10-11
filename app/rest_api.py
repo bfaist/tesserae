@@ -2115,25 +2115,40 @@ def _frame_info_for_digest(device: Device, wanted: str) -> dict[str, Any] | None
 
 
 def _atlas_provider_for(device: Device) -> Any:
-    """The manifest builder's atlas source: build (or reuse) the glyph
-    strip for a (px, weight) pair and hand back its device-scoped URL."""
+    """The manifest builder's atlas source: the cached glyph strip for a
+    (px, weight) pair and its device-scoped URL. CACHE-ONLY, like the touch
+    atlases: a manifest request used to build a missing atlas inline, a cold
+    Chromium launch the device waited on (#359). A missing one is queued for
+    building instead and its text left out of this manifest, as the manifest
+    already does for an atlas that failed to build. Most are built right after
+    the render that needs them (PushManager atlas_warm_fn)."""
     renders_dir = current_app.config.get("RENDERS_DIR")
-    rasterizer = current_app.config.get("OVERLAY_ATLAS_RASTERIZER")
-    url_root = request.url_root
 
     def provider(px: int, weight: int) -> dict[str, Any] | None:
         if renders_dir is None:
             return None
-        from app.overlay_sync import browser_rasterizer, build_atlas
+        from app.overlay_sync import build_atlas
 
-        rasterize = rasterizer or browser_rasterizer(url_root)
-        atlas = build_atlas(px, weight, renders_dir=Path(renders_dir), rasterize=rasterize)
+        atlas = build_atlas(px, weight, renders_dir=Path(renders_dir), rasterize=None)
         if atlas is None:
+            _schedule_atlas_jobs([("overlay", px, weight)])
             return None
         atlas["url"] = f"/api/v1/device/{device.id}/frame/overlay/atlas/{atlas['digest']}"
         return atlas
 
     return provider
+
+
+def _schedule_atlas_jobs(jobs: list[tuple[Any, ...]]) -> None:
+    """Queue atlas builds from inside a request (app.atlas_warm); never
+    blocks the request."""
+    from app import atlas_warm
+
+    atlas_warm.schedule(
+        current_app._get_current_object(),  # type: ignore[attr-defined]
+        jobs,
+        request.url_root,
+    )
 
 
 def _build_manifest_for(device: Device, wanted: str) -> dict[str, Any] | None:
@@ -2301,12 +2316,6 @@ def get_frame_spec(device_id: str) -> Response:
     return jsonify(spec)
 
 
-# Roles currently being warmed in a background thread, so concurrent /frame/spec
-# polls don't each spawn a duplicate build for the same (static) atlas.
-_touch_atlas_warming: set[str] = set()
-_touch_atlas_warm_lock = threading.Lock()
-
-
 def _attach_touch_atlases(spec: dict[str, Any], device: Device) -> None:
     """Attach the glyph atlases the spec's primitive text refs reference
     (label / value_text), CACHE-ONLY. A device poll must never drive a Playwright
@@ -2344,44 +2353,12 @@ def _attach_touch_atlases(spec: dict[str, Any], device: Device) -> None:
 
 
 def _schedule_touch_atlas_warm(roles: list[str]) -> None:
-    """Kick a daemon thread to build the given (static) touch atlases so a later
-    poll finds them cached. De-duped against in-flight roles; never blocks."""
-    with _touch_atlas_warm_lock:
-        todo = [r for r in roles if r not in _touch_atlas_warming]
-        _touch_atlas_warming.update(todo)
-    if not todo:
-        return
-    app_obj = current_app._get_current_object()  # type: ignore[attr-defined]
-    url_root = request.url_root
-    thread = threading.Thread(
-        target=_warm_touch_atlases, args=(app_obj, todo, url_root), daemon=True
-    )
-    thread.start()
+    """Queue the given (static) touch atlases for building so a later poll
+    finds them cached. Shares app.atlas_warm's de-dup guard with the startup
+    and post-render warms; never blocks."""
+    from app.atlas_warm import touch_jobs
 
-
-def _warm_touch_atlases(app_obj: Flask, roles: list[str], url_root: str) -> None:
-    """Background: build each touch atlas role through the real rasterizer (the
-    serialized render queue) so it lands in the cache. Runs off the request path,
-    so the browser render can take as long as it needs without stalling a poll."""
-    try:
-        with app_obj.app_context():
-            renders_dir = app_obj.config.get("RENDERS_DIR")
-            if renders_dir is None:
-                return
-            from app.overlay_sync import browser_rasterizer
-            from app.touch_atlas import build_touch_atlas
-
-            rasterize = app_obj.config.get("OVERLAY_ATLAS_RASTERIZER") or browser_rasterizer(
-                url_root
-            )
-            for role in roles:
-                try:
-                    build_touch_atlas(role, renders_dir=Path(renders_dir), rasterize=rasterize)
-                except Exception:
-                    logger.exception("touch atlas warm failed role=%s", role)
-    finally:
-        with _touch_atlas_warm_lock:
-            _touch_atlas_warming.difference_update(roles)
+    _schedule_atlas_jobs(touch_jobs(roles))
 
 
 @bp.get("/<device_id>/atlas/<digest>")

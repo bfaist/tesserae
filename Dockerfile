@@ -80,13 +80,13 @@ RUN apt-get update \
 COPY --from=dependency-manifest /tmp/requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
-# Escape hatch for x86-64 CPUs older than 2009 (no SSE4.2 / POPCNT). numpy 2.4
-# raised its wheel baseline to x86-64-v2, so on those machines the stock image
-# dies with "Illegal instruction" the moment numpy loads. Rebuild with
-#   docker build --build-arg NUMPY_SPEC='numpy<2.4' .
-# to pin the last line whose wheels still run there. Empty by default so the
-# published image and its dependency layer are unchanged.
-ARG NUMPY_SPEC=""
+# numpy 2.4 raised its x86-64 wheel baseline to x86-64-v2 (SSE4.2, POPCNT), so
+# on a pre-2009 CPU, or in a VM given a basic CPU model such as Proxmox's
+# default kvm64, the image could not start: numpy failed to import (#361). The
+# Home Assistant App cannot be rebuilt by its users, so the image pins the last
+# line whose wheels run there. Pass --build-arg NUMPY_SPEC= (empty) to keep the
+# newest numpy on hardware known to be x86-64-v2 or arm64.
+ARG NUMPY_SPEC="numpy<2.4"
 RUN if [ -n "$NUMPY_SPEC" ]; then pip install "$NUMPY_SPEC"; fi
 
 # Copy the whole source tree after the stable layers. Tesserae's loaders

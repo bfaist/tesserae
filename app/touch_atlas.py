@@ -65,6 +65,8 @@ def build_touch_atlas(role_id: str, *, renders_dir: Path, rasterize: Any) -> dic
         rasterize=rasterize,
         charset=TOUCH_CHARSET,
         prefix="touch",
+        # touch-v3 reads strips as ink over paper (0 = paper), #360.
+        ink_scale=True,
     )
     if atlas is None:
         return None

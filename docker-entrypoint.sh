@@ -19,24 +19,34 @@
 set -e
 
 # Fail with a message instead of a bare "Illegal instruction". numpy's x86-64
-# wheels need a 2009-or-newer CPU (x86-64-v2: SSE4.2, POPCNT) from 2.4 on, and
-# a SIGILL at import is all an older machine gets. Exit status 132 is SIGILL.
+# wheels need a 2009-or-newer CPU (x86-64-v2: SSE4.2, POPCNT) from 2.4 on. An
+# older CPU, or a VM given a basic CPU model (Proxmox's default kvm64), either
+# dies with SIGILL (exit 132) or gets numpy's own "your machine doesn't support"
+# error at import (exit 1); both mean the same thing. Anything else is printed
+# as numpy reported it, so the log says what actually went wrong (#361).
 status=0
-python -c 'import numpy' >/dev/null 2>&1 || status=$?
+numpy_err=$(python -c 'import numpy' 2>&1 >/dev/null) || status=$?
 if [ "$status" != "0" ]; then
-    if [ "$status" = "132" ]; then
-        cat >&2 <<'MSG'
-Tesserae: numpy cannot run on this CPU (illegal instruction at import).
+    case "$status:$numpy_err" in
+        132:*|*"machine doesn't support"*|*"Illegal instruction"*)
+            cat >&2 <<'MSG'
+Tesserae: numpy cannot run on this CPU.
 The bundled numpy needs an x86-64-v2 processor (SSE4.2 and POPCNT, CPUs from
-2009 on). Rebuild the image with the last numpy line that runs on older CPUs:
+2009 on). In a virtual machine (Proxmox, Unraid, ESXi), set the VM's CPU type
+to "host" (or x86-64-v2 or newer) and restart it. The published images pin
+numpy below 2.4, which still runs on older CPUs; an image built by hand should
+do the same:
 
     docker build --build-arg NUMPY_SPEC='numpy<2.4' -t tesserae .
 
 See docs: Install via Docker -> Limits.
 MSG
-        exit 132
-    fi
-    echo "Tesserae: numpy failed to import (exit $status); the image is broken." >&2
+            ;;
+        *)
+            echo "Tesserae: numpy failed to import (exit $status):" >&2
+            ;;
+    esac
+    [ -n "$numpy_err" ] && printf '%s\n' "$numpy_err" | tail -n 20 >&2
     exit "$status"
 fi
 

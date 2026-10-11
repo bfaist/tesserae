@@ -151,6 +151,22 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ### Fixed
 
+- **Touch-v3 labels draw as text, not as boxes** (#360). The server packed
+  touch atlases the overlay's way (0 = black) while touch-v3 reads 0 as paper,
+  so every button label showed as white letters in a black box. Touch atlases
+  are now packed ink over paper as the atlas schema says, and a server that
+  had the old ones cached rebuilds them once.
+- **Glyph atlases are built ahead of time and kept** (#359). The render prune
+  deleted them every 50 renders, so the next device poll went out without
+  label text until a rebuild. They are now spared, keyed on an atlas format
+  number and the Tesserae version, built at startup (touch-v3) and right after
+  a render (overlay sizes), and a device request never builds one inline.
+- **The Docker image and Home Assistant App start on older x86-64 CPUs**
+  (#361). numpy 2.4 needs an x86-64-v2 processor, so a pre-2009 CPU, or a VM
+  given a basic CPU model such as Proxmox's `kvm64`, stopped at "numpy failed
+  to import". The image pins `numpy<2.4`, and the startup check now names the
+  CPU cause or prints numpy's own error instead of "the image is broken".
+
 - **Picture, NASA APOD** shows the real picture again. NASA moved APOD to
   science.nasa.gov on 2026-09-29, and the `api.nasa.gov/planetary/apod`
   route the widget used now answers every date with the NASA logo. It now

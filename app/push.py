@@ -455,8 +455,12 @@ class PushManager:
         device_status_fn: Callable[[], dict[str, dict[str, Any]]] | None = None,
         palette_profile_store: PaletteProfileStore | None = None,
         plugin_registry_fn: Callable[[], Any] | None = None,
+        atlas_warm_fn: Callable[[list[tuple[Any, ...]]], None] | None = None,
     ) -> None:
         self._registry = registry
+        # Called with the overlay atlases a fresh render will be asked for
+        # (app.atlas_warm jobs), so they are built before a device asks.
+        self._atlas_warm_fn = atlas_warm_fn
         self._page_store = page_store
         self._transport = transport
         self._settings = settings
@@ -2128,7 +2132,11 @@ class PushManager:
             # Patch blobs are referenced by an in-memory document, never
             # an event row; they're deleted on supersede and swept at
             # startup, so the prune must not race a pending fetch.
-            if path.name.startswith("overlay-patch-"):
+            # Glyph atlases are static per (size, weight, charset) and named
+            # by no frame, so pruning them only meant rebuilding them on the
+            # next device poll, which went out without labels meanwhile (#359).
+            # build_atlas drops the strip a rebuild replaces.
+            if path.name.startswith(("overlay-patch-", "overlay-atlas-", "touch-atlas-")):
                 continue
             # First-dot split, not ``.stem``: the touch-region sidecar is
             # ``<digest>.regions.json`` (double suffix), and its lifecycle
@@ -2738,6 +2746,18 @@ class PushManager:
             duration_s=duration,
             extra=event_extra,
         )
+
+        # Build the overlay atlases this composition's value slots will ask
+        # for now, rather than inside the device's manifest request (#359).
+        if self._atlas_warm_fn is not None and comp_digest:
+            try:
+                from app.atlas_warm import overlay_jobs
+
+                jobs = overlay_jobs(self.overlay_slots_for(comp_digest))
+                if jobs:
+                    self._atlas_warm_fn(jobs)
+            except Exception:
+                logger.exception("overlay atlas warm failed for %s", comp_digest)
 
         # Roll the orphan-render sweep on a cadence (the just-written
         # artifacts are already referenced by the events above, so they're

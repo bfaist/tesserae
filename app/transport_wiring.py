@@ -26,6 +26,7 @@ from typing import Any
 from flask import Flask
 
 from app import (
+    atlas_warm,
     collection_sync,
     deck_sync,
     device_loader,
@@ -904,6 +905,12 @@ def _rebuild_transport(
         # the PushManager a direct accessor so fan-out stays correct on
         # those paths, not just on request-bound manual Sends.
         plugin_registry_fn=lambda: app.config.get("PLUGIN_REGISTRY"),
+        # Overlay atlases a fresh render will be asked for are built right
+        # after it, off the device's request (#359). Off under pytest, where a
+        # background browser per test app is the last thing wanted.
+        atlas_warm_fn=(
+            None if _under_pytest(app) else lambda jobs: atlas_warm.schedule(app, jobs, _base_url())
+        ),
     )
     # Sweep render artifacts orphaned by event-log eviction (or a manual
     # history clear) at boot. Idempotent + never fatal.
@@ -911,6 +918,9 @@ def _rebuild_transport(
         app.config["PUSH_MANAGER"].prune_orphan_renders()
     except Exception:
         logger.exception("startup render prune failed")
+    # Glyph atlases for touch-v3 text are built ahead of the first poll.
+    if not _under_pytest(app):
+        atlas_warm.warm_at_startup(app, _base_url)
 
     # HA discovery is opt-in. If previously running, stop it first so the
     # old listeners detach from the previous PushManager (which has been

@@ -279,19 +279,13 @@ Both still work under Docker. Snapshotting `./data` with your normal backup tool
 - **mDNS needs host networking.** See above.
 - **arm/v7 is not built.** Pi 3 and below would need a different
   Playwright story; not currently in scope.
-- **x86-64 CPUs from before 2009 need a rebuild.** numpy 2.4 and later
-  ship wheels built for x86-64-v2 (SSE4.2, POPCNT), so on an older
-  processor the container exits at startup with `Illegal instruction`
-  (the entrypoint prints an explanation). Build the image yourself with
-  the last numpy line that still runs there:
-
-  ```bash
-  git clone https://github.com/dmellok/tesserae && cd tesserae
-  docker build --build-arg NUMPY_SPEC='numpy<2.4' -t tesserae .
-  ```
-
-  then point your compose file's `image:` at `tesserae`. Check with
-  `grep -c sse4_2 /proc/cpuinfo`; `0` means this applies to you.
+- **Older x86-64 CPUs work.** numpy 2.4 and later ship wheels built
+  for x86-64-v2 (SSE4.2, POPCNT), which a pre-2009 processor, or a VM
+  given a basic CPU model such as Proxmox's default `kvm64`, does not
+  have. The published image pins `numpy<2.4` so it starts there too. If
+  you build the image yourself on hardware you know is x86-64-v2 or
+  arm64, `--build-arg NUMPY_SPEC=` (empty) keeps the newest numpy. On a
+  VM, setting the CPU type to `host` is worth doing anyway.
 - **The image is ~970 MB to pull**, ~2.5 GB on disk uncompressed.
   Most of that is Chromium and its sandboxes. There's no smaller
   Tesserae image plan, the renderer fundamentally needs a real

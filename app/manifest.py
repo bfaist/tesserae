@@ -233,8 +233,8 @@ def build_interaction_manifest(
         for (px, weight), members in ranked_groups[:MAX_ATLASES]:
             atlas = atlas_provider(px, weight)
             if atlas is None:
-                logger.warning(
-                    "manifest: atlas build failed px=%d weight=%d; dropping %d text region(s)",
+                logger.info(
+                    "manifest: no atlas yet for px=%d weight=%d; dropping %d text region(s)",
                     px,
                     weight,
                     len(members),

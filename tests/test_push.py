@@ -723,6 +723,26 @@ def test_prune_orphan_renders_keeps_referenced_drops_the_rest(
     assert not (renders / "thumb_home_deadbeef.png").exists()
 
 
+def test_prune_spares_glyph_atlases(tmp_path: Path, composition_png: bytes) -> None:
+    """Atlases are named by no frame; pruning them meant every device poll
+    after a prune went out without label text until a rebuild (#359)."""
+    renderers = [_make_renderer(tmp_path, "pi_png", "png", retain=False)]
+    manager, _, _ = _wired(tmp_path, composition_png, renderers)
+    renders = manager._renders_dir
+    kept = [
+        "touch-atlas-0123456789abcdef.bin",
+        "touch-atlas-20-400.json",
+        "overlay-atlas-fedcba9876543210.bin",
+        "overlay-atlas-32-700.json",
+    ]
+    for name in kept:
+        (renders / name).write_bytes(b"x")
+    (renders / "orphan99999999.png").write_bytes(b"x")
+    assert manager.prune_orphan_renders() == 1
+    for name in kept:
+        assert (renders / name).exists(), name
+
+
 def test_multi_device_page_renders_once_per_panel_and_routes(
     tmp_path: Path, composition_png: bytes
 ) -> None:

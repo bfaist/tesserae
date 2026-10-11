@@ -139,9 +139,10 @@ whose wheels still run there, inside the same virtualenv:
 pip install 'numpy<2.4'
 ```
 
-`grep -c sse4_2 /proc/cpuinfo` printing `0` is the tell. The Docker image
-has the same floor; see [Install via Docker](docker.md#limits) for the
-rebuild flag.
+`grep -c sse4_2 /proc/cpuinfo` printing `0` is the tell; in a virtual
+machine, setting the CPU type to `host` fixes it too. The Docker image and
+the Home Assistant App already pin `numpy<2.4`; see
+[Install via Docker](docker.md#limits).
 
 ## Chromium for webpage rendering
 
