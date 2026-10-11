@@ -1,5 +1,5 @@
-"""The opt-in Paper design: the header switch, the route it posts to, and
-what the base template renders for each setting."""
+"""Paper, the default design, and the classic one: the header switch, the
+route it posts to, and what the base template renders for each setting."""
 
 from __future__ import annotations
 
@@ -33,14 +33,17 @@ def _ui(app: Flask) -> object:
     return (app.config["SETTINGS_STORE"].get_section("app") or {}).get("ui_design")
 
 
-def test_classic_by_default_with_switch_offered(app: Flask) -> None:
+def test_paper_by_default_with_switch_offered(app: Flask) -> None:
+    """An install that never touched the switch gets Paper (the default since
+    0.449), with the switch showing it on and offering the classic design."""
     client = app.test_client()
     _sign_in(client)
+    assert _ui(app) is None  # the default is not written as a choice
     body = client.get("/history").get_data(as_text=True)
-    assert '<html lang="en" data-ui="paper">' not in body
-    assert "Try the new design" in body
-    assert 'aria-checked="false"' in body
-    assert "style/paper.css" in body  # loaded everywhere; inert without data-ui
+    assert '<html lang="en" data-ui="paper">' in body
+    assert 'aria-checked="true"' in body
+    assert "Go back to the classic design" in body
+    assert "style/paper.css" in body
     # Both designs draw the same server mark and lockup.
     assert '<span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 256 256"' in body
     assert 'class="brand-edge"' in body

@@ -132,6 +132,45 @@ def test_lone_single_bound_page_refreshes_on_cadence(tmp_path: Path) -> None:
     assert len(pusher.pushes) == 2
 
 
+def test_refresh_lands_on_wall_clock_slots(tmp_path: Path) -> None:
+    """A 1-minute page renders once in every minute, just after it starts,
+    rather than 60 s after its previous render: that crept by the render time
+    each round and skipped a minute every few (firmware repo #39)."""
+    ps = _pages(tmp_path, Page(id="clock", name="Clock", device_ids=["panel"], refresh_minutes=1))
+    pusher = FakePush()
+    sched = _sched(tmp_path, ps, pusher)
+
+    sched._maybe_refresh_pages(T0 + timedelta(seconds=58))  # 12:00:58
+    sched._maybe_refresh_pages(T0 + timedelta(seconds=59))  # same minute: nothing
+    assert len(pusher.pushes) == 1
+    sched._maybe_refresh_pages(T0 + timedelta(seconds=61))  # 12:01:01, 3 s later
+    assert len(pusher.pushes) == 2
+    # A late tick still renders in its minute, and never twice in one.
+    sched._maybe_refresh_pages(T0 + timedelta(seconds=150))  # 12:02:30
+    sched._maybe_refresh_pages(T0 + timedelta(seconds=179))  # 12:02:59
+    assert len(pusher.pushes) == 3
+
+
+def test_refresh_slots_follow_the_configured_timezone(tmp_path: Path) -> None:
+    """A 60-minute page refreshes at the top of the local hour, so a zone half
+    an hour off UTC refreshes at :30 UTC."""
+    from datetime import timezone
+
+    ps = _pages(tmp_path, Page(id="p", name="P", device_ids=["panel"], refresh_minutes=60))
+    pusher = FakePush()
+    sched = Scheduler(
+        store=ScheduleStore(tmp_path / "s.json"),
+        push_manager=lambda: pusher,  # type: ignore[arg-type,return-value]
+        page_store=ps,
+        timezone_provider=lambda: timezone(timedelta(hours=5, minutes=30)),
+    )
+    sched._maybe_refresh_pages(T0 + timedelta(minutes=10))  # 17:40 local
+    sched._maybe_refresh_pages(T0 + timedelta(minutes=29))  # 17:59 local
+    assert len(pusher.pushes) == 1
+    sched._maybe_refresh_pages(T0 + timedelta(minutes=31))  # 18:01 local
+    assert len(pusher.pushes) == 2
+
+
 def test_zero_cadence_and_ambiguous_devices_never_refresh(tmp_path: Path) -> None:
     ps = _pages(
         tmp_path,

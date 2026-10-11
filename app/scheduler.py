@@ -33,6 +33,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, time, timedelta, tzinfo
 from functools import partial
 from time import monotonic
+from time import time as _wall_clock_s
 from typing import TYPE_CHECKING, Any, Protocol
 
 from pydantic import ValidationError
@@ -323,6 +324,18 @@ def compute_step_window(
     return _compute_step_state(rotation, now, tz, forced=forced)
 
 
+def _refresh_slot(at: datetime, refresh_minutes: int, tz: tzinfo | None = None) -> int:
+    """Which ``refresh_minutes``-long slot of the wall clock in ``tz`` (the
+    server's own zone when None) ``at`` falls in. A page refresh is due once per slot, so a 1-minute page
+    renders once in every minute just after it starts, and a 15-minute page
+    at :00, :15, :30 and :45, instead of ``refresh_minutes`` after its
+    previous render finished, which crept by the render time each round."""
+    period = refresh_minutes * 60
+    offset = at.astimezone(tz).utcoffset()
+    seconds = at.timestamp() + (offset.total_seconds() if offset else 0.0)
+    return int(seconds // period)
+
+
 class Scheduler:
     def __init__(
         self,
@@ -525,7 +538,13 @@ class Scheduler:
                     self._tick_started_at = None
                     self._stuck_warned_at = None
             self._note_tick_duration(monotonic() - started)
-            self._stop.wait(self._tick)
+            # Wait to the next multiple of the tick on the wall clock rather
+            # than a full tick after this one finished: a tick that rendered
+            # took a few seconds, and waiting the whole interval after it
+            # slid every later tick (and every page refresh) by that much,
+            # so a 1-minute clock page drifted through the minute and skipped
+            # one every few minutes (#39 on the firmware repo).
+            self._stop.wait(self._tick - (_wall_clock_s() % self._tick))
 
     def _note_tick_duration(self, elapsed_s: float) -> None:
         """Warn when a tick overran its own interval. Every automated push
@@ -969,12 +988,18 @@ class Scheduler:
             pages = self._page_store.list()
         except Exception:
             return
+        tz = self._tz_provider()
         due = [
             p
             for p in pages
             if getattr(p, "refresh_minutes", 0) > 0
             and not getattr(p, "archived", False)
-            and now.timestamp() - self._page_last_refresh.get(p.id, 0.0) >= p.refresh_minutes * 60
+            and _refresh_slot(now, p.refresh_minutes, tz)
+            > _refresh_slot(
+                datetime.fromtimestamp(self._page_last_refresh.get(p.id, 0.0), UTC),
+                p.refresh_minutes,
+                tz,
+            )
         ]
         if not due:
             return
