@@ -8,6 +8,7 @@
   "charge": "充電",
   "export": "輸出",
   "kwh_today": "今天 {n} kWh",
+  "kwh_yesterday": "昨天 {n} kWh",
   "today": "今天",
   "yesterday": "昨天",
   "no_history": "沒有歷史紀錄。",

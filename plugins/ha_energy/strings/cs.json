@@ -8,6 +8,7 @@
   "charge": "Nabíjení",
   "export": "Export",
   "kwh_today": "{n} kWh dnes",
+  "kwh_yesterday": "{n} kWh včera",
   "today": "Dnes",
   "yesterday": "Včera",
   "no_history": "Žádná historie.",

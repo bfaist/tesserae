@@ -139,3 +139,83 @@ def test_sparkline_yesterday_is_empty_without_samples() -> None:
     assert result["sparkline_today"] == []
     assert result["sparkline_yesterday"] == []
     assert result["sparkline"] == []
+
+
+def test_yesterday_solar_total_uses_latest_local_day_sample() -> None:
+    zone = ZoneInfo("Europe/Berlin")
+    now = datetime(2026, 9, 28, 20, 5, tzinfo=zone)
+    yesterday = now.replace(hour=0, minute=0) - timedelta(days=1)
+    samples = [
+        _sample(yesterday - timedelta(minutes=1), "7.4"),
+        _sample(yesterday + timedelta(hours=12), "10.25"),
+        _sample(yesterday + timedelta(hours=23, minutes=59), "14.8"),
+        _sample(yesterday + timedelta(days=1), "0"),
+        _sample(yesterday + timedelta(hours=23, minutes=58), "unavailable"),
+    ]
+
+    class FixedDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return now if tz is None else now.astimezone(tz)
+
+    core = MagicMock()
+    core.get_states.return_value = [
+        {"entity_id": "sensor.solar_today", "state": "8.6"},
+    ]
+    core.history.return_value = samples
+    registry = MagicMock()
+    registry.get.return_value = SimpleNamespace(server_module=core)
+    app = SimpleNamespace(config={"PLUGIN_REGISTRY": registry})
+
+    with (
+        patch.object(server, "current_app", app),
+        patch.object(server, "datetime", FixedDateTime),
+        patch.object(server, "app_timezone", return_value=zone),
+    ):
+        result = server.fetch(
+            options={"solar_today_entity": "sensor.solar_today", "show_solar_yesterday": True},
+            settings={},
+            ctx={},
+        )
+
+    core.history.assert_called_once_with("sensor.solar_today", hours=48)
+    assert result["solar_today_kwh"] == 8.6
+    assert result["solar_yesterday_kwh"] == 14.8
+
+
+def test_yesterday_solar_total_respects_toggle_and_missing_history() -> None:
+    zone = ZoneInfo("Europe/Berlin")
+    now = datetime(2026, 9, 28, 20, 5, tzinfo=zone)
+
+    class FixedDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return now if tz is None else now.astimezone(tz)
+
+    core = MagicMock()
+    core.get_states.return_value = []
+    registry = MagicMock()
+    registry.get.return_value = SimpleNamespace(server_module=core)
+    app = SimpleNamespace(config={"PLUGIN_REGISTRY": registry})
+    with (
+        patch.object(server, "current_app", app),
+        patch.object(server, "datetime", FixedDateTime),
+        patch.object(server, "app_timezone", return_value=zone),
+    ):
+        result = server.fetch(
+            options={"solar_today_entity": "sensor.solar_today", "show_solar_yesterday": True},
+            settings={},
+            ctx={},
+        )
+        core.history.assert_called_once_with("sensor.solar_today", hours=48)
+        assert result["solar_yesterday_kwh"] is None
+
+        core.history.reset_mock()
+        result = server.fetch(
+            options={"solar_today_entity": "sensor.solar_today"},
+            settings={},
+            ctx={},
+        )
+
+    core.history.assert_not_called()
+    assert result["solar_yesterday_kwh"] is None

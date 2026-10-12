@@ -8,6 +8,7 @@
   "charge": "Ładowanie",
   "export": "Eksport",
   "kwh_today": "{n} kWh dziś",
+  "kwh_yesterday": "{n} kWh wczoraj",
   "today": "Dziś",
   "yesterday": "Wczoraj",
   "no_history": "Brak historii.",

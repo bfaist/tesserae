@@ -12,14 +12,15 @@ paint:
       "house_w": float,           # house consumption
       "battery_soc": float|None,  # 0-100 %, if entity provided
       "solar_today_kwh": float|None,
+      "solar_yesterday_kwh": float|None,
       "flow": "solar" | "grid" | "battery" | "mixed",
       "sparkline_today": [...],   # today, local midnight to now, 48 half-hour slots
       "sparkline_yesterday": [...] # yesterday, midnight to midnight, 48 slots
     }
 
 The widget batches a single ``get_states`` call to cover all four power
-entities; the SoC + today's-energy entities are optional and only
-queried when the user filled them in.
+entities; the SoC + daily-energy entities are optional and only queried
+when the user filled them in.
 """
 
 from __future__ import annotations
@@ -140,6 +141,7 @@ def fetch(
 
     today_entity = (options.get("solar_today_entity") or "").strip()
     solar_today_kwh = None
+    solar_yesterday_kwh = None
     if today_entity:
         today_state = _state(states, today_entity)
         if today_state is not None:
@@ -151,6 +153,25 @@ def fetch(
     # midnight. Prefer the solar entity (it has a clear day-shaped curve);
     # fall back to house consumption when solar's not configured.
     now = datetime.now(app_timezone())
+    if today_entity and options.get("show_solar_yesterday") is True:
+        try:
+            energy_samples = core.history(today_entity, hours=48)
+        except Exception:
+            energy_samples = []
+        yesterday_start = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        previous_day_samples: list[tuple[datetime, float]] = []
+        for sample in energy_samples:
+            sample_dt = _parse_dt(sample.get("last_changed") or sample.get("last_updated"))
+            value = _f_or_none(sample.get("state"))
+            if sample_dt is None or value is None:
+                continue
+            local_dt = sample_dt.astimezone(now.tzinfo)
+            if yesterday_start <= local_dt < today_start:
+                previous_day_samples.append((local_dt, value))
+        if previous_day_samples:
+            solar_yesterday_kwh = round(max(previous_day_samples, key=lambda item: item[0])[1], 2)
+
     spark_entity = (options.get("solar_entity") or options.get("house_entity") or "").strip()
     sparkline_today: list[float | None] = []
     sparkline_yesterday: list[float | None] = []
@@ -180,6 +201,7 @@ def fetch(
         "house_w": round(house, 1),
         "battery_soc": round(soc, 1) if soc is not None else None,
         "solar_today_kwh": round(solar_today_kwh, 2) if solar_today_kwh is not None else None,
+        "solar_yesterday_kwh": solar_yesterday_kwh,
         "flow": flow,
         # Backwards-compat: `sparkline` mirrors today's series without the
         # trailing gap, for anything that still reads the old key.

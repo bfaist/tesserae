@@ -221,7 +221,7 @@ export default function render(shadow, ctx) {
       flex-wrap: wrap;
       align-items: center;
     }
-    .energy-soc, .energy-today-chip {
+    .energy-soc, .energy-today-chip, .energy-yesterday-chip {
       display: inline-flex;
       align-items: center;
       gap: var(--space-1);
@@ -238,6 +238,10 @@ export default function render(shadow, ctx) {
     .energy-today-chip {
       background: color-mix(in oklab, var(--accent-2) 12%, var(--surface));
       color: var(--accent-2);
+    }
+    .energy-yesterday-chip {
+      background: color-mix(in oklab, var(--text-muted) 10%, var(--surface));
+      color: var(--text-secondary);
     }
     /* Sankey container, taller still so the 120px nodePadding has
        room to push the three sink rails apart while still leaving
@@ -321,11 +325,16 @@ export default function render(shadow, ctx) {
   `;
 
   const chips = [];
+  const options = ctx?.cell?.options ?? {};
+  const showYesterday = options.show_solar_yesterday === true;
   if (soc != null) {
     chips.push(`<span class="energy-soc"><i class="ph-bold ph-battery-charging"></i>${Math.round(Number(soc))}%</span>`);
   }
   if (data.solar_today_kwh != null) {
     chips.push(`<span class="energy-today-chip"><i class="ph-bold ph-sun"></i>${escapeHtml(t("kwh_today", "{n} kWh today").replace("{n}", Number(data.solar_today_kwh).toFixed(1)))}</span>`);
+  }
+  if (showYesterday && data.solar_yesterday_kwh != null) {
+    chips.push(`<span class="energy-yesterday-chip"><i class="ph-bold ph-sun"></i>${escapeHtml(t("kwh_yesterday", "{n} kWh yesterday").replace("{n}", Number(data.solar_yesterday_kwh).toFixed(1)))}</span>`);
   }
 
   // Build the per-rail legend below the Sankey so users can read the

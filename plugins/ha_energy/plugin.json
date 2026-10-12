@@ -1,10 +1,10 @@
 {
   "tesserae_compat": "1.x",
   "name": "Home Assistant, Energy",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "kind": "widget",
   "locales": ["en", "cs", "de", "es", "fr", "it", "lt", "nb", "nl", "pl", "pt", "sk", "sv", "zh-CN", "zh-TW"],
-  "description": "Live solar / grid / battery / house-consumption snapshot from your HA energy dashboard, with today's totals and a 24-hour sparkline. Wires to the same sensor.* entities you've already configured under HA's Energy panel.",
+  "description": "Live solar / grid / battery / house-consumption snapshot from your HA energy dashboard, with today's totals, optional yesterday's solar total, and a 24-hour sparkline. Wires to the same sensor.* entities you've already configured under HA's Energy panel.",
   "icon": "ph-lightning",
   "supports": {
     "sizes": [
@@ -55,6 +55,12 @@
       "label": "Solar energy today (kWh) entity (optional)",
       "default": "",
       "choices_from": "entity"
+    },
+    {
+      "name": "show_solar_yesterday",
+      "type": "boolean",
+      "label": "Show yesterday's solar production",
+      "default": false
     },
     {
       "name": "label",

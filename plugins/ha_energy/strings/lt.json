@@ -8,6 +8,7 @@
   "charge": "Įkrova",
   "export": "Eksportas",
   "kwh_today": "{n} kWh šiandien",
+  "kwh_yesterday": "{n} kWh vakar",
   "today": "Šiandien",
   "yesterday": "Vakar",
   "no_history": "Istorijos nėra.",

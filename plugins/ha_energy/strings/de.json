@@ -8,6 +8,7 @@
   "charge": "Laden",
   "export": "Einspeisung",
   "kwh_today": "{n} kWh heute",
+  "kwh_yesterday": "{n} kWh gestern",
   "today": "Heute",
   "yesterday": "Gestern",
   "no_history": "Kein Verlauf.",

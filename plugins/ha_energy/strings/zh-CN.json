@@ -8,6 +8,7 @@
   "charge": "充电",
   "export": "上网",
   "kwh_today": "今日 {n} kWh",
+  "kwh_yesterday": "昨日 {n} kWh",
   "today": "今天",
   "yesterday": "昨天",
   "no_history": "暂无历史。",

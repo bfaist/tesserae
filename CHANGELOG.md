@@ -18,6 +18,10 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ### Added
 
+- **Yesterday's solar total on the HA energy widget** (#362). A new switch,
+  "Show yesterday's solar production", adds a chip with yesterday's total next
+  to today's, read from the history of the daily solar-energy entity. Off by
+  default, so existing widgets look the same until it is turned on.
 - **Heartbeat: was the design chosen?** The daily heartbeat's `ui` field
   (classic or Paper) gains `ui_chosen`, true when somebody set the design by
   hand rather than leaving the default. It lets a later change of default be
