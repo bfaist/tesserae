@@ -246,6 +246,27 @@ builds a single PNG showing your widget at all four sizes
 side-by-side, the easiest "did anything regress?" loop while
 iterating on a polish pass.
 
+### Keep it to your own install
+
+A widget that only makes sense for your setup doesn't need the catalog.
+Zip the widget folder (the one holding `plugin.json`) and pick it with
+**Upload widget** on Settings → Widgets. A `.tar.gz` works too, and so does a
+zip made with Finder's Compress.
+
+The widget lands in `data/authored/<id>/`, so it survives updates, and it
+shows up in the widget picker straight away. This is also the way in on the
+Home Assistant App, whose data folder you can't reach over Samba or SSH.
+A manifest that doesn't validate is refused with the reason, which helps
+when the widget came from an AI assistant. The folder name becomes the id
+and can't match a bundled widget.
+
+Uploading the same id again replaces it. **Remove** on the widget's row
+deletes it. A widget with an admin page (`blueprint()` in `server.py`) needs
+a restart before that page appears; the top bar offers one.
+
+A widget's `server.py` runs on your server with the same access as Tesserae
+itself, so upload only code you wrote or have read.
+
 ### Publish through the community catalog
 
 For your own widgets, third-party APIs, niche use cases — anything

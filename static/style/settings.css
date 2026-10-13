@@ -3324,7 +3324,15 @@ select.dx-input:hover {
    dashboard", Widgets' "Browse community widgets", etc. */
 .page-head-cta {
   margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
+/* A form holding a secondary action (Widgets' "Upload widget") sits in the
+   row like a bare button would. */
+.page-head-cta > form { display: contents; }
+.page-head-cta label.dx-btn-ghost-sm { cursor: pointer; }
 .page-head-cta .dx-btn-primary {
   display: inline-flex;
 }

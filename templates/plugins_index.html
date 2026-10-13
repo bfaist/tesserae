@@ -20,6 +20,16 @@
       <i class="ph ph-storefront" aria-hidden="true"></i>
       <span>Browse catalog</span>
     </a>
+    {# A widget you wrote for this install only. The form submits as soon as a
+       file is picked; the label is the visible button. #}
+    <form method="post" action="{{ url_for('marketplace.upload_widget') }}"
+          enctype="multipart/form-data" class="form form--inline">
+      <label class="dx-btn-ghost-sm" title="Install a widget folder from a .zip or .tar.gz">
+        <i class="ph ph-upload-simple" aria-hidden="true"></i><span>Upload widget</span>
+        <input type="file" name="archive" accept=".zip,.tar.gz,.tgz,application/zip,application/gzip"
+               hidden onchange="this.form.submit()">
+      </label>
+    </form>
   </div>
 </header>
 
@@ -91,7 +101,7 @@
   {% if _sources|length > 1 %}
   <select class="dx-devtb-select" aria-label="Filter by source" data-lf-filter="source">
     <option value="">Any source</option>
-    {% for src in ['bundled', 'catalog', 'authored'] if src in _sources %}<option value="{{ src }}">{{ {'bundled': 'Bundled', 'catalog': 'From the catalog', 'authored': 'Pushed by an authoring tool'}[src] }}</option>{% endfor %}
+    {% for src in ['bundled', 'catalog', 'authored'] if src in _sources %}<option value="{{ src }}">{{ {'bundled': 'Bundled', 'catalog': 'From the catalog', 'authored': 'Uploaded or pushed'}[src] }}</option>{% endfor %}
   </select>
   {% endif %}
   <select class="dx-devtb-select" aria-label="Filter by admin page" data-lf-filter="admin">
@@ -137,6 +147,15 @@
         <a class="dx-btn-ghost-sm" href="{{ request.script_root }}/plugins/{{ plugin.id }}/">
           <i class="ph ph-arrow-square-out" aria-hidden="true"></i><span>Open admin</span>
         </a>
+        {% endif %}
+        {% if plugin_sources is defined and plugin_sources.get(plugin.id) == 'authored' %}
+        <form method="post" action="{{ url_for('marketplace.remove_uploaded_widget') }}" class="form form--inline"
+              onsubmit="return confirm('Remove {{ plugin.id }}?\n\nDashboards that use it lose that widget.');">
+          <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
+          <button type="submit" class="dx-btn-ghost-sm">
+            <i class="ph ph-trash" aria-hidden="true"></i><span>Remove</span>
+          </button>
+        </form>
         {% endif %}
       </div>
     </li>

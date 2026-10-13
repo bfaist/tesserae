@@ -26,6 +26,7 @@ import logging
 import re
 import shutil
 import tarfile
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -98,6 +99,66 @@ def _extract(tar_bytes: bytes, dest: Path) -> None:
         raise
     except (tarfile.TarError, OSError, ValueError) as err:
         raise InstallError(f"could not extract tarball: {err}") from err
+
+
+def _is_finder_junk(name: str) -> bool:
+    """Entries macOS adds to a zip made with Finder's Compress: a ``__MACOSX/``
+    tree of resource forks and ``.DS_Store`` files. Left in, the ``__MACOSX``
+    folder sits beside the widget folder and the archive no longer has a single
+    top-level folder."""
+    parts = [p for p in name.split("/") if p]
+    return bool(parts) and (parts[0] == "__MACOSX" or parts[-1] == ".DS_Store")
+
+
+def zip_to_tarball(zip_bytes: bytes) -> bytes:
+    """Repack a zip as a gzipped tar so it goes through :func:`install_tarball`
+    and its extraction guards unchanged. Only regular files are carried over
+    (no symlinks, which zip stores as files with a mode bit), Finder junk is
+    dropped, and the same size and count caps apply before anything is read."""
+    if len(zip_bytes) > MAX_COMPRESSED_BYTES:
+        raise InstallError(f"zip too large ({len(zip_bytes)} bytes > {MAX_COMPRESSED_BYTES})", 413)
+    try:
+        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+            infos = [
+                i
+                for i in zf.infolist()
+                if not i.is_dir()
+                and not _is_finder_junk(i.filename)
+                # Unix mode lives in the high 16 bits; S_IFLNK marks a symlink.
+                and (i.external_attr >> 16) & 0o170000 != 0o120000
+            ]
+            if len(infos) > MAX_FILE_COUNT:
+                raise InstallError(
+                    f"zip has too many entries ({len(infos)} > {MAX_FILE_COUNT})", 413
+                )
+            # file_size is the declared size, and zipfile refuses to read past it,
+            # so this bounds what the loop below can decompress.
+            total = sum(i.file_size for i in infos)
+            if total > MAX_UNCOMPRESSED_BYTES:
+                raise InstallError(
+                    f"zip uncompressed size too large ({total} > {MAX_UNCOMPRESSED_BYTES})", 413
+                )
+            buf = io.BytesIO()
+            with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+                for info in infos:
+                    data = zf.read(info)
+                    member = tarfile.TarInfo(info.filename)
+                    member.size = len(data)
+                    member.mode = 0o644
+                    tar.addfile(member, io.BytesIO(data))
+            return buf.getvalue()
+    except InstallError:
+        raise
+    except (zipfile.BadZipFile, OSError, ValueError, RuntimeError) as err:
+        raise InstallError(f"could not read zip: {err}") from err
+
+
+def install_archive(archive: bytes, **kwargs: Any) -> dict[str, Any]:
+    """:func:`install_tarball` for either a zip or a gzipped tar, told apart by
+    the zip magic number rather than the file name."""
+    if archive[:4] == b"PK\x03\x04":
+        archive = zip_to_tarball(archive)
+    return install_tarball(archive, **kwargs)
 
 
 def _locate_widget_root(extract_dir: Path) -> Path:

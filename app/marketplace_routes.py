@@ -614,6 +614,84 @@ def remove_shadowed() -> Response:
     return redirect(url_for("plugins.plugins_index"))
 
 
+def _rediscover_after_upload() -> None:
+    """Swap in a freshly scanned registry so an uploaded or removed widget is
+    picked up without a restart, the same in-process reload a Studio push uses."""
+    rediscover = current_app.config.get("REDISCOVER_PLUGINS")
+    if callable(rediscover):
+        current_app.config["PLUGIN_REGISTRY"] = rediscover()
+    else:
+        _mark_restart_pending()
+
+
+@bp.post("/widgets/upload")
+def upload_widget() -> Response:
+    """Install a widget from a .zip or .tar.gz picked on the Widgets page.
+
+    For a widget the operator wrote for their own install and has no reason to
+    publish. It lands in ``data/authored/`` beside Studio pushes, so it survives
+    image upgrades and the HA App's private ``/data`` needs no file access. The
+    widget is usable straight away; one with an admin page (``blueprint()``)
+    also needs a restart to register its routes, so that lights the topbar
+    button rather than restarting under the operator."""
+    part = request.files.get("archive")
+    back = redirect(url_for("plugins.plugins_index"))
+    if part is None or not part.filename:
+        flash("Choose a .zip or .tar.gz of the widget folder to upload.", "error")
+        return back
+    # Read one byte past the cap so an oversized upload is refused without
+    # holding all of it in memory.
+    archive = part.stream.read(authored_widgets.MAX_COMPRESSED_BYTES + 1)
+    try:
+        result = authored_widgets.install_archive(
+            archive,
+            data_root=current_app.config["DATA_ROOT"],
+            plugins_dir=current_app.config["PLUGINS_DIR"],
+            schema_path=current_app.config["PLUGIN_SCHEMA"],
+        )
+    except authored_widgets.InstallError as err:
+        flash(f"Upload refused: {err.message}", "error")
+        return back
+
+    try:
+        _rediscover_after_upload()
+    except Exception:
+        logger.exception("widget upload: reload failed")
+        _mark_restart_pending()
+    msg = f"Installed {result['name']} ({result['id']} v{result['version']})."
+    if result["blueprint"]:
+        _mark_restart_pending()
+        msg += ' Its admin page appears after a restart: click "Restart required" in the top bar.'
+    flash(msg, "ok")
+    return back
+
+
+@bp.post("/widgets/remove")
+def remove_uploaded_widget() -> Response:
+    """Delete a widget from ``data/authored/`` (an upload or a Studio push).
+    Never touches bundled or catalog widgets: ``authored_widgets.uninstall`` only
+    removes a folder directly under that directory."""
+    plugin_id = (request.form.get("plugin_id") or "").strip()
+    data_root = Path(current_app.config["DATA_ROOT"])
+    registry = current_app.config.get("PLUGIN_REGISTRY")
+    plugin = registry.get(plugin_id) if registry is not None else None
+    had_admin = bool(plugin is not None and plugin.has_admin)
+    if not authored_widgets.uninstall(plugin_id, data_root=data_root):
+        flash(f"{plugin_id!r} isn't an uploaded widget; nothing removed.", "error")
+        return redirect(url_for("plugins.plugins_index"))
+    try:
+        _rediscover_after_upload()
+    except Exception:
+        logger.exception("widget remove: reload failed")
+        _mark_restart_pending()
+    if had_admin:
+        # Flask can't unregister the blueprint, so its admin page lingers
+        # until the next restart.
+        _mark_restart_pending()
+    flash(f"Removed {plugin_id}.", "ok")
+    return redirect(url_for("plugins.plugins_index"))
+
+
 def _remove_marketplace_folder(plugin_id: str, path: Path) -> bool | None:
     """Remove a shadowed folder under ``data/marketplace/``.
 

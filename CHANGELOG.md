@@ -18,6 +18,13 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ### Added
 
+- **Upload a widget from the Widgets page.** "Upload widget" takes a `.zip` or
+  `.tar.gz` of a widget folder and installs it into the data folder beside
+  Tesserae Studio pushes, so a widget written for one install needs neither
+  the catalog nor file access (the Home Assistant App keeps its data where
+  Samba and SSH can't reach it). It is usable straight away; one with an admin
+  page asks for a restart. A zip made with Finder's Compress works as is.
+  Uploaded and pushed widgets get a Remove button on the same page.
 - **Yesterday's solar total on the HA energy widget** (#362). A new switch,
   "Show yesterday's solar production", adds a chip with yesterday's total next
   to today's, read from the history of the daily solar-energy entity. Off by
