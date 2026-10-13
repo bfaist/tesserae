@@ -199,6 +199,91 @@
     });
   }
 
+  // Widget options that only apply in some modes declare ``show_if``
+  // (app/option_conditions.py has the grammar and the server-side first
+  // render). auto_field wraps such a field in ``[data-show-if]``; this keeps
+  // it in step as the controlling options change. Fields are hidden, never
+  // disabled, so their values are still submitted and survive a save. The
+  // scope is the nearest ``[data-opt-scope]``: one cell's options in the
+  // grid editor, the config drawer in the canvas editor.
+  function showIfText(value) {
+    if (value === null || value === undefined) return "";
+    return String(value);
+  }
+
+  function showIfMatches(actual, expected) {
+    if (expected && typeof expected === "object" && !Array.isArray(expected) && "not" in expected) {
+      return !showIfMatches(actual, expected.not);
+    }
+    const wanted = (Array.isArray(expected) ? expected : [expected]).map(showIfText);
+    if (Array.isArray(actual)) return actual.some((v) => wanted.includes(showIfText(v)));
+    return wanted.includes(showIfText(actual));
+  }
+
+  // Current value of option ``name`` in ``scope``, or undefined when the
+  // scope has no such field. Switches read as true/false, a multiselect
+  // as the list of ticked values.
+  function showIfValue(scope, name) {
+    const inputs = Array.from(scope.querySelectorAll(`[name="opt_${CSS.escape(name)}"]`));
+    if (!inputs.length) return undefined;
+    const boxes = inputs.filter((el) => el.type === "checkbox");
+    if (boxes.length && boxes.length === inputs.length) {
+      if (boxes.length === 1 && !boxes[0].closest("[data-multiselect]")) return boxes[0].checked;
+      return boxes.filter((el) => el.checked).map((el) => el.value);
+    }
+    return inputs[0].value;
+  }
+
+  function applyShowIf(scope) {
+    const wraps = Array.from(scope.querySelectorAll("[data-show-if]"));
+    const fieldOf = (name) =>
+      scope.querySelector(`[name="opt_${CSS.escape(name)}"]`)?.closest("[data-show-if]") || null;
+    // Settle chains: a field whose controller is hidden hides too, so a few
+    // passes let a change ripple down (bounded, a cycle just stays hidden).
+    for (let pass = 0; pass < 8; pass++) {
+      let changed = false;
+      wraps.forEach((wrap) => {
+        let cond;
+        try {
+          cond = JSON.parse(wrap.dataset.showIf);
+        } catch {
+          return;
+        }
+        let show = true;
+        for (const [name, expected] of Object.entries(cond || {})) {
+          const actual = showIfValue(scope, name);
+          if (actual === undefined) continue;
+          const controller = fieldOf(name);
+          if ((controller && controller.hidden) || !showIfMatches(actual, expected)) {
+            show = false;
+            break;
+          }
+        }
+        if (wrap.hidden === show) {
+          wrap.hidden = !show;
+          changed = true;
+        }
+      });
+      if (!changed) break;
+    }
+  }
+
+  function attachShowIf(root) {
+    const scopes = new Set();
+    root.querySelectorAll("[data-show-if]").forEach((wrap) => {
+      scopes.add(wrap.closest("[data-opt-scope]") || wrap.parentElement);
+    });
+    scopes.forEach((scope) => {
+      if (!scope) return;
+      applyShowIf(scope);
+      if (scope.dataset.showIfBound) return;
+      scope.dataset.showIfBound = "1";
+      const update = () => applyShowIf(scope);
+      scope.addEventListener("change", update);
+      scope.addEventListener("input", update);
+    });
+  }
+
   // Multi-select checklists (e.g. the HA entity pickers): a client-side
   // filter box narrows the list, and a count shows how many are ticked.
   // The filter input has no name (never submitted) and stops its own
@@ -814,6 +899,7 @@
     attachPresetNumbers(document);
     attachLocationSearch(document);
     attachMultiSelect(document);
+    attachShowIf(document);
     attachLightbox();
     publishTopbarHeight();
   }
@@ -859,6 +945,7 @@
     attachPresetNumbers,
     attachLocationSearch,
     attachMultiSelect,
+    attachShowIf,
     fitPreview,
   };
 })();

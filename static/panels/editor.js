@@ -3160,6 +3160,8 @@
           // HA entity picker filter box (#130): dead without this in the
           // drawer since the form is injected after page load.
           if (tc.attachMultiSelect) tc.attachMultiSelect(body);
+          // Options that only apply in some modes (show_if).
+          if (tc.attachShowIf) tc.attachShowIf(body);
         }
         // Icon picker + per-entity label/icon/format overrides (#130). Both
         // bindAll passes are idempotent and only touch the freshly-injected

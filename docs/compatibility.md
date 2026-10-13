@@ -49,6 +49,7 @@ The bundled client kinds Tesserae knows how to talk to. A flashed client announc
 
 | Device kind | Default panel | Renderers | What it is |
 |---|---|---|---|
+| `bloomin8_canvas` | 1200×1600 | `pi_png` | Bloomin8 Canvas colour e-paper frame using its Schedule Pull API. |
 | `circuitpython_generic` | 800×480 | `circuitpython_png`, `circuitpython_bmp` | Generic CircuitPython client kind for boards driving an e-paper panel from a Pico W / Pico 2 W / Feather / similar microcontroller. |
 | `crosspoint_gray` | 480×800 | `circuitpython_bmp` | CrossPoint e-readers painting a Tesserae dashboard as their sleep screen, over the LAN with no cloud component. |
 | `esp32_bw_client` | 400×300 | `esp32_bw_bin` | Battery-powered ESP32 firmware for mono B/W e-paper panels (e.g. |

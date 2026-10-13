@@ -156,10 +156,10 @@ def _resolve_beep_pattern(out: dict[str, Any], device: Device) -> None:
 def _kind_uses_access_token(kind: Device) -> bool:
     """True for kinds whose protocol uses an HTTP access token instead
     of (or in addition to) an MQTT status/config topic. Currently just
-    TRMNL clients; extracted as a helper so a new HTTP-polled kind can
-    opt in by appearing in this list rather than threading a new
-    manifest field through the loader."""
-    return kind.id == "trmnl_client"
+    TRMNL clients and the Bloomin8 Canvas; extracted as a helper so a
+    new HTTP-polled kind can opt in by appearing in this list rather than
+    threading a new manifest field through the loader."""
+    return kind.id in ("trmnl_client", "bloomin8_canvas")
 
 
 # Alphabet for short access tokens. Lowercase letters plus 2–9, with
@@ -649,6 +649,11 @@ def create_instance(
         effective_strength = api_key_strength
         if normalised_transport in ("rest", "relay") and not _kind_uses_access_token(kind):
             effective_strength = "native"
+        # The Canvas token is pasted once into its pull settings, never
+        # typed on a device keyboard, and it is the only thing guarding
+        # /api/bloomin8/eink_pull, so it always gets the long form.
+        if kind.id == "bloomin8_canvas":
+            effective_strength = "native"
         if access_token:
             manifest["access_token"] = access_token
         elif effective_strength == "native":
@@ -659,7 +664,7 @@ def create_instance(
         # show on the setup screen as a stable, human-readable id.
         # Skip for non-TRMNL REST devices, the field has no protocol
         # meaning for them.
-        if _kind_uses_access_token(kind):
+        if kind.id == "trmnl_client":
             manifest["friendly_id"] = generate_friendly_id(devices)
         # MAC address (when auto-provisioning from /api/setup) becomes
         # the device's primary identity for /api/display auth, matching

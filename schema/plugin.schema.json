@@ -103,6 +103,30 @@
               "map": { "type": "object", "description": "Controlling value -> value for this field." }
             }
           },
+          "show_if": {
+            "type": "object",
+            "description": "Show this field only when other options match. Keys are option names, every key must match. A value is an exact match, a list is any-of, and {\"not\": value-or-list} is none-of. A field whose controlling option is hidden is hidden too. Hidden fields keep their value. See docs/widgets.md.",
+            "minProperties": 1,
+            "additionalProperties": {
+              "anyOf": [
+                { "type": ["string", "number", "boolean", "null"] },
+                { "type": "array", "items": { "type": ["string", "number", "boolean", "null"] } },
+                {
+                  "type": "object",
+                  "required": ["not"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "not": {
+                      "anyOf": [
+                        { "type": ["string", "number", "boolean", "null"] },
+                        { "type": "array", "items": { "type": ["string", "number", "boolean", "null"] } }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
           "help": { "type": "string" }
         }
       }

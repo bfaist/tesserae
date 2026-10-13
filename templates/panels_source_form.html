@@ -7,11 +7,13 @@
    into an options dict via the shared per-cell coercion. #}
 {% from "_components.html" import auto_field %}
 {% if opts %}
+  <div data-opt-scope>
   {% for opt in opts %}
     {% set field_id = 'src-' ~ sid ~ '-opt-' ~ opt.name %}
     {% set value = values.get(opt.name, opt.get('default', '')) %}
-    {{ auto_field(field_id, 'opt_' ~ opt.name, opt, value) }}
+    {{ auto_field(field_id, 'opt_' ~ opt.name, opt, value, visible=option_visible(opt, values, opts)) }}
   {% endfor %}
+  </div>
 {% else %}
   <p class="note" style="padding:8px 2px">This widget has no configurable options.</p>
 {% endif %}

@@ -7,11 +7,31 @@
 <div class="modal" data-modal role="dialog" aria-modal="true" aria-labelledby="trmnl-reveal-title">
   <div class="modal-card">
     <header class="modal-head">
+      {% if trmnl_token_reveal.kind == 'bloomin8_canvas' %}
+      <h2 id="trmnl-reveal-title"><i class="ph ph-frame-corners"></i> Bloomin8 access token</h2>
+      {% else %}
       <h2 id="trmnl-reveal-title"><i class="ph ph-device-tablet-speaker"></i> TRMNL access token</h2>
+      {% endif %}
       <button type="button" class="modal-close" data-modal-close aria-label="Close">
         <i class="ph ph-x"></i>
       </button>
     </header>
+{% if trmnl_token_reveal.kind == 'bloomin8_canvas' %}
+    <div class="modal-body">
+      <p class="lede">Point <code>{{ trmnl_token_reveal.device_name }}</code> at Tesserae by sending its pull settings while the Canvas is awake (press its button, or wake it from the Bloomin8 app). Replace <code>CANVAS_IP</code> with the Canvas's address; the first pull happens a minute later and each reply sets the next wake. Copy the token now, refreshing this page won't bring the modal back, though the device card always shows the current token.</p>
+      <div class="token-row">
+        <input type="text" class="token-input" value="{{ trmnl_token_reveal.token }}" readonly data-modal-token aria-label="Bloomin8 access token">
+        <button type="button" class="button" data-modal-copy>
+          <i class="ph ph-copy"></i> Copy
+        </button>
+      </div>
+      <p class="field-help">Upstream URL: <code>{{ request.scheme }}://{{ request.host }}/api/bloomin8</code></p>
+      <pre class="field-help"><code>curl -X PUT http://CANVAS_IP/upstream/pull_settings \
+  -H 'Content-Type: application/json' \
+  -d '{"upstream_on": true, "upstream_url": "{{ request.scheme }}://{{ request.host }}/api/bloomin8", "token": "{{ trmnl_token_reveal.token }}", "cron_time": "'$(date -u -v+1M +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d '+1 min' +%Y-%m-%dT%H:%M:%SZ)'"}'</code></pre>
+      <p class="field-help">The Canvas fetches its image from the same address, so it has to reach this URL directly: plain <code>http://</code> on your network, or <code>https://</code> with a public certificate.</p>
+    </div>
+{% else %}
     <div class="modal-body">
       <p class="lede">Type this into <code>{{ trmnl_token_reveal.device_name }}</code>'s client config (KOReader plugin → TRMNL settings). It's short on purpose so you can enter it on an on-screen keyboard without losing your mind. Native TRMNL hardware (XIAO DIY kit, commercial TRMNL devices) doesn't need this, those clients auto-provision by MAC the first time they poll Tesserae and don't expose a "paste a token" UI. Copy it now, refreshing this page won't bring the modal back, though the device card always shows the current token.</p>
       {% if trmnl_token_reveal.client_ip %}
@@ -25,6 +45,7 @@
       </div>
       <p class="field-help">Server URL: <code>http://{{ request.host }}</code></p>
       <p class="field-help"><strong>LAN-safe, not internet-safe.</strong> The short token is fine for a homelab Tesserae behind a firewall / Tailscale / VPN. If your instance is reachable from the public internet, stack additional auth in front (reverse proxy with HTTP basic auth, OAuth, Cloudflare Access, anything), five characters won't survive a determined brute-force.</p>
+{% endif %}
     </div>
     <footer class="modal-foot">
       <button type="button" class="button ghost" data-modal-close>Done</button>

@@ -34,6 +34,10 @@ Devices that speak the TRMNL BYOS protocol. The TRMNL flagship hardware ships re
 - [Seeed reTerminal E-Series (TRMNL BYOS)](seeed-reterminal.md): the older TRMNL-flashed path. Superseded by the [unified firmware guide](seeed-unified.md) above for most users.
 - [Seeed XIAO 7.5" (TRMNL BYOS)](seeed-xiao.md): the older TRMNL-flashed path.
 
+## Bloomin8 Canvas
+
+- [Bloomin8 Canvas](bloomin8.md): point the Canvas's Schedule Pull upstream at Tesserae. Built against Bloomin8's spec, not yet tested on hardware.
+
 ## Kindle
 
 Jailbroken Kindles can act as a Tesserae panel via the KOReader plugin path.

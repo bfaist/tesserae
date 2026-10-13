@@ -269,6 +269,41 @@ the instant the select changes. A widget whose behaviour depends on the
 filled value should re-derive it from the controlling option in `fetch()`,
 the way `gtfs` does, rather than trusting what a single save persisted.
 
+### Fields that only apply sometimes, `show_if`
+
+An option can say when it is relevant. The editor shows it only while the
+other options match, and hides it again the moment they stop matching, so
+a widget with several modes doesn't confront everyone with every mode's
+settings at once.
+
+```jsonc
+{ "name": "cluster_style", "type": "select", "label": "Cluster style",
+  "show_if": { "layout": "cluster" } },                  // equals
+{ "name": "art_style", "type": "select", "label": "Art style",
+  "show_if": { "pictures": ["gen", "plate_gen"] } },     // any of
+{ "name": "token", "type": "string", "label": "Token", "secret": true,
+  "show_if": { "url": { "not": "" } } }                  // none of: here, "url is set"
+```
+
+- Every key in `show_if` must match. Keys are other option names.
+- A value is an exact match, a list matches any of its entries, and
+  `{"not": value}` or `{"not": [...]}` matches none of them.
+- Values compare as text, so `true` matches a ticked switch and `"8"` matches
+  `8`. A multiselect matches when any of its picks does.
+- A controlling option with no saved value yet counts as its `default`.
+- A field whose controlling option is hidden is hidden too. In the example,
+  a `cluster_every` with `"show_if": {"cluster_style": "blend"}` disappears
+  whenever the layout isn't `cluster`, without repeating that condition.
+- Hiding is only visual. A hidden field keeps its value and is still saved,
+  so switching the mode back brings the old setting with it. Your `fetch()`
+  and `client.js` still receive every option, and should ignore the ones the
+  current mode doesn't use, as they would without `show_if`.
+
+`show_if` works in the grid editor and the canvas editor's Configure drawer,
+and `get_widget_options` passes it through to agents. Servers older than
+0.452 ignore the key and show every field, so it is safe to ship before your
+users update.
+
 ### Companion `_core` plugins
 
 A widget family that needs shared admin state (saved instances, API

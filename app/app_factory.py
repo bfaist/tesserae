@@ -35,6 +35,7 @@ from werkzeug.wrappers import Response
 
 from app import (
     auth,
+    bloomin8_api,
     composer,
     device_battery_routes,
     device_loader,
@@ -1165,6 +1166,7 @@ def create_app(
     agent_activity.register(app)
     mcp_api.register(app)
     trmnl_api.register(app)
+    bloomin8_api.register(app)
     # New REST transport: per-device bearer-token HTTP endpoints under
     # /api/v1/device/*. Lives alongside MQTT (both transports active at
     # the same time); will become the new default for first-time
@@ -1294,6 +1296,9 @@ def create_app(
         return status if status["update_available"] else None
 
     app.jinja_env.globals["server_colour_presets"] = server_identity.presets_for_picker
+    from app.option_conditions import option_visible as _option_visible
+
+    app.jinja_env.globals["option_visible"] = _option_visible
 
     @app.context_processor
     def _inject_nav_data() -> dict[str, Any]:

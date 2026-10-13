@@ -18,6 +18,19 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ### Added
 
+- **Bloomin8 Canvas support** (#344). A new device kind speaks the Canvas's
+  own Schedule Pull API: point its upstream URL at `<tesserae>/api/bloomin8`
+  with the token from the device card and it pulls the latest frame as a
+  full-colour JPEG on each wake, sleeping until the time Tesserae gives back.
+  Wakes follow the page's schedule within the configured interval, a frame
+  the Canvas already painted isn't sent again, and the battery level it
+  reports shows on the device card and in Home Assistant. Built against
+  Bloomin8's spec and not yet tested on a Canvas; see the new quickstart.
+- **Widget options that only show when they apply.** A widget can mark an
+  option with `show_if` (for example, "only for the cluster layout") and the
+  grid editor and the canvas Configure drawer hide it until it applies,
+  updating as you change the other options. Hidden options keep their value.
+  See "Fields that only apply sometimes" in the widget docs.
 - **Upload a widget from the Widgets page.** "Upload widget" takes a `.zip` or
   `.tar.gz` of a widget folder and installs it into the data folder beside
   Tesserae Studio pushes, so a widget written for one install needs neither

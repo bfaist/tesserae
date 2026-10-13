@@ -242,7 +242,8 @@ DATA SOURCES (how every data-bearing element pulls from widgets):
     - code     -> MANY sources (the "sources" array), each named, injected as ctx.data.<name>.
   Workflow for any of them:
     1. Pick the widget key from list_widgets().
-    2. Configure it with get_widget_options(key) -> set "options".
+    2. Configure it with get_widget_options(key) -> set "options". An option with "show_if"
+       only matters while the named options match (e.g. {"layout":"cluster"}); skip it otherwise.
     3. probe_widget_data(key, options) -> returns "data_source" (live|sample|error), the real
        "data", and a "fields" list of bindable dot-paths with sample values. Do this BEFORE
        choosing a "field" / writing code, so you use paths that exist.

@@ -233,6 +233,7 @@ def devices_add() -> Response:
         session["_trmnl_token_reveal"] = {
             "device_id": result.device.id,
             "device_name": result.device.name,
+            "kind": result.device.kind_of,
             "token": token,
         }
     # Persist any config-schema values the add form actually supplied (e.g.
@@ -435,7 +436,12 @@ def devices_regenerate_token(instance_id: str) -> Response:
         flash(f"{device.name!r} doesn't use access tokens.", "error")
         return redirect_to
 
-    new_token = device_service.generate_access_token(devs)
+    # A Bloomin8 Canvas token is pasted, never typed, and is the only
+    # guard on its pull endpoint, so it keeps the long form on rotation.
+    if device.kind_of == "bloomin8_canvas":
+        new_token = device_service.generate_native_access_token(devs)
+    else:
+        new_token = device_service.generate_access_token(devs)
     # Rewrite the instance JSON on disk + the in-memory manifest. The
     # manifest dict is technically owned by the loader but it's a plain
     # dict so direct mutation is what every other "update an instance
@@ -452,6 +458,7 @@ def devices_regenerate_token(instance_id: str) -> Response:
     session["_trmnl_token_reveal"] = {
         "device_id": device.id,
         "device_name": device.name,
+        "kind": device.kind_of,
         "token": new_token,
     }
     flash(f"Regenerated access token for {device.name!r}. Update the client config.", "ok")
@@ -486,6 +493,7 @@ def devices_reveal_token(instance_id: str) -> Response:
     session["_trmnl_token_reveal"] = {
         "device_id": device.id,
         "device_name": device.name,
+        "kind": device.kind_of,
         "token": token,
     }
     event_log = current_app.config.get("EVENT_LOG")

@@ -611,7 +611,14 @@ macro here instead.
    when another option owns this field's value (e.g. a feed preset that
    supplies the URLs below it), so the value stays visible and stays in the
    POST instead of silently reverting. -#}
-{%- macro auto_field(field_id, name, spec, value, help=None, form=None, readonly=False) -%}
+{#- ``visible``: the caller's server-side answer to the option's
+   ``show_if`` (app/option_conditions.py). A field with ``show_if`` is
+   wrapped so attachShowIf (static/components.js) can show and hide it as
+   the controlling options change. Hidden, not disabled: the inputs are
+   still submitted, so the saved value survives a round trip. -#}
+{%- macro auto_field(field_id, name, spec, value, help=None, form=None, readonly=False, visible=True) -%}
+  {% set show_if = spec.get('show_if') %}
+  {% if show_if %}<div class="opt-cond" data-show-if="{{ show_if|tojson|forceescape }}"{% if not visible %} hidden{% endif %}>{% endif %}
   {% set ftype = spec.get('type', 'string') %}
   {% set label = spec.get('label', name) %}
   {% set help_text = help if help is not none else spec.get('help') %}
@@ -691,6 +698,7 @@ macro here instead.
                   autocomplete='new-password' if mask else None,
                   help=help_text, form=form, readonly=readonly) }}
   {% endif %}
+  {% if show_if %}</div>{% endif %}
 {%- endmacro -%}
 
 

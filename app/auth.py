@@ -68,6 +68,10 @@ _OPEN_PATHS: Final[tuple[str, ...]] = (
     "/api/setup",
     "/api/log",
     "/api/trmnl/",
+    # Bloomin8 Canvas Schedule Pull API. /eink_pull and /eink_signal carry
+    # an ``X-Access-Token`` that ``app.bloomin8_api`` resolves to a device;
+    # the frame route serves only frames a pull just handed that device.
+    "/api/bloomin8/",
     # Companion API (/api/app/v1/*) for community client apps. Every route
     # bar the unauthenticated capability probe carries its own scoped
     # bearer token (app.companion_api._require_companion); the session gate

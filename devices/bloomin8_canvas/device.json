@@ -1,0 +1,28 @@
+{
+  "tesserae_compat": "1.x",
+  "name": "Bloomin8 Canvas",
+  "icon": "frame-corners",
+  "version": "0.1.0",
+  "description": "Bloomin8 Canvas colour e-paper frame using its Schedule Pull API. Point the Canvas's upstream URL at <tesserae>/api/bloomin8 with the access token shown on the device card; it wakes on schedule, calls /eink_pull for the latest frame as a baseline JPEG, paints it, and sleeps until the next wake Tesserae hands back. Wakes follow the page's schedule within the configured interval. The Canvas dithers for its own panel, so the frame is sent full colour.",
+  "renderers": ["pi_png"],
+  "panel": { "w": 1200, "h": 1600, "orientation": "portrait", "name": "Bloomin8 Canvas 13.3\"", "native_w": 1200, "native_h": 1600, "gamut": "spectra_6" },
+  "config_schema": {
+    "sleep_interval_s": {
+      "type": "int",
+      "label": "Wake interval",
+      "default": 1800,
+      "min": 60,
+      "max": 604800,
+      "presets": [
+        {"value": 300,   "label": "5 minutes"},
+        {"value": 900,   "label": "15 minutes"},
+        {"value": 1800,  "label": "30 minutes"},
+        {"value": 3600,  "label": "1 hour"},
+        {"value": 21600, "label": "6 hours"},
+        {"value": 43200, "label": "12 hours"},
+        {"value": 86400, "label": "1 day"}
+      ],
+      "help": "The longest the Canvas sleeps between pulls. A scheduled page change pulls the wake earlier so the new frame lands on time. Manual Send and Home Assistant triggers have no schedule to follow, so this is how long they can take to show. Bloomin8 asks for at least a minute between wakes."
+    }
+  }
+}
