@@ -2,5 +2,6 @@
   "no_events": "Geen afspraken vandaag.",
   "event": "afspraak",
   "events": "afspraken",
-  "at": "om"
+  "at": "om",
+  "n_events": "{n} afspraken"
 }

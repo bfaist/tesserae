@@ -2,5 +2,6 @@
   "no_events": "Aucun événement aujourd'hui.",
   "event": "événement",
   "events": "événements",
-  "at": "à"
+  "at": "à",
+  "n_events": "{n} événements"
 }

@@ -2,5 +2,6 @@
   "no_events": "Dnes žiadne udalosti.",
   "event": "udalosť",
   "events": "udalostí",
-  "at": "o"
+  "at": "o",
+  "n_events": "{n} udalostí"
 }

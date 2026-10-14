@@ -7,7 +7,11 @@ import assert from "node:assert/strict";
 import {
   clampScale,
   clampToDay,
+  columnStyle,
   computeRange,
+  freeFrom,
+  layoutColumns,
+  planCrowds,
   localizedFull,
   minimalMapFor,
   pctSpan,
@@ -109,3 +113,43 @@ assert.deepEqual(minimalMapFor("weekday", "fr"), {}, "non-English gets {} -- sty
 assert.deepEqual(minimalMapFor("month", "de"), {}, "same for months");
 
 console.log("clamp_check.mjs: all assertions passed");
+
+// layoutColumns: overlapping events share the lane side by side (#345).
+assert.deepEqual(layoutColumns([]), [], "no events");
+assert.deepEqual(layoutColumns([{ s: 9, e: 10 }]), [{ col: 0, n: 1, span: 1, run: 0 }], "one event keeps the lane");
+assert.deepEqual(
+  layoutColumns([{ s: 9, e: 10 }, { s: 10, e: 11 }]),
+  [{ col: 0, n: 1, span: 1, run: 0 }, { col: 0, n: 1, span: 1, run: 1 }],
+  "end-to-end events do not overlap"
+);
+// The report: short meetings at 15:30-16:00 over a long event from 15:45.
+const reported = layoutColumns([{ s: 15.5, e: 16 }, { s: 15.5, e: 16 }, { s: 15.75, e: 16 }, { s: 15.75, e: 19.5 }]);
+assert.deepEqual(reported.map((x) => x.n), [4, 4, 4, 4], "four overlapping events need four columns");
+assert.deepEqual(new Set(reported.map((x) => x.col)).size, 4, "each takes its own column");
+// An event widens into free columns to its right.
+const widen = layoutColumns([{ s: 9, e: 12 }, { s: 9, e: 10 }, { s: 13, e: 14 }]);
+assert.deepEqual(widen[0], { col: 0, n: 2, span: 1, run: 0 }, "the long one keeps column 0");
+assert.deepEqual(widen[1], { col: 1, n: 2, span: 1, run: 0 }, "the short one sits beside it");
+assert.deepEqual(widen[2], { col: 0, n: 1, span: 1, run: 1 }, "a later event starts a new run with the whole lane");
+const chain = layoutColumns([{ s: 9, e: 10 }, { s: 9.5, e: 11 }, { s: 10, e: 12 }]);
+assert.deepEqual(chain.map((x) => [x.col, x.n, x.span]), [[0, 2, 1], [1, 2, 1], [0, 2, 1]], "a chain reuses column 0 once it is free");
+const free = layoutColumns([{ s: 9, e: 10 }, { s: 9, e: 10 }, { s: 10.5, e: 11 }, { s: 9, e: 12 }]);
+assert.deepEqual(free[2], { col: 1, n: 3, span: 2, run: 0 }, "an event widens across the free columns on its right");
+assert.equal(columnStyle({ col: 0, n: 1, span: 1 }), "", "a lone event takes no inline placement");
+assert.equal(columnStyle({ col: 1, n: 2, span: 1 }), "left:calc(50.000% + var(--space-1));right:auto;width:calc(50.000% - var(--space-1) - var(--space-1));");
+assert.equal(columnStyle({ col: 0, n: 2, span: 1 }), "left:calc(0.000% + var(--space-1));right:auto;width:calc(50.000% - var(--space-1));");
+// freeFrom: where an event has the lane to itself again.
+assert.deepEqual(freeFrom([{ s: 9, e: 10 }]), [null], "nothing overlaps: nothing to wait for");
+assert.deepEqual(freeFrom([{ s: 15.5, e: 16 }, { s: 15.75, e: 19.5 }]), [null, 16], "the long one is alone from 16:00; the short one never outlasts it");
+assert.deepEqual(freeFrom([{ s: 9, e: 12 }, { s: 10, e: 11 }, { s: 11.5, e: 13 }]), [null, null, 12], "an event outlasted by one that overlaps it is never alone; the last one is alone from 12:00");
+// planCrowds: a run too dense for its lane becomes one listed block.
+const dense = [{ s: 15.5, e: 16 }, { s: 15.5, e: 16 }, { s: 15.75, e: 16 }, { s: 15.75, e: 19.5 }];
+const dcols = layoutColumns(dense), dfree = freeFrom(dense);
+assert.deepEqual(planCrowds(dense, dcols, dfree, 0).crowds, [], "no layout yet: columns stand");
+assert.deepEqual(planCrowds(dense, dcols, dfree, 1000).crowds, [], "a wide lane keeps columns");
+const narrow = planCrowds(dense, dcols, dfree, 280);
+assert.deepEqual(narrow.crowds, [{ run: 0, s: 15.5, e: 16, members: [0, 1, 2] }], "four events in 280px: the three short ones are listed");
+assert.deepEqual(narrow.start, [null, null, null, 16], "the long one draws from the crowd's end");
+const two = layoutColumns([{ s: 9, e: 10 }, { s: 9, e: 10 }]);
+assert.deepEqual(planCrowds([{ s: 9, e: 10 }, { s: 9, e: 10 }], two, freeFrom([{ s: 9, e: 10 }, { s: 9, e: 10 }]), 200).crowds, [], "two events are never a crowd");
+console.log("calendar_day client checks passed");

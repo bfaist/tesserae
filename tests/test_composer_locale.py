@@ -170,6 +170,7 @@ def test_calendar_day_receives_its_real_french_strings(client: FlaskClient, app:
         "event": "événement",
         "events": "événements",
         "at": "à",
+        "n_events": "{n} événements",
     }
 
 

@@ -2,5 +2,6 @@
   "no_events": "Heute keine Termine.",
   "event": "Termin",
   "events": "Termine",
-  "at": "um"
+  "at": "um",
+  "n_events": "{n} Termine"
 }

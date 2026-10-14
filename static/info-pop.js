@@ -17,7 +17,28 @@
     btn.setAttribute("aria-expanded", "false");
     content.hidden = true;
     content.classList.remove("is-flipped");
+    content.style.maxWidth = "";
+    content.style.minWidth = "";
+    content.style.left = "";
     if (openWrap === wrap) openWrap = null;
+  }
+
+  // The horizontal room a popover has: the viewport, narrowed by every
+  // ancestor that clips its overflow. A settings card or a scrolling panel
+  // clips what spills past its edge just as the viewport does, so a check
+  // against the viewport alone let a popover near a card's right edge open
+  // half out of sight (#363).
+  function clipBounds(el) {
+    let left = 8;
+    let right = window.innerWidth - 8;
+    for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
+      const cs = getComputedStyle(a);
+      if (cs.overflowX === "visible" && cs.overflowY === "visible") continue;
+      const r = a.getBoundingClientRect();
+      left = Math.max(left, r.left + 8);
+      right = Math.min(right, r.right - 8);
+    }
+    return { left, right };
   }
 
   function open(wrap) {
@@ -28,12 +49,24 @@
     btn.setAttribute("aria-expanded", "true");
     content.hidden = false;
     openWrap = wrap;
-    // Flip to right-anchored if the panel would overflow the viewport.
-    // Measure after the panel is visible so getBoundingClientRect is real.
+    // Flip to right-anchored if the panel would overflow the room it has,
+    // then, if it is wider than that room, shrink it and pin it to the room's
+    // left edge. Measure after the panel is visible so
+    // getBoundingClientRect is real.
     requestAnimationFrame(() => {
-      const rect = content.getBoundingClientRect();
-      if (rect.right > window.innerWidth - 8) {
+      const { left, right } = clipBounds(wrap);
+      let rect = content.getBoundingClientRect();
+      if (rect.right > right) {
         content.classList.add("is-flipped");
+        rect = content.getBoundingClientRect();
+      }
+      if (rect.left < left) {
+        const room = Math.max(120, right - left);
+        // The stylesheet's min-width would win over max-width alone.
+        content.style.minWidth = `${Math.round(Math.min(220, room))}px`;
+        content.style.maxWidth = `${Math.round(room)}px`;
+        content.classList.remove("is-flipped");
+        content.style.left = `${Math.round(left - wrap.getBoundingClientRect().left)}px`;
       }
     });
   }

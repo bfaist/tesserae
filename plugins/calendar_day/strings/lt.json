@@ -2,5 +2,6 @@
   "no_events": "Šiandien įvykių nėra.",
   "event": "įvykis",
   "events": "įvykiai",
-  "at": "nuo"
+  "at": "nuo",
+  "n_events": "{n} įvykiai"
 }
