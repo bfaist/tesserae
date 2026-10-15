@@ -949,7 +949,11 @@ for things the icon font doesn't cover: race-track SVGs, team logos,
 country flags, calendar service logos.
 
 Drop them under `plugins/<id>/static/` or `plugins/<id>/files/`. The
-plugin asset route serves anything matching those prefixes:
+plugin asset route serves anything matching those prefixes, and nothing
+else beside `client.js` and `client.css`: a second module that `client.js`
+imports (`import { pack } from './static/pack.js'`) has to live under one of
+them too, or the browser answers "Failed to fetch dynamically imported
+module" for the whole widget.
 
 ```
 plugins/f1_next_race/
