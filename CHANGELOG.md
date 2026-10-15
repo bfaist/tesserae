@@ -18,6 +18,13 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ### Added
 
+- **Live previews while a widget has background work.** A widget whose data
+  carries `live_refresh_s` (2 to 120 seconds) is fetched again by the page
+  editor's preview and the Panels editor after that long, and the cell
+  repaints when the data changed, so pictures and cut-outs appear as they
+  finish instead of on the next edit. Polling stops when the field goes, the
+  cell leaves the page, or the tab is hidden (documented in the widget guide).
+
 - **Background job tray.** Anything working in the background now shows a
   progress card at the bottom right of every admin page: a title, a detail
   line, an animated bar (a sweeping block when the fraction is unknown), a
