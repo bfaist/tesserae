@@ -461,6 +461,32 @@
     return combined;
   }
 
+  // A widget whose data carries live_refresh_s (2 to 120) is waiting on
+  // something in the background; ask for the preview again after that long,
+  // so the cell fills in as the work lands. Nothing is polled once it is 0.
+  let liveTimer;
+  function liveWait(groups) {
+    let wait = 0;
+    (groups || []).forEach((g) => {
+      ((g.state && g.state.cells) || []).forEach((c) => {
+        const n = Number(c.data && c.data.live_refresh_s);
+        if (n >= 2 && n <= 120) wait = wait ? Math.min(wait, n) : n;
+      });
+    });
+    return wait;
+  }
+  function armLive(wait) {
+    clearTimeout(liveTimer);
+    if (!wait) return;
+    liveTimer = setTimeout(function tick() {
+      if (document.hidden) {
+        liveTimer = setTimeout(tick, wait * 1000);
+        return;
+      }
+      schedulePreview();
+    }, wait * 1000);
+  }
+
   let previewTimer;
   let previewInFlight = null;
   function schedulePreview() {
@@ -485,6 +511,7 @@
         // CSS / cell updates in place, the fallback path full-reloads.
         const body = await resp.json().catch(() => null);
         applyPreviewGroups(body && body.groups);
+        armLive(liveWait(body && body.groups));
       })();
       try {
         await previewInFlight;

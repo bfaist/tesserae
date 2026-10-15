@@ -738,6 +738,24 @@ have died and is dropped. Calls are cheap and thread-safe, so report from the
 worker thread as often as the progress moves. Guard the import and any call so
 the widget still runs on a Tesserae without the tray.
 
+### Live previews while work is on the way
+
+A widget whose background work will change what it draws (pictures still being
+painted, a cut-out still running) can say so in its data:
+
+```python
+return {"title": "...", "live_refresh_s": 6}   # 2 to 120; 0 or absent when nothing is pending
+```
+
+While that field is set, the page editor's preview and the Panels editor ask
+for the widget's data again after that many seconds and repaint if it changed,
+so the cell fills in as the work lands instead of waiting for the next edit.
+Polling stops as soon as a fetch comes back without the field, when the cell
+leaves the page, and while the tab is hidden. A Tesserae without this ignores
+the field, so it is safe to always send. Keep `fetch()` cheap enough to run
+every few seconds, and never start paid work from a fetch more often than the
+widget's own limits allow.
+
 ## `design.palette`, opting out of strict colour tokens
 
 The Spectra colour tokens (`--accent-1` through `--accent-6`, plus

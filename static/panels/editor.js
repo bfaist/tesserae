@@ -517,16 +517,27 @@
     Object.keys(want).forEach(function (k) {
       var req = want[k];
       S.dataPending[k] = true;
-      fetch(S.cfg.dataUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(req),
-      })
-        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
-        .then(function (j) { S.data[k] = j && "data" in j ? j.data : null; })
-        .catch(function () { S.data[k] = null; })
-        .then(function () {
-          delete S.dataPending[k];
+      pullSource(k, req, false);
+    });
+  }
+  // Fetch one source into S.data and repaint what draws from it. A widget
+  // whose data carries live_refresh_s (2 to 120) is waiting on something in
+  // the background: ask again after that long, and repaint only if the data
+  // changed, until the field is gone or the source leaves the page.
+  function pullSource(k, req, again) {
+    fetch(S.cfg.dataUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req),
+    })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function (j) { return j && "data" in j ? j.data : null; })
+      .catch(function () { return again ? S.data[k] : null; })
+      .then(function (data) {
+        delete S.dataPending[k];
+        var same = again && JSON.stringify(data) === JSON.stringify(S.data[k]);
+        S.data[k] = data;
+        if (!same) {
           // Invalidate cached mounts for any element pulling from this source so
           // it re-renders with the live data.
           var hit = false;
@@ -537,8 +548,19 @@
             if (S.mount[e.id]) { delete S.mount[e.id]; hit = true; }
           });
           if (hit) paint();
-        });
-    });
+        }
+        var wait = Number(data && data.live_refresh_s);
+        if (wait >= 2 && wait <= 120) {
+          setTimeout(function again() {
+            var onPage = S.doc.els.some(function (e) {
+              return elSources(e).some(function (s) { return srcKey(s) === k; });
+            });
+            if (!onPage) return;
+            if (document.hidden) { setTimeout(again, wait * 1000); return; }
+            pullSource(k, req, true);
+          }, wait * 1000);
+        }
+      });
   }
   // Mount the real widget into a fresh shadow-rooted host. Async import is
   // cached by the browser, so this is cheap after the first mount of a widget.
