@@ -707,6 +707,37 @@ Worked examples in the bundled tree:
 
 ---
 
+### Background jobs, the progress tray
+
+A widget that works in the background (painting pictures, syncing photos, an
+import) can show it in the job tray at the bottom right of every admin page.
+The tray survives navigating between pages, animates the bar, and offers a Stop
+button when the job can be stopped. Report from `server.py`:
+
+```python
+try:
+    from app import jobs
+except ImportError:  # an older Tesserae
+    jobs = None
+
+if jobs:
+    jobs.report("my_widget", "sync", "Syncing photos",
+                progress=0.4, detail="40 of 100",
+                label="My Widget", href="/plugins/my_widget/",
+                stop=cancel)             # progress 0..1, or None for "working"
+...
+if jobs:
+    jobs.finish("my_widget", "sync", "100 photos")   # or jobs.fail(...) / jobs.cancel(...)
+```
+
+A job is named by `(source, key)`, so calling `report` again updates the same
+card and nothing needs carrying about. `stop` is optional; with it the card
+gets a Stop button that calls it. A finished card stays for a few seconds, a
+failed one for 25, and a job nobody has reported on for 15 minutes is taken to
+have died and is dropped. Calls are cheap and thread-safe, so report from the
+worker thread as often as the progress moves. Guard the import and any call so
+the widget still runs on a Tesserae without the tray.
+
 ## `design.palette`, opting out of strict colour tokens
 
 The Spectra colour tokens (`--accent-1` through `--accent-6`, plus

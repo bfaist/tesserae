@@ -158,6 +158,9 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style/send.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='style/events.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='style/editor.css') }}">
+  {% if not shell_locked %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='style/jobs.css') }}">
+  {% endif %}
   {% if agent_watch_enabled %}
   <link rel="stylesheet" href="{{ url_for('static', filename='style/agent.css') }}">
   {% endif %}
@@ -502,6 +505,14 @@
      install with no agent never polls. ``__ID__`` is the page-id placeholder the script
      substitutes; empty when the canvas editor itself is switched off, in which
      case the toast narrates without offering to navigate. #}
+  {# Background-job tray: anything working in the background (a widget painting
+     pictures, say) reports to app/jobs.py and gets a progress card here. The jobs
+     live on the server, so the tray carries across pages. #}
+  {% if not shell_locked %}
+  <div id="job-tray" hidden aria-live="polite"
+       data-url="{{ url_for('jobs.listing') }}" data-stop-url="{{ url_for('jobs.stop') }}"></div>
+  <script src="{{ url_for('static', filename='jobs-tray.js') }}" defer></script>
+  {% endif %}
   {% if agent_watch_enabled %}
   <div id="agent-follow" hidden
        data-activity-url="{{ url_for('agent_activity.activity') }}"

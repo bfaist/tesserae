@@ -1160,10 +1160,11 @@ def create_app(
     onboarding.register(app)
     themes_routes.register(app)
     webhook_routes.register(app)
-    from app import agent_activity, mcp_api
+    from app import agent_activity, jobs, mcp_api
 
     # The activity bus must exist before mcp_api narrates its first call.
     agent_activity.register(app)
+    jobs.register(app)
     mcp_api.register(app)
     trmnl_api.register(app)
     bloomin8_api.register(app)

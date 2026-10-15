@@ -18,6 +18,18 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ### Added
 
+- **Background job tray.** Anything working in the background now shows a
+  progress card at the bottom right of every admin page: a title, a detail
+  line, an animated bar (a sweeping block when the fraction is unknown), a
+  Stop button for jobs that can be stopped, and a check, warning or stop mark
+  when it ends. Jobs live in the server, so the tray carries across page
+  navigation without replaying its entrance; it folds to a "2 jobs running"
+  pill and stacks above the agent toast. A widget's `server.py` reports with
+  `from app import jobs` and `jobs.report(source, key, title, progress=...,
+  detail=..., stop=...)`, then `jobs.finish`, `jobs.fail` or `jobs.cancel`
+  (documented under "Background jobs" in the widget guide). Polled at
+  `/jobs/jobs.json`, quick while a job runs and paused in a hidden tab.
+
 - **Bloomin8 Canvas support** (#344). A new device kind speaks the Canvas's
   own Schedule Pull API: point its upstream URL at `<tesserae>/api/bloomin8`
   with the token from the device card and it pulls the latest frame as a
