@@ -199,6 +199,28 @@
     });
   }
 
+  // A textarea with an Examples dropdown above it (``presets`` on a textarea
+  // option): picking one fills the textarea with the preset's text and
+  // leaves it to be edited; the dropdown goes back to "Examples…" so the
+  // same one can be picked again after an edit. The textarea carries the
+  // name, so the input event there is what the save bar hears.
+  function attachTextareaPresets(root) {
+    root.querySelectorAll("[data-textarea-presets]:not([data-preset-bound])").forEach((field) => {
+      const select = field.querySelector("[data-textarea-preset-select]");
+      const area = field.querySelector("textarea");
+      if (!select || !area) return;
+      select.addEventListener("change", () => {
+        if (!select.value) return;
+        area.value = select.value;
+        select.value = "";
+        area.dispatchEvent(new Event("input", { bubbles: true }));
+        area.dispatchEvent(new Event("change", { bubbles: true }));
+        area.focus();
+      });
+      field.dataset.presetBound = "1";
+    });
+  }
+
   // Widget options that only apply in some modes declare ``show_if``
   // (app/option_conditions.py has the grammar and the server-side first
   // render). auto_field wraps such a field in ``[data-show-if]``; this keeps
@@ -897,6 +919,7 @@
     attachPreviewFit(document);
     attachSendFitPreview(document);
     attachPresetNumbers(document);
+    attachTextareaPresets(document);
     attachLocationSearch(document);
     attachMultiSelect(document);
     attachShowIf(document);

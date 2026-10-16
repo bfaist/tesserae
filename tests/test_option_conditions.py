@@ -169,3 +169,36 @@ def test_schema_accepts_show_if_and_rejects_bad_shapes() -> None:
     for bad in ({}, {"layout": {"is": "x"}}, {"layout": [{"a": 1}]}):
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate({"name": "x", "type": "string", "label": "X", "show_if": bad}, item)
+
+
+def test_textarea_presets_render_an_examples_dropdown(app: Flask) -> None:
+    import json
+
+    import jsonschema
+
+    opts = [
+        {
+            "name": "scene",
+            "type": "textarea",
+            "label": "The scene",
+            "default": "",
+            "presets": [
+                {"label": "Along a wire", "value": "sitting in a row along a telephone wire"},
+                {"label": "At a feeder", "value": "gathered at a hanging bird feeder"},
+            ],
+        },
+        {"name": "note", "type": "textarea", "label": "Note", "default": ""},
+    ]
+    with app.test_request_context():
+        html = render_template("panels_source_form.html", opts=opts, values={}, sid="s1")
+    start = html.index('name="opt_scene"')
+    field = html[html.rindex('<div class="field"', 0, start) : start]
+    assert "data-textarea-presets" in field and "data-textarea-preset-select" in field
+    assert "Examples" in field and "Along a wire" in field
+    assert 'value="sitting in a row along a telephone wire"' in field
+    # the select carries no name: only the textarea is submitted
+    assert "name=" not in field[field.index("<select") : field.index("</select>")]
+    plain = html[html.rindex('<div class="field"', 0, html.index('name="opt_note"')) : html.index('name="opt_note"')]
+    assert "data-textarea-presets" not in plain
+    schema = json.loads((REPO_ROOT / "schema" / "plugin.schema.json").read_text(encoding="utf-8"))
+    jsonschema.validate(opts[0], schema["properties"]["cell_options"]["items"])

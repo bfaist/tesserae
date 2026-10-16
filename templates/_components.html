@@ -267,9 +267,17 @@ macro here instead.
 </script>
 {%- endmacro -%}
 
-{%- macro textarea_field(field_id, name, label, value='', rows=3, placeholder='', help=None) -%}
-<div class="field">
+{%- macro textarea_field(field_id, name, label, value='', rows=3, placeholder='', help=None, presets=None) -%}
+{#- ``presets`` ([{label, value}]) puts an Examples dropdown above the textarea; picking one
+   fills the textarea with its value, to be edited from there. components.js wires it. -#}
+<div class="field"{% if presets %} data-textarea-presets{% endif %}>
   <label for="{{ field_id }}">{{ label }}{{ info_pop(help) }}</label>
+  {% if presets %}
+  <select class="preset-select" data-textarea-preset-select aria-label="Examples for {{ label }}">
+    <option value="">Examples…</option>
+    {% for preset in presets %}<option value="{{ preset.value }}">{{ preset.label }}</option>{% endfor %}
+  </select>
+  {% endif %}
   <textarea id="{{ field_id }}" name="{{ name }}" rows="{{ rows }}"
             {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}>{{ value|default('', true) }}</textarea>
 </div>
@@ -632,7 +640,7 @@ macro here instead.
     {{ textarea_field(field_id, name, label, value=value,
                       rows=spec.get('rows', 3),
                       placeholder=spec.get('placeholder', ''),
-                      help=help_text) }}
+                      help=help_text, presets=spec.get('presets')) }}
   {% elif ftype == 'variables_textarea' %}
     {{ variables_textarea_field(field_id, name, label, value=value,
                                 rows=spec.get('rows', 6),

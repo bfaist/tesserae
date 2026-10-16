@@ -6,6 +6,13 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+
+- **Examples on a textarea option.** A widget's `textarea` cell option can
+  carry `presets` (`[{label, value}]`): the editor shows an Examples
+  dropdown above the box, and picking one fills the box with that text to
+  be edited from there. The Specimen Sheet's scene uses it.
+
 ### Changed
 
 - **Paper is the default design.** New installs, and installs that never
