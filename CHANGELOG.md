@@ -6,6 +6,16 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **A big picture no longer reaches the panel as an empty box.** The
+  renderer waited for every image to load, not to decode, and Chromium
+  decodes a large one (a widget's own data-URL JPEG, a camera frame) after
+  the load event; a frame captured in between had the picture's box empty.
+  The image wait now decodes each loaded picture and lets a frame through
+  before the screenshot, and says in the log when a picture would not
+  decode or the wait gave up.
+
 ### Added
 
 - **A button of a job's own in the job tray.** `jobs.report` takes

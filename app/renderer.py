@@ -350,27 +350,41 @@ _IMAGE_WAIT_JS: Final[str] = """async () => {
             seen.push(u.origin + u.pathname);
         } catch { seen.push('(unparsable src)'); }
     }
+    // A loaded picture is not yet a painted one: Chromium decodes a big
+    // picture (a widget's own data-URL JPEG, a camera frame) off the main
+    // thread and paints it when that is done, and a screenshot taken before
+    // then has the picture's box empty. ``img.decode()`` resolves once the
+    // bitmap is ready, so each loaded picture is decoded too before the
+    // frame is captured; a picture that fails to decode is left as it is.
+    const decoded = [];
+    let undecodable = 0;
+    const decode = (img) => {
+        if (typeof img.decode !== 'function') return;
+        decoded.push(img.decode().catch(() => { undecodable += 1; }));
+    };
     for (const img of allImages(document)) {
         total += 1;
-        if (img.complete && img.naturalWidth > 0) continue;
+        if (img.complete && img.naturalWidth > 0) { decode(img); continue; }
         if (img.complete && !img.naturalWidth) { record(img); continue; }
         pending.push(new Promise((resolve) => {
-            const done = () => resolve();
+            const done = () => { decode(img); resolve(); };
             const failed = () => { record(img); resolve(); };
             img.addEventListener('load', done, { once: true });
             img.addEventListener('error', failed, { once: true });
         }));
     }
-    if (!pending.length) {
-        return { total, awaited: 0, timed_out: false, failed: seen.length, failed_urls: seen };
-    }
+    // ... and then a frame is let through, so what was just decoded is painted
+    const frame = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const settle = Promise.all(pending).then(() => Promise.all(decoded)).then(frame);
     const outcome = await Promise.race([
-        Promise.all(pending).then(() => 'done'),
+        settle.then(() => 'done'),
         new Promise((r) => setTimeout(() => r('timeout'), 5000)),
     ]);
     return {
         total,
         awaited: pending.length,
+        decoded: decoded.length,
+        undecodable,
         timed_out: outcome === 'timeout',
         failed: seen.length,
         failed_urls: seen.slice(0, 8),
@@ -556,6 +570,19 @@ def _log_failed_images(settle: Any) -> None:
     """
     if not isinstance(settle, dict):
         return
+    bad = settle.get("undecodable")
+    if isinstance(bad, int) and bad > 0:
+        logger.warning(
+            "render: %d image(s) loaded but would not decode (too big for the "
+            "browser, or not the picture their type says); the frame may show "
+            "them empty.",
+            bad,
+        )
+    if settle.get("timed_out"):
+        logger.warning(
+            "render: the image wait gave up after 5 s with pictures still "
+            "loading or decoding; the frame was captured as it was."
+        )
     failed = settle.get("failed")
     if not isinstance(failed, int) or failed <= 0:
         return

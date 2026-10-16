@@ -62,6 +62,36 @@ def test_a_failure_is_logged_with_its_url(caplog: pytest.LogCaptureFixture) -> N
     assert "media_player_proxy" in caplog.text
 
 
+def test_an_undecodable_or_unfinished_picture_is_logged(caplog: pytest.LogCaptureFixture) -> None:
+    with caplog.at_level(logging.WARNING, logger="app.renderer"):
+        _log_failed_images(
+            {
+                "total": 2,
+                "awaited": 0,
+                "decoded": 2,
+                "undecodable": 1,
+                "timed_out": False,
+                "failed": 0,
+                "failed_urls": [],
+            }
+        )
+    assert "1 image(s) loaded but would not decode" in caplog.text
+    caplog.clear()
+    with caplog.at_level(logging.WARNING, logger="app.renderer"):
+        _log_failed_images(
+            {
+                "total": 1,
+                "awaited": 1,
+                "decoded": 0,
+                "undecodable": 0,
+                "timed_out": True,
+                "failed": 0,
+                "failed_urls": [],
+            }
+        )
+    assert "gave up after 5 s" in caplog.text
+
+
 def test_a_clean_render_says_nothing(caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.WARNING, logger="app.renderer"):
         _log_failed_images(
@@ -114,6 +144,23 @@ def test_a_query_string_is_stripped_so_a_token_is_not_logged() -> None:
 
 
 @requires_chromium
+def test_a_loaded_picture_is_decoded_before_the_wait_ends() -> None:
+    """A big data-URL picture is decoded, not just loaded, so the frame has it."""
+    import base64
+    import io
+
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.effect_noise((1600, 1600), 80).convert("RGB").save(buf, "JPEG", quality=95)
+    src = "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
+    result = _evaluate(f'<img src="{src}" alt="" decoding="async">')
+    assert result["total"] == 1
+    assert result["decoded"] == 1
+    assert result["undecodable"] == 0
+    assert result["failed"] == 0 and not result["timed_out"]
+
+
 def test_a_working_image_is_not_reported() -> None:
     # A 1x1 gif as a data URI always loads, so this isolates the failure path
     # from network flakiness.
