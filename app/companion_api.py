@@ -2276,18 +2276,12 @@ def device_preview(device_id: str) -> Any:
 
 
 def _preview_dims_for_device(device: Device) -> tuple[int, int]:
-    """Preview render dims for an explicit target display: its panel scaled
-    so the longest edge is PREVIEW_MAX_DIM, matching the composer's own
-    preview sizing."""
-    from app.composer import PREVIEW_MAX_DIM
+    """Preview render dims for an explicit target display: its panel at native
+    size (the render is downscaled to the thumbnail size afterwards)."""
+    from app.composer import clamp_screenshot_dim
 
     panel = device_panel(device) or resolve_settings_panel(_settings())
-    pw, ph = max(1, int(panel.w)), max(1, int(panel.h))
-    longest = max(pw, ph)
-    if longest > PREVIEW_MAX_DIM:
-        scale = PREVIEW_MAX_DIM / longest
-        pw, ph = max(1, round(pw * scale)), max(1, round(ph * scale))
-    return pw, ph
+    return clamp_screenshot_dim(int(panel.w)), clamp_screenshot_dim(int(panel.h))
 
 
 @bp.get("/dashboards/<dashboard_id>/preview")
@@ -2303,7 +2297,12 @@ def dashboard_preview(dashboard_id: str) -> Any:
     A faithful cached visual preview, invalidated by layout / config /
     target-dimension changes; it does not promise live widget data."""
     from app import preview_cache
-    from app.composer import _preview_timezone_id, page_preview_token, preview_dims
+    from app.composer import (
+        PREVIEW_MAX_DIM,
+        _preview_timezone_id,
+        page_preview_token,
+        preview_dims,
+    )
 
     page = _pages().get(dashboard_id)
     if page is None:
@@ -2332,6 +2331,7 @@ def dashboard_preview(dashboard_id: str) -> Any:
             width=width,
             height=height,
             cache_path=cache_path,
+            thumb_max=PREVIEW_MAX_DIM,
             pool=current_app.config.get("BROWSER_POOL"),
             timezone_id=_preview_timezone_id(),
         )

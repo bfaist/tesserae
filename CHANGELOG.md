@@ -27,6 +27,17 @@ All notable changes to Tesserae are recorded here. Format loosely follows
   nobody who tried it went back. The heartbeat's `ui_chosen` flag tells a
   switch back from an install that never saw the other design.
 
+### Fixed
+
+- **Dashboard previews no longer show oversized fonts and icons on large
+  panels.** Previews were laid out at an 800px-capped size, so a 1200x1600
+  panel was laid out at 600x800 and its widget text and icons looked twice
+  too big once shown at panel size. Previews now lay out at the panel's real
+  size, exactly as a push does, and the dashboards-list thumbnail is shrunk
+  afterwards. The editor's Panel view also renders each bound panel at its
+  own size instead of the largest panel's. Covers the dashboards list, the
+  decks lineup and the companion app's `/dashboards/<id>/preview`. (#364)
+
 ### Added
 
 - **Live previews while a widget has background work.** A widget whose data
