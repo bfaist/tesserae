@@ -213,11 +213,18 @@ export default function render(shadow, ctx) {
     }
 
     // A rolling grid crosses month boundaries with nothing else to mark
-    // them, so the 1st carries its month ("1 Nov").
+    // them, so the 1st carries its month ("1 Nov"). English keeps the
+    // widget's short label; other locales ask Intl for day + month so the
+    // order is theirs ("1. Nov.", "11月1日"). The year is irrelevant.
     let numText = String(d.day);
     if (data.rolling && d.day === 1) {
-      const mon = styleLabel(localizedFull(new Date(2026, d.month - 1, 1), "month", locale), "short", minimalMapFor("month", locale));
-      numText = `${d.day} ${mon}`;
+      const first = new Date(2026, d.month - 1, 1);
+      if ((locale || "en").split("-")[0] === "en") {
+        const mon = styleLabel(localizedFull(first, "month", locale), "short", minimalMapFor("month", locale));
+        numText = `${d.day} ${mon}`;
+      } else {
+        numText = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(first);
+      }
     }
 
     return `
@@ -257,8 +264,8 @@ export default function render(shadow, ctx) {
       min-height: 0;
       overflow: hidden;
     }
-    .mc-more { flex: none; }
     .mc-more {
+      flex: none;
       align-self: flex-end;
       font-size: calc(var(--fs-caption) * var(--mc-event-scale, 1));
       font-weight: var(--fw-black);
