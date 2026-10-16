@@ -198,7 +198,11 @@ def test_textarea_presets_render_an_examples_dropdown(app: Flask) -> None:
     assert 'value="sitting in a row along a telephone wire"' in field
     # the select carries no name: only the textarea is submitted
     assert "name=" not in field[field.index("<select") : field.index("</select>")]
-    plain = html[html.rindex('<div class="field"', 0, html.index('name="opt_note"')) : html.index('name="opt_note"')]
+    plain = html[
+        html.rindex('<div class="field"', 0, html.index('name="opt_note"')) : html.index(
+            'name="opt_note"'
+        )
+    ]
     assert "data-textarea-presets" not in plain
     schema = json.loads((REPO_ROOT / "schema" / "plugin.schema.json").read_text(encoding="utf-8"))
     jsonschema.validate(opts[0], schema["properties"]["cell_options"]["items"])
