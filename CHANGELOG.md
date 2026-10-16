@@ -16,6 +16,15 @@ All notable changes to Tesserae are recorded here. Format loosely follows
   before the screenshot, and says in the log when a picture would not
   decode or the wait gave up.
 
+- **Dashboard previews no longer show oversized fonts and icons on large
+  panels.** Previews were laid out at an 800px-capped size, so a 1200x1600
+  panel was laid out at 600x800 and its widget text and icons looked twice
+  too big once shown at panel size. Previews now lay out at the panel's real
+  size, exactly as a push does, and the dashboards-list thumbnail is shrunk
+  afterwards. The editor's Panel view also renders each bound panel at its
+  own size instead of the largest panel's. Covers the dashboards list, the
+  decks lineup and the companion app's `/dashboards/<id>/preview`. (#364)
+
 ### Added
 
 - **Custom CSS on a dashboard** (#366). The dashboard editor's Appearance
@@ -53,17 +62,6 @@ All notable changes to Tesserae are recorded here. Format loosely follows
   Paper was chosen by about half of the installs that could see it and
   nobody who tried it went back. The heartbeat's `ui_chosen` flag tells a
   switch back from an install that never saw the other design.
-
-### Fixed
-
-- **Dashboard previews no longer show oversized fonts and icons on large
-  panels.** Previews were laid out at an 800px-capped size, so a 1200x1600
-  panel was laid out at 600x800 and its widget text and icons looked twice
-  too big once shown at panel size. Previews now lay out at the panel's real
-  size, exactly as a push does, and the dashboards-list thumbnail is shrunk
-  afterwards. The editor's Panel view also renders each bound panel at its
-  own size instead of the largest panel's. Covers the dashboards list, the
-  decks lineup and the companion app's `/dashboards/<id>/preview`. (#364)
 
 ### Added
 
