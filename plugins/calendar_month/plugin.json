@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "Calendar, Month",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "kind": "widget",
   "description": "Month-grid view with tunable dashboard title/day-number/event text sizing, cell spacing, and a location toggle for text-display mode. Each feed's colour drives the bar / dot / stripe colour.",
   "icon": "ph-calendar",
@@ -24,6 +24,22 @@
       ]
     },
     {
+      "name": "rolling_weeks",
+      "type": "select",
+      "label": "Rolling weeks",
+      "default": "month",
+      "choices": [
+        {"value": "month", "label": "Month"},
+        {"value": "1", "label": "1 week"},
+        {"value": "2", "label": "2 weeks"},
+        {"value": "3", "label": "3 weeks"},
+        {"value": "4", "label": "4 weeks"},
+        {"value": "5", "label": "5 weeks"},
+        {"value": "6", "label": "6 weeks"}
+      ],
+      "help": "A number of weeks starts at the week containing today and rolls forward week by week."
+    },
+    {
       "name": "feeds_filter",
       "type": "string",
       "label": "Feed IDs (comma-separated; blank = all enabled)",
@@ -44,6 +60,17 @@
         {"value": "bars", "label": "Coloured bars"},
         {"value": "text", "label": "Title text with feed colour bar"}
       ]
+    },
+    {
+      "name": "event_title_lines",
+      "type": "slider",
+      "show_if": {"event_display": "text"},
+      "label": "Event title lines",
+      "default": 1,
+      "min": 1,
+      "max": 4,
+      "step": 1,
+      "help": "Text-display mode only: how many lines an event title may wrap onto before it is cut. 1 = single line with an ellipsis."
     },
     {
       "name": "heatmap",

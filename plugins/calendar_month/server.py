@@ -17,6 +17,8 @@ from app.calendar_time import (
 )
 from app.tz_resolve import app_timezone
 
+_ROLLING_CHOICES = {str(n) for n in range(1, 7)}
+
 
 def _parse_feeds_filter(s: str) -> list[str] | None:
     s = (s or "").strip()
@@ -48,13 +50,18 @@ def fetch(
     feeds_filter = _parse_feeds_filter(options.get("feeds_filter") or "")
     max_per_day = int(options.get("max_events_per_day") or 3)
 
-    # Compute the 6-week visible grid that covers `today`'s month.
+    # rolling_weeks "month" (default): the 6-week grid covering `today`'s month.
+    # "1".."6" (#367): that many weeks rolling forward from the week containing
+    # today.
     first_of_month = today.replace(day=1)
     first_weekday = 6 if week_start == "sunday" else 0  # 0=Mon, 6=Sun
-    # Days from grid-start to first of month
-    offset = (first_of_month.weekday() - first_weekday) % 7
-    grid_start = first_of_month - timedelta(days=offset)
-    grid_end = grid_start + timedelta(days=42)
+    raw_weeks = str(options.get("rolling_weeks") or "month").strip()
+    weeks = int(raw_weeks) if raw_weeks in _ROLLING_CHOICES else None
+    rolling = weeks is not None
+    anchor = today if rolling else first_of_month
+    offset = (anchor.weekday() - first_weekday) % 7
+    grid_start = anchor - timedelta(days=offset)
+    grid_end = grid_start + timedelta(weeks=weeks or 6)
 
     start_dt = local_midnight_utc(grid_start, zone)
     end_dt = local_midnight_utc(grid_end, zone)
@@ -138,5 +145,6 @@ def fetch(
         "year": first_of_month.year,
         "month_name": cal_mod.month_name[first_of_month.month],
         "week_start": week_start,
+        "rolling": rolling,
         "days": days,
     }
