@@ -163,3 +163,34 @@ def test_shell_carries_the_tray(app: Flask) -> None:
     html = client.get("/", follow_redirects=True).get_data(as_text=True)
     assert 'id="job-tray"' in html
     assert "jobs-tray.js" in html and "style/jobs.css" in html
+
+
+def test_action_is_a_button_of_the_jobs_own(app: Flask) -> None:
+    board = jobs.JobBoard()
+    pressed: list[str] = []
+    board.report(
+        "w", "waiting", "3 paintings waiting", action=("Paint now", lambda: pressed.append("go"))
+    )
+    snap = board.snapshot()[0]
+    assert snap["action"] == "Paint now" and snap["stoppable"] is False
+    assert board.act("w:waiting") is True and pressed == ["go"]
+    # still running until the job says otherwise; finishing takes the button away
+    assert board.snapshot()[0]["state"] == "running"
+    board.finish("w", "waiting", "started")
+    assert board.snapshot()[0]["action"] == "" and board.act("w:waiting") is False
+    board.report("w", "plain", "no button")
+    assert board.snapshot()[-1]["action"] == "" and board.act("w:plain") is False
+    # the shared board behind the endpoint
+    jobs.report("w", "k", "t", action=("Go", lambda: pressed.append("endpoint")))
+    client = app.test_client()
+    _sign_in(client)
+    try:
+        res = client.post("/jobs/act", json={"id": "w:k"})
+        assert (
+            res.status_code == 200
+            and res.get_json() == {"acted": True}
+            and pressed[-1] == "endpoint"
+        )
+        assert client.post("/jobs/act", json={}).status_code == 400
+    finally:
+        jobs.clear("w", "k")

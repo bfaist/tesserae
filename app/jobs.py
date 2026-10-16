@@ -21,7 +21,9 @@ For a widget's ``server.py``::
 
 A job is named by ``(source, key)``; calling ``report`` again with the same
 pair updates it, so no handle needs carrying about. ``progress=None`` draws an
-indeterminate bar. ``stop`` is an optional callable that gives up the job; with
+indeterminate bar. ``action`` is an optional ``(label, callable)``: a button of
+the job's own on the card (a widget's "Paint now"), pressed through ``/jobs/act``.
+``stop`` is an optional callable that gives up the job; with
 one, the card has a Stop button. A finished job stays on screen for a few
 seconds, a failed one longer, and a job nobody has touched for a quarter of an
 hour is taken to have died with its worker and is dropped.
@@ -66,6 +68,8 @@ class Job:
     started_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
     stop: Callable[[], object] | None = None
+    # A button of the job's own: its label, and what pressing it runs (a widget's "Paint now").
+    action: tuple[str, Callable[[], object]] | None = None
 
     @property
     def id(self) -> str:
@@ -90,6 +94,7 @@ class JobBoard:
         label: str = "",
         href: str = "",
         stop: Callable[[], object] | None = None,
+        action: tuple[str, Callable[[], object]] | None = None,
     ) -> None:
         """Start a job, or update it when ``(source, key)`` is already there."""
         now = time.time()
@@ -108,6 +113,7 @@ class JobBoard:
             if href:
                 job.href = href
             job.stop = stop
+            job.action = action
             self._trim()
 
     def _end(self, source: str, key: str, state: str, detail: str) -> None:
@@ -117,6 +123,7 @@ class JobBoard:
                 return
             job.state = state
             job.stop = None
+            job.action = None
             job.updated_at = time.time()
             if state == DONE:
                 job.progress = 1.0
@@ -153,6 +160,20 @@ class JobBoard:
             self.cancel(job.source, job.key)
         return True
 
+    def act(self, job_id: str) -> bool:
+        """Press a job's own button. False when it has none to press."""
+        with self._lock:
+            job = self._jobs.get(job_id)
+            callback = job.action[1] if job and job.action and job.state == RUNNING else None
+        if callback is None:
+            return False
+        try:
+            callback()
+        except Exception:
+            logger.exception("job %s action failed", job_id)
+            return False
+        return True
+
     def _trim(self) -> None:
         if len(self._jobs) <= MAX_JOBS:
             return
@@ -183,6 +204,7 @@ class JobBoard:
                         "state": job.state,
                         "href": job.href,
                         "stoppable": job.stop is not None and job.state == RUNNING,
+                        "action": job.action[0][:40] if job.action and job.state == RUNNING else "",
                         "started": job.started_at,
                         "seconds": round(now - job.started_at),
                     }
@@ -208,9 +230,18 @@ def report(
     label: str = "",
     href: str = "",
     stop: Callable[[], object] | None = None,
+    action: tuple[str, Callable[[], object]] | None = None,
 ) -> None:
     _BOARD.report(
-        source, key, title, progress=progress, detail=detail, label=label, href=href, stop=stop
+        source,
+        key,
+        title,
+        progress=progress,
+        detail=detail,
+        label=label,
+        href=href,
+        stop=stop,
+        action=action,
     )
 
 
@@ -248,6 +279,15 @@ def stop() -> Response:
     if not job_id:
         abort(400)
     return jsonify({"stopped": _BOARD.stop(job_id)})
+
+
+@bp.post("/act")
+def act() -> Response:
+    body = request.get_json(silent=True) or {}
+    job_id = str(body.get("id") or "")
+    if not job_id:
+        abort(400)
+    return jsonify({"acted": _BOARD.act(job_id)})
 
 
 def register(app: Flask) -> None:

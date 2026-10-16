@@ -19,6 +19,7 @@
 
   var URL_ = root.dataset.url;
   var STOP_URL = root.dataset.stopUrl;
+  var ACT_URL = root.dataset.actUrl;
   var KEEP_KEY = "tesserae-jobs";
   var FOLD_KEY = "tesserae-jobs-folded";
   var WARM_MS = 1200;
@@ -86,17 +87,26 @@
     var pct = el("span", "jt-pct");
     var stop = el("button", "jt-stop", "Stop");
     stop.type = "button";
+    // the job's own button, when it has one: its label comes with the job
+    var act = el("button", "jt-stop jt-act", "");
+    act.type = "button";
+    act.hidden = true;
     var x = el("button", "jt-x");
     x.type = "button";
     x.title = "Hide";
     x.setAttribute("aria-label", "Hide");
     x.textContent = "×";
-    head.append(ico, text, pct, stop, x);
+    head.append(ico, text, pct, act, stop, x);
     var bar = el("div", "jt-bar");
     var fill = el("i", "jt-fill");
     bar.appendChild(fill);
     card.append(head, bar);
-    var entry = { el: card, ico: ico, title: title, detail: detail, pct: pct, stop: stop, fill: fill, bar: bar, started: job.started, job: job };
+    var entry = { el: card, ico: ico, title: title, detail: detail, pct: pct, stop: stop, act: act, fill: fill, bar: bar, started: job.started, job: job };
+    act.addEventListener("click", function () {
+      act.disabled = true;
+      fetch(ACT_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: entry.job.id }) })
+        .then(function () { poke(); }, function () { act.disabled = false; });
+    });
     stop.addEventListener("click", function () {
       stop.disabled = true;
       stop.textContent = "Stopping";
@@ -134,6 +144,8 @@
     entry.fill.style.width = indeterminate ? "" : Math.round((p == null ? 0 : p) * 100) + "%";
     entry.pct.textContent = !indeterminate && running ? Math.round((p || 0) * 100) + "%" : "";
     entry.stop.hidden = !job.stoppable;
+    entry.act.hidden = !job.action;
+    if (job.action && entry.act.textContent !== job.action) { entry.act.textContent = job.action; entry.act.disabled = false; }
     if (job.stoppable && entry.stop.textContent !== "Stop" && !entry.stop.disabled) entry.stop.textContent = "Stop";
     var glyph = job.state === "done" ? "check" : job.state === "failed" ? "warning" : job.state === "stopped" ? "stop" : "";
     if (entry.glyph !== glyph) {

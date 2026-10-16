@@ -8,6 +8,10 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ### Added
 
+- **A button of a job's own in the job tray.** `jobs.report` takes
+  `action=(label, callable)`: the card shows a button with that label and
+  pressing it runs the callable through `POST /jobs/act`. The Specimen Sheet
+  uses it for "Paint now" on the paintings its editor previews hold back.
 - **Examples on a textarea option.** A widget's `textarea` cell option can
   carry `presets` (`[{label, value}]`): the editor shows an Examples
   dropdown above the box, and picking one fills the box with that text to

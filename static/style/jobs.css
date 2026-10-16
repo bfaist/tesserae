@@ -35,6 +35,7 @@
 .jt-pct{flex:none;font:500 11px var(--t-font-mono);color:var(--t-muted);min-width:2.6em;text-align:right}
 .jt-stop{flex:none;font:600 11px var(--t-font);padding:3px 8px;border-radius:6px;border:1px solid var(--t-border);background:var(--t-surface-soft);color:var(--t-fg);cursor:pointer}
 .jt-stop:hover{border-color:var(--t-danger);color:var(--t-danger)}
+.jt-act:hover{border-color:var(--t-accent,var(--t-fg));color:var(--t-accent,var(--t-fg))}
 .jt-stop:disabled{opacity:.55;cursor:default}
 .jt-stop[hidden]{display:none}
 .jt-x{flex:none;width:20px;height:20px;border:0;background:transparent;color:var(--t-muted);font-size:16px;line-height:1;cursor:pointer;border-radius:6px;padding:0}

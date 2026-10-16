@@ -510,7 +510,7 @@
      live on the server, so the tray carries across pages. #}
   {% if not shell_locked %}
   <div id="job-tray" hidden aria-live="polite"
-       data-url="{{ url_for('jobs.listing') }}" data-stop-url="{{ url_for('jobs.stop') }}"></div>
+       data-url="{{ url_for('jobs.listing') }}" data-stop-url="{{ url_for('jobs.stop') }}" data-act-url="{{ url_for('jobs.act') }}"></div>
   <script src="{{ url_for('static', filename='jobs-tray.js') }}" defer></script>
   {% endif %}
   {% if agent_watch_enabled %}
