@@ -123,7 +123,8 @@ export default function render(shadow, ctx) {
   const headerScale = clampScale(opts.header_scale, 1.0, 0.01, 10.0);
   const eventScale = clampScale(opts.event_title_scale, 1.0, 0.01, 10.0);
   const rowPad = clampScale(opts.event_row_padding_em, 0.0, 0.0, 3.0);
-  const styleAttr = `--mc-dash-title-scale:${titleScale};--mc-header-scale:${headerScale};--mc-event-scale:${eventScale};--mc-row-pad:${rowPad}em;`;
+  const titleLines = Math.round(clampScale(opts.event_title_lines, 1, 1, 4));
+  const styleAttr = `--mc-title-lines:${titleLines};--mc-dash-title-scale:${titleScale};--mc-header-scale:${headerScale};--mc-event-scale:${eventScale};--mc-row-pad:${rowPad}em;`;
   const css = `<link rel="stylesheet" href="/static/style/spectra-widgets.css">`;
 
   if (data.error) {
@@ -178,7 +179,7 @@ export default function render(shadow, ctx) {
       const visible = events.slice(0, maxPerDay);
       const remainder = Math.max(0, count - maxPerDay);
       body = `
-        ${visible.map((ev) => {
+        <div class="mc-evs">${visible.map((ev) => {
           const colour = ev.colour || "var(--accent-4)";
           const location = showLocations && ev.location ? ev.location : "";
           const text = location ? `${ev.summary || ""} · ${location}` : (ev.summary || "");
@@ -190,7 +191,7 @@ export default function render(shadow, ctx) {
           const label = ev.continued ? `↳ ${text}` : text;
           const cls = ev.continued ? "mc-text is-continued" : "mc-text";
           return `<span class="${cls}" style="border-left-color:${colour}" title="${escapeHtml(text)}">${escapeHtml(label)}</span>`;
-        }).join("")}
+        }).join("")}</div>
         ${remainder > 0 ? `<span class="mc-more">+${remainder}</span>` : ""}`;
     } else {
       // bars mode (default), strips per unique feed-colour. Cap at
@@ -211,9 +212,17 @@ export default function render(shadow, ctx) {
       body = `${stripsRow}${moreChip}`;
     }
 
+    // A rolling grid crosses month boundaries with nothing else to mark
+    // them, so the 1st carries its month ("1 Nov").
+    let numText = String(d.day);
+    if (data.rolling && d.day === 1) {
+      const mon = styleLabel(localizedFull(new Date(2026, d.month - 1, 1), "month", locale), "short", minimalMapFor("month", locale));
+      numText = `${d.day} ${mon}`;
+    }
+
     return `
       <div class="${classes.join(" ")}" style="${heatStyle}">
-        <span class="mc-num">${escapeHtml(String(d.day))}</span>
+        <span class="mc-num">${escapeHtml(numText)}</span>
         <div class="mc-dots">${body}</div>
       </div>`;
   }).join("");
@@ -236,7 +245,19 @@ export default function render(shadow, ctx) {
       display: flex;
       flex-direction: column;
       gap: 0.15em;
+      flex: 1 1 auto;
+      min-height: 0;
     }
+    /* Events shrink and clip inside the cell (wrapped titles can be taller
+       than it); the +N chip is a sibling, so it is never the part cut. */
+    .mc-evs {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15em;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .mc-more { flex: none; }
     .mc-more {
       align-self: flex-end;
       font-size: calc(var(--fs-caption) * var(--mc-event-scale, 1));
@@ -262,6 +283,17 @@ export default function render(shadow, ctx) {
        than a lighter colour so it survives the 1-bit and greyscale
        panels the same way the rest of the grid does. */
     .mc-text.is-continued { opacity: 0.72; }
+    /* event_title_lines > 1 (#367): wrap to N lines, then cut. 1 keeps the
+       shared single-line ellipsis. */
+    ${titleLines > 1 ? `
+    .mc-text {
+      display: -webkit-box;
+      -webkit-line-clamp: var(--mc-title-lines);
+      line-clamp: var(--mc-title-lines);
+      -webkit-box-orient: vertical;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }` : ""}
     .mc-cell { padding: calc(var(--space-1) + var(--mc-row-pad, 0em)) var(--space-2); }
     .cal-head-title { font-size: calc(1em * var(--mc-dash-title-scale, 1)); }
     .cal-head-meta { font-size: calc(1em * var(--mc-dash-title-scale, 1)); }

@@ -29,6 +29,16 @@ All notable changes to Tesserae are recorded here. Format loosely follows
   `action=(label, callable)`: the card shows a button with that label and
   pressing it runs the callable through `POST /jobs/act`. The Specimen Sheet
   uses it for "Paint now" on the paintings its editor previews hold back.
+- **Rolling weeks and wrapped titles on the month widget.** `calendar_month`
+  has a new Rolling weeks option: the calendar month as before (the
+  default), or 1 to 6 weeks starting at the week that holds today and
+  rolling forward week by week, so late in the month the grid shows what is
+  coming instead of the past. The title follows today's month, so the days
+  of the next month fade as they do in the month view, and the 1st of a
+  month shows its month name (`1 Nov`). A new Event title lines option
+  (1 to 4, shown with the text event style) wraps event titles onto that
+  many lines instead of cutting them at one; the `+N` chip stays visible
+  however tall the titles get.
 - **Examples on a textarea option.** A widget's `textarea` cell option can
   carry `presets` (`[{label, value}]`): the editor shows an Examples
   dropdown above the box, and picking one fills the box with that text to

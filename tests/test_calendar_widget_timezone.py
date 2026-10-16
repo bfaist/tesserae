@@ -195,6 +195,62 @@ def test_calendar_month_uses_local_month(app: Flask, monkeypatch: pytest.MonkeyP
     assert captured["end"] == datetime(2026, 8, 9, 16, 0, tzinfo=UTC)
 
 
+def test_calendar_month_rolling_range_starts_on_current_week(
+    app: Flask, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    month = _plugin(app, "calendar_month")
+    core = _core_plugin(app)
+    app.config["SETTINGS_STORE"].update_section("app", {"timezone": "UTC"})
+    # Thursday 17 Dec 2026; week starts Monday 14 Dec, and the grid rolls into 2027.
+    monkeypatch.setattr(month, "datetime", _freeze_datetime(datetime(2026, 12, 17, 9, tzinfo=UTC)))
+    monkeypatch.setattr(core.server_module, "load_events", lambda *_a, **_k: [])
+
+    with app.app_context():
+        out4 = month.fetch({"rolling_weeks": "4"}, {}, ctx={})
+        out5 = month.fetch({"rolling_weeks": "5"}, {}, ctx={})
+        out1 = month.fetch({"rolling_weeks": "1"}, {}, ctx={})
+        out9 = month.fetch({"rolling_weeks": "9"}, {}, ctx={})
+        out_month = month.fetch({"rolling_weeks": "month"}, {}, ctx={})
+
+    assert len(out4["days"]) == 28
+    assert len(out5["days"]) == 35
+    assert len(out1["days"]) == 7
+    assert len(out9["days"]) == 42  # out of range falls back to the month view
+    assert len(out_month["days"]) == 42
+    assert out4["days"][0]["date"] == "2026-12-14"
+    assert out4["days"][-1]["date"] == "2027-01-10"
+    assert out5["days"][-1]["date"] == "2027-01-17"
+    # The title follows today, so it stays on December 2026 across the boundary.
+    assert out4["month_name"] == "December"
+    assert out4["year"] == 2026
+    assert out4["days"][18]["date"] == "2027-01-01"
+    assert out4["days"][18]["day"] == 1
+    assert out4["days"][18]["month"] == 1
+    # in_month follows today's month, so the days after the boundary fade.
+    assert [d["in_month"] for d in out4["days"][16:20]] == [True, True, False, False]
+    assert out4["rolling"] is True
+
+
+def test_calendar_month_rolling_sunday_start_across_year_boundary(
+    app: Flask, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    month = _plugin(app, "calendar_month")
+    core = _core_plugin(app)
+    app.config["SETTINGS_STORE"].update_section("app", {"timezone": "UTC"})
+    # Sunday 27 Dec 2026: with a Sunday week start, today opens the grid.
+    monkeypatch.setattr(month, "datetime", _freeze_datetime(datetime(2026, 12, 27, 9, tzinfo=UTC)))
+    monkeypatch.setattr(core.server_module, "load_events", lambda *_a, **_k: [])
+
+    with app.app_context():
+        out = month.fetch({"rolling_weeks": "2", "week_start": "sunday"}, {}, ctx={})
+
+    assert [d["date"] for d in out["days"]][::13] == ["2026-12-27", "2027-01-09"]
+    assert out["days"][0]["is_today"]
+    assert out["days"][5]["date"] == "2027-01-01" and out["days"][5]["day"] == 1
+    assert out["days"][5]["month"] == 1
+    assert out["month_name"] == "December" and out["year"] == 2026
+
+
 def test_calendar_month_expands_all_day_events_across_visible_dates(
     app: Flask, monkeypatch: pytest.MonkeyPatch
 ) -> None:
