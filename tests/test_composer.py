@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -824,7 +825,7 @@ def test_compose_panel_preview_quantises_existing_composition(
     cache_dir.mkdir(parents=True, exist_ok=True)
     buf = io.BytesIO()
     Image.new("RGB", (24, 18), (123, 200, 60)).save(buf, "PNG")
-    (cache_dir / f"pg__{token}.png").write_bytes(buf.getvalue())
+    (cache_dir / f"pg~panel{width}x{height}__{token}.png").write_bytes(buf.getvalue())
 
     def _boom(req: object, pool: object = None) -> bytes:
         raise AssertionError("should not render when the composition is cached")
@@ -833,7 +834,7 @@ def test_compose_panel_preview_quantises_existing_composition(
     resp = app.test_client().get("/compose/pg/panel.png?dither=none")
     assert resp.status_code == 200 and resp.mimetype == "image/png"
     # A quantised cache file was written (keyed by gamut + dither).
-    assert list(cache_dir.glob("pg__*__none.png"))
+    assert list(cache_dir.glob("pg~panel*__none.png"))
     out = Image.open(io.BytesIO(resp.data))
     assert out.size == (24, 18)
 
@@ -910,3 +911,88 @@ def test_non_secret_options_are_untouched_by_the_redaction(app: Flask) -> None:
     resp = app.test_client().get("/compose/clockpg")
     assert resp.status_code == 200
     assert 'data-plugin="clock"' in resp.get_data(as_text=True)
+
+
+def test_compose_panel_preview_renders_at_requested_size(
+    app: Flask, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Panel view passes the preview group's w/h (#364): the render is at that
+    native size, each size has its own cache file, and sizes are clamped."""
+    from app.state.page_store import Page
+
+    calls: list[dict] = []
+    monkeypatch.setattr("app.preview_cache.submit", lambda **kw: calls.append(kw))
+    app.config["PAGE_STORE"].save(Page(id="pg3", name="Grid", layout_kind="grid"))
+    client = app.test_client()
+    assert client.get("/compose/pg3/panel.png?w=1200&h=1600").status_code == 202
+    assert client.get("/compose/pg3/panel.png?w=800&h=480").status_code == 202
+    assert [(c["width"], c["height"]) for c in calls] == [(1200, 1600), (800, 480)]
+    assert calls[0]["cache_path"] != calls[1]["cache_path"]
+    assert all(c.get("thumb_max") is None for c in calls)  # native, never downscaled
+    client.get("/compose/pg3/panel.png?w=99999&h=1")
+    assert (calls[2]["width"], calls[2]["height"]) == (
+        composer.SCREENSHOT_MAX_DIM,
+        composer.SCREENSHOT_MIN_DIM,
+    )
+
+
+def test_preview_dims_is_native_and_thumbnail_is_downscaled(app: Flask, tmp_path: Path) -> None:
+    """Thumbnails lay out at the panel's native size and are shrunk afterwards
+    (#364), so widget fonts/icons match a push instead of looking 2x too big."""
+    import io
+    from unittest.mock import patch
+
+    from PIL import Image
+
+    from app import preview_cache
+    from app.state.page_store import Page
+
+    page = Page(id="pg4", name="Grid", layout_kind="grid")
+    with patch(
+        "app.composer.resolve_panel_for_page",
+        return_value=type("P", (), {"w": 1200, "h": 1600})(),
+    ):
+        assert composer.preview_dims(page, None, None) == (1200, 1600)
+
+    buf = io.BytesIO()
+    Image.new("RGB", (1200, 1600), "white").save(buf, "PNG")
+    seen: list[tuple[int, int]] = []
+
+    def fake_render(req: object, pool: object = None) -> bytes:
+        seen.append((req.viewport_w, req.viewport_h))  # type: ignore[attr-defined]
+        return buf.getvalue()
+
+    out = tmp_path / ("pg4__" + "a" * 16 + ".png")
+    with patch("app.renderer.render_to_png", fake_render):
+        preview_cache.PreviewRenderQueue()._render(
+            "http://x", "pg4", 1200, 1600, out, None, None, composer.PREVIEW_MAX_DIM
+        )
+    assert seen == [(1200, 1600)]
+    with Image.open(out) as im:
+        assert im.size == (600, 800)
+
+
+def test_preview_render_eviction_is_scoped(tmp_path: Path) -> None:
+    """A render only evicts its own prefix's older files: not a page whose id
+    shares a ``__`` stem, and not a sibling Panel-view size (those age out)."""
+    import os
+    import time
+    from unittest.mock import patch
+
+    from app import preview_cache
+
+    t, t2 = "a" * 16, "b" * 16
+    mine_old = tmp_path / f"pg__{t}.png"
+    other_page = tmp_path / f"pg__x__{t}.png"  # id "pg__x" is a different page
+    sibling = tmp_path / f"pg~panel800x480__{t}.png"
+    ancient = tmp_path / f"pg~panel640x480__{t}.png"
+    for f in (mine_old, other_page, sibling, ancient):
+        f.write_bytes(b"x")
+    old = time.time() - 3 * 24 * 3600
+    os.utime(ancient, (old, old))
+    with patch("app.renderer.render_to_png", return_value=b"png"):
+        preview_cache.PreviewRenderQueue()._render(
+            "http://x", "pg", 1200, 1600, tmp_path / f"pg~panel1200x1600__{t2}.png", None
+        )
+    assert other_page.exists() and sibling.exists() and mine_old.exists()
+    assert not ancient.exists()

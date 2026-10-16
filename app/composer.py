@@ -1687,8 +1687,9 @@ def compose(page_id: str) -> Response:
 
 
 # Longest side of the cached hover-preview PNG. The dashboards list shows the
-# image scaled well below this, so 800px is plenty sharp while keeping the
-# screenshot cheap to render and small to cache.
+# image scaled well below this, so 800px is plenty sharp and small to cache.
+# The page is still rendered at the panel's native size and the PNG is
+# downscaled to this afterwards (``preview_cache``), so the layout matches a push.
 PREVIEW_MAX_DIM: Final = 800
 
 
@@ -1751,10 +1752,11 @@ def _preview_timezone_id() -> str | None:
 
 
 def preview_dims(page: Page, devices: Any, settings_store: Any) -> tuple[int, int]:
-    """The dims to render a dashboard's hover preview at: its panel (or an
-    unbound canvas's authored size), scaled so the longest side is
-    ``PREVIEW_MAX_DIM`` with the aspect preserved. Mirrors ``compose``'s dim
-    logic so the preview matches what a push would look like."""
+    """The dims to render a dashboard's preview at: its panel (or an unbound
+    canvas's authored size), at native size, exactly as a push lays it out.
+    Rendering smaller would re-flow the layout and leave widget text and icons
+    far too big for the frame (#364); thumbnails are downscaled *after* the
+    render instead (``PREVIEW_MAX_DIM``)."""
     cv = (
         page.canvas
         if (page.layout_kind == "canvas" and page.canvas and not page.device_ids)
@@ -1765,12 +1767,7 @@ def preview_dims(page: Page, devices: Any, settings_store: Any) -> tuple[int, in
     else:
         panel = resolve_panel_for_page(page, devices, settings_store)
         pw, ph = int(panel.w), int(panel.h)
-    pw, ph = max(1, pw), max(1, ph)
-    longest = max(pw, ph)
-    if longest > PREVIEW_MAX_DIM:
-        scale = PREVIEW_MAX_DIM / longest
-        pw, ph = max(1, round(pw * scale)), max(1, round(ph * scale))
-    return pw, ph
+    return clamp_screenshot_dim(pw), clamp_screenshot_dim(ph)
 
 
 def page_preview_token(page: Page, dims: tuple[int, int]) -> str:
@@ -1848,6 +1845,7 @@ def compose_preview(page_id: str) -> WerkzeugResponse:
             width=width,
             height=height,
             cache_path=cache_path,
+            thumb_max=PREVIEW_MAX_DIM,
             pool=current_app.config.get("BROWSER_POOL"),
             timezone_id=_preview_timezone_id(),
         )
@@ -1869,6 +1867,7 @@ def compose_preview(page_id: str) -> WerkzeugResponse:
             width=width,
             height=height,
             cache_path=cache_path,
+            thumb_max=PREVIEW_MAX_DIM,
             pool=current_app.config.get("BROWSER_POOL"),
             force=True,
             timezone_id=_preview_timezone_id(),
@@ -1913,7 +1912,17 @@ def compose_panel_preview(page_id: str) -> Response:
         abort(404)
     devices = current_app.config.get("DEVICE_REGISTRY")
     settings_store = current_app.config["SETTINGS_STORE"]
-    width, height = preview_dims(page, devices, settings_store)
+    # The editor passes the preview group's real ?w/?h so Panel view renders at
+    # that panel's native size (as a push does), not the largest bound panel's
+    # (#364). Panel renders live under their own ``~panel<w>x<h>`` cache
+    # prefix: native size, never downscaled, one per size so groups coexist.
+    w_arg = request.args.get("w", type=int)
+    h_arg = request.args.get("h", type=int)
+    if w_arg and h_arg:
+        width, height = clamp_screenshot_dim(w_arg), clamp_screenshot_dim(h_arg)
+    else:
+        width, height = preview_dims(page, devices, settings_store)
+    prefix = f"{page_id}~panel{width}x{height}"
     token = page_preview_token(page, (width, height))
 
     # An explicit ?gamut wins (the editor passes the preview group's gamut);
@@ -1938,12 +1947,12 @@ def compose_panel_preview(page_id: str) -> Response:
         dither = "floyd-steinberg"
 
     cache_dir = Path(current_app.config["DATA_ROOT"]) / "core" / "previews"
-    comp_path = cache_dir / f"{page_id}__{token}.png"
+    comp_path = cache_dir / f"{prefix}__{token}.png"
     if not comp_path.exists():
         from app import preview_cache
 
         preview_cache.submit(
-            key=f"{page_id}__{token}",
+            key=f"{prefix}__{token}",
             base_url=request.host_url.rstrip("/"),
             page_id=page_id,
             width=width,
@@ -1956,7 +1965,7 @@ def compose_panel_preview(page_id: str) -> Response:
         resp.headers["Cache-Control"] = "no-store"
         return resp
 
-    panel_path = cache_dir / f"{page_id}__{token}__{gamut}__{dither}.png"
+    panel_path = cache_dir / f"{prefix}__{token}__{gamut}__{dither}.png"
     if not panel_path.exists():
         # ``kaleido3`` (colour e-readers) has no ink palette: it is dithered
         # per channel to 16 levels, which this dispatches to; every other
