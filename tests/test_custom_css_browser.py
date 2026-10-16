@@ -33,7 +33,9 @@ pytestmark = pytest.mark.skipif(
     not _chromium_available(), reason="Playwright Chromium not installed"
 )
 
-CSS = '[data-widget="year_progress"] .w-title { display: none; }\n.panel { outline: 3px solid red; }'
+CSS = (
+    '[data-widget="countdown_date"] .w-title { display: none; }\n.panel { outline: 3px solid red; }'
+)
 
 
 @pytest.fixture
@@ -58,7 +60,7 @@ def live_server(tmp_path: Path) -> Iterator[str]:
             id="css",
             name="CSS",
             panel=Panel(w=800, h=480),
-            cells=[Cell(id="c1", plugin="year_progress", x=0, y=0, w=800, h=480)],
+            cells=[Cell(id="c1", plugin="countdown_date", x=0, y=0, w=800, h=480)],
             custom_css=CSS,
         )
     )
