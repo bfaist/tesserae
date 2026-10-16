@@ -1,5 +1,5 @@
 {% extends "_base.html" %}
-{% from "_components.html" import text_input, slider, switch, select_field, color_input, button, auto_field, card_head %}
+{% from "_components.html" import text_input, slider, switch, select_field, color_input, button, auto_field, card_head, textarea_field %}
 {% from "_schedule_form.html" import schedule_form, schedule_form_scripts %}
 {% block title %}{{ page.name }}, Dashboard editor, Tesserae{% endblock %}
 
@@ -465,6 +465,11 @@
         {{ slider('page-gap', 'gap', 'Gap', value=page.gap, min=0, max=200, unit='px',
                   help='Visible matting strip between cells + around panel edges.') }}
         {{ slider('page-radius', 'corner_radius', 'Corner radius', value=page.corner_radius, min=0, max=80, unit='px') }}
+        {# Free-form CSS for this dashboard (#366). Reaches inside every
+           widget as well as the page, see composer.js applyCustomCss. #}
+        {{ textarea_field('page-custom-css', 'custom_css', 'Custom CSS', value=page.custom_css or '', rows=5,
+                          placeholder='[data-widget="weather_now"] .w-title { display: none; }',
+                          help='Applied to the page and inside every widget on it. A widget\'s root is [data-widget="id"] (the id is in the cell\'s widget picker); its title row is .w-title and its body .w-body. The preview updates when you leave the box.') }}
       </form>
 
       {# v0.72.0: page-level status bar toggle. No expand/collapse

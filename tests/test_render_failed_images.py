@@ -161,6 +161,7 @@ def test_a_loaded_picture_is_decoded_before_the_wait_ends() -> None:
     assert result["failed"] == 0 and not result["timed_out"]
 
 
+@requires_chromium
 def test_a_working_image_is_not_reported() -> None:
     # A 1x1 gif as a data URI always loads, so this isolates the failure path
     # from network flakiness.

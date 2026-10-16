@@ -123,6 +123,11 @@
     .cell-empty-placeholder strong { color: #555; display: block; }
   </style>
 </head>
+<!-- The dashboard's own CSS (#366). Printed verbatim: the store neutralises
+       any closing style tag on save (see page_store.clean_custom_css). Always
+       present, empty or not, so the editor's live patch has a node to fill;
+       composer.js copies the same text into every widget's shadow root. -->
+  <style id="tesserae-custom-css">{{ page.custom_css|default('', true)|safe }}</style>
 <body data-for-push="{{ '1' if for_push else '0' }}" data-theme="{{ page.theme|default('light') }}" data-style="{{ page.style|default('standard') }}"{% if page.font %} style="--font-family: '{{ page.font_family }}', system-ui, sans-serif;"{% endif %}>
   <div class="panel">
     {% for cell in page.cells %}

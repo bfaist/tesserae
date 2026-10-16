@@ -18,6 +18,13 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ### Added
 
+- **Custom CSS on a dashboard** (#366). The dashboard editor's Appearance
+  section has a Custom CSS box. Its rules apply to the page and, since each
+  widget renders inside its own shadow root, are copied inside every widget
+  on the dashboard as well, so `[data-widget="weather_now"] .w-title
+  { display: none; }` hides that widget's title row. The live preview picks
+  the box up like any other field, and a closing style tag in the text is
+  neutralised on save. Documented under Dashboards in the docs.
 - **A button of a job's own in the job tray.** `jobs.report` takes
   `action=(label, callable)`: the card shows a button with that label and
   pressing it runs the callable through `POST /jobs/act`. The Specimen Sheet

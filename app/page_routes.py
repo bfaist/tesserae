@@ -61,7 +61,7 @@ from app.panel import (
     resolve_settings_panel,
 )
 from app.plugin_loader import Plugin, PluginRegistry
-from app.state.page_store import Cell, Page, PageStore, Panel
+from app.state.page_store import Cell, Page, PageStore, Panel, clean_custom_css
 from app.state.settings_store import SettingsStore
 
 logger = logging.getLogger(__name__)
@@ -1075,6 +1075,7 @@ def create() -> Response:
             theme=(form.get("theme") or "light"),
             style=(form.get("style") or "standard"),
             font=(form.get("font") or None),
+            custom_css=(form.get("custom_css") or ""),
             canvas=CanvasLayout(w=design[0], h=design[1]) if design else CanvasLayout(),
         )
         _store().save(page)
@@ -1107,6 +1108,7 @@ def create() -> Response:
             gap=_coerce_int(form.get("gap"), 0, lo=0),
             corner_radius=_coerce_int(form.get("corner_radius"), 0, lo=0),
             bleed_color=(form.get("bleed_color") or ""),
+            custom_css=(form.get("custom_css") or ""),
         )
     except ValidationError as exc:
         flash(f"Could not create dashboard: {exc.errors()[0]['msg']}", "error")
@@ -1192,6 +1194,11 @@ def update(page_id: str) -> Response:
         updates["corner_radius"] = _coerce_int(form.get("corner_radius"), page.corner_radius, lo=0)
     if "bleed_color" in form:
         updates["bleed_color"] = form.get("bleed_color") or page.bleed_color
+    if "custom_css" in form:
+        # Empty is meaningful here: clearing the box removes the CSS. Cleaned
+        # here as well as by the model's validator, since ``model_copy`` below
+        # does not run validators and the in-memory page is what /compose reads.
+        updates["custom_css"] = clean_custom_css(form.get("custom_css") or "")
     if "icon" in form:
         updates["icon"] = (form.get("icon") or None) or None
     # Device checkboxes vanish from the POST when all are unticked, so a
@@ -1678,7 +1685,7 @@ def preview(page_id: str) -> Response:
 
     Form field convention (set by editor.js):
       ``name``, ``font``, ``bleed_color``, ``gap``,
-      ``corner_radius``, page-level overrides.
+      ``corner_radius``, ``custom_css``, page-level overrides.
       ``cell_<id>__<field>``, per-cell overrides (double-underscore
       separates the cell id from the field name to disambiguate cell
       ids containing underscores)."""
@@ -1727,6 +1734,11 @@ def preview(page_id: str) -> Response:
                 "corner_radius": _coerce_int(form.get("corner_radius"), page.corner_radius, lo=0),
                 "bleed_color": (
                     form.get("bleed_color") if "bleed_color" in form else page.bleed_color
+                ),
+                "custom_css": (
+                    clean_custom_css(form.get("custom_css") or "")
+                    if "custom_css" in form
+                    else page.custom_css
                 ),
                 "icon": (form.get("icon") or None) or None,
                 "device_ids": _clean_device_ids(form.getlist("device_ids")),

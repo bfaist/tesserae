@@ -234,6 +234,42 @@ def test_update_page_metadata_autosave_json(app: Flask, tmp_path: Path) -> None:
     assert page.gap == 16
 
 
+def test_custom_css_saves_and_reaches_the_compose_page(app: Flask, tmp_path: Path) -> None:
+    """A dashboard's custom CSS (#366) is stored, printed into the compose
+    page's own ``<style id="tesserae-custom-css">`` (composer.js copies it
+    into every widget's shadow root from there), and cleaned so it can never
+    close that tag: ``</style`` is neutralised, and an empty save clears it."""
+    client = app.test_client()
+    _sign_in(client)
+    pid = _new(client, name="Home")
+    css = (
+        '[data-widget="weather_now"] .w-title { display: none; }\n</STYLE><script>alert(1)</script>'
+    )
+    resp = client.post(
+        f"/pages/{pid}",
+        data={"custom_css": css},
+        headers={"X-Requested-With": "fetch"},
+    )
+    assert resp.status_code == 200
+    page = _store(tmp_path).get(pid)
+    assert page is not None
+    assert '[data-widget="weather_now"] .w-title { display: none; }' in page.custom_css
+    assert "</STYLE" not in page.custom_css
+    assert "<\\/style><script>" in page.custom_css
+
+    html = client.get(f"/compose/{pid}").get_data(as_text=True)
+    assert '<style id="tesserae-custom-css">' in html
+    assert '[data-widget="weather_now"] .w-title { display: none; }' in html
+    assert "</STYLE><script>" not in html
+
+    # A save that carries the field empty clears it; one without the field
+    # leaves it alone (the rename form must not wipe it).
+    client.post(f"/pages/{pid}", data={"name": "Still home"}, headers={"X-Requested-With": "fetch"})
+    assert _store(tmp_path).get(pid).custom_css  # type: ignore[union-attr]
+    client.post(f"/pages/{pid}", data={"custom_css": ""}, headers={"X-Requested-With": "fetch"})
+    assert _store(tmp_path).get(pid).custom_css == ""  # type: ignore[union-attr]
+
+
 def test_update_is_a_merge_not_a_replace(app: Flask, tmp_path: Path) -> None:
     """The editor posts TWO forms to this endpoint: the header rename form
     (just ``name``) and the dashboard form (icon / device_ids / …). Each

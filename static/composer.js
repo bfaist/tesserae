@@ -79,6 +79,27 @@ function applyParts(shadow, cell) {
   shadow.appendChild(st);
 }
 
+// The dashboard's own CSS (#366), a copy per widget. Page-level CSS stops at
+// the shadow boundary, so the text in the compose page's
+// <style id="tesserae-custom-css"> goes into every shadow root as well, after
+// the widget has rendered (a widget that sets innerHTML would wipe it) and
+// after the parts rules so it wins ties. Removing the node when the text is
+// empty keeps an untouched dashboard rendering exactly as before.
+function pageCustomCss() {
+  const el = document.getElementById("tesserae-custom-css");
+  return el ? el.textContent || "" : "";
+}
+function applyCustomCss(shadow) {
+  const existing = shadow.querySelector("style#tesserae-custom-css");
+  if (existing) existing.remove();
+  const text = pageCustomCss();
+  if (!text.trim()) return;
+  const st = document.createElement("style");
+  st.id = "tesserae-custom-css";
+  st.textContent = text;
+  shadow.appendChild(st);
+}
+
 function reportError(cell, shadow, pluginId, err) {
   cell.classList.add("error");
   cell.dataset.error = err.message || String(err);
@@ -161,6 +182,7 @@ async function mountCell(cell) {
     cellState.set(cell.dataset.cellId, { module: mod, pluginId, shadow });
     await mod.default(shadow, ctx);
     applyParts(shadow, cell);
+    applyCustomCss(shadow);
     prefixShadowUrls(shadow, prefix);
   } catch (err) {
     reportError(cell, shadow, pluginId, err);
@@ -217,6 +239,20 @@ function applyPagePatch(page) {
     if (panelEl) {
       panelEl.style.width = page.panel.w + "px";
       panelEl.style.height = page.panel.h + "px";
+    }
+  }
+  // Live custom CSS (#366): swap the page-level text and re-copy it into
+  // every mounted widget. No remount needed, the rules apply in place.
+  if (typeof page.custom_css === "string") {
+    let el = document.getElementById("tesserae-custom-css");
+    if (!el) {
+      el = document.createElement("style");
+      el.id = "tesserae-custom-css";
+      document.head.appendChild(el);
+    }
+    if (el.textContent !== page.custom_css) {
+      el.textContent = page.custom_css;
+      cellState.forEach((state) => applyCustomCss(state.shadow));
     }
   }
   // Live corner-radius update. The compose template bakes
@@ -277,6 +313,7 @@ async function remountAllCells() {
       Promise.resolve()
         .then(() => state.module.default(state.shadow, ctx))
         .then(() => applyParts(state.shadow, cell))
+        .then(() => applyCustomCss(state.shadow))
         .then(() => prefixShadowUrls(state.shadow, prefix))
         .catch((err) => reportError(cell, state.shadow, state.pluginId, err)),
     );
@@ -357,6 +394,7 @@ async function applyCellPatch(patch) {
   try {
     await state.module.default(state.shadow, ctx);
     applyParts(state.shadow, cell);
+    applyCustomCss(state.shadow);
     prefixShadowUrls(state.shadow, window.TESSERAE_URL_PREFIX || "");
   } catch (err) {
     reportError(cell, state.shadow, state.pluginId, err);

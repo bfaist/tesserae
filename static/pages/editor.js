@@ -356,6 +356,7 @@
         font_face_css: next.font_face_css,
         bleed_color: next.bleed_color,
         corner_radius: next.corner_radius,
+        custom_css: typeof next.custom_css === "string" ? next.custom_css : "",
         gap: next.gap,
         panel: next.panel,
       },

@@ -98,6 +98,8 @@ nav:
   - Physical buttons: install/buttons.md
   - Rooms: install/rooms.md
   - Touch interactions: install/touch.md
+  - Dashboards:
+      - Custom CSS: dashboards/custom-css.md
   - REST transport (no broker): install/rest-transport.md
   - Remote panel (cloud relay): install/remote-panel.md
   - OpenDisplay tags: install/opendisplay.md

@@ -12,6 +12,7 @@ from __future__ import annotations
 import contextlib
 import json
 import logging
+import re
 import threading
 from collections.abc import Callable
 from pathlib import Path
@@ -188,6 +189,24 @@ class Cell(BaseModel):
         return self
 
 
+CUSTOM_CSS_MAX_CHARS = 20_000
+_STYLE_CLOSE_RE = re.compile(r"<\s*/\s*style", re.IGNORECASE)
+
+
+def clean_custom_css(value: Any) -> str:
+    """The stored form of a dashboard's custom CSS.
+
+    The text is printed verbatim into a ``<style>`` element, so the one
+    thing it must not contain is a closing style tag; ``</style`` becomes
+    ``<\\/style`` (invalid CSS, inert HTML). Anything that is not a string
+    stores as empty, and the length is capped so a pasted stylesheet can't
+    bloat pages.json."""
+    if not isinstance(value, str):
+        return ""
+    text = _STYLE_CLOSE_RE.sub("<\\/style", value)
+    return text[:CUSTOM_CSS_MAX_CHARS]
+
+
 class Page(BaseModel):
     """A saved dashboard.
 
@@ -256,6 +275,12 @@ class Page(BaseModel):
     style: str = "standard"
     gap: int = 0
     corner_radius: int = 0
+    # Free-form CSS for this dashboard (#366). Emitted once on the compose
+    # page and once more inside every widget's shadow root, since a widget's
+    # own markup is unreachable from page-level CSS. Cleaned on the way in
+    # by ``clean_custom_css``: a ``</style`` is neutralised so the text can
+    # never close the tag it is printed into, and the length is capped.
+    custom_css: str = ""
     # Default matting is white. Older pages stored before this default
     # change have an empty string; the composer treats both as the
     # bleed (empty falls back to var(--bg) for theme-following, the
@@ -315,6 +340,11 @@ class Page(BaseModel):
         if isinstance(value, list):
             return list(dict.fromkeys(v for v in value if isinstance(v, str) and v))
         return value
+
+    @field_validator("custom_css", mode="before")
+    @classmethod
+    def _clean_custom_css(cls, value: Any) -> Any:
+        return clean_custom_css(value)
 
     @field_validator("icon", mode="before")
     @classmethod
