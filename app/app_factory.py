@@ -38,6 +38,7 @@ from app import (
     artwork_routes,
     auth,
     bloomin8_api,
+    commons,
     composer,
     device_battery_routes,
     device_loader,
@@ -1159,6 +1160,11 @@ def create_app(
     artwork.host_configure(
         ledger=genai.Ledger(Path(app.config["DATA_ROOT"]) / "artwork"),
         ceilings=lambda: genai.ceilings(app.config.get("SETTINGS_STORE")),
+    )
+    commons.configure(
+        Path(app.config["DATA_ROOT"]) / "commons",
+        contact=lambda: str(genai.settings(app.config.get("SETTINGS_STORE")).get("contact") or ""),
+        version=str(app.config.get("APP_VERSION") or ""),
     )
     device_battery_routes.register(app)
     stats_routes.register(app)

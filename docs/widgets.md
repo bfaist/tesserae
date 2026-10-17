@@ -881,6 +881,38 @@ reason, exactly as a widget's own budget behaves; a widget's budget still
 applies inside the ceiling. A widget needs nothing for this: it comes with
 `app.artwork`.
 
+### Pictures from Wikimedia Commons: `app.commons`
+
+A widget that paints a real thing wants a free picture of it to paint from.
+The host looks them up on Wikimedia Commons so no widget carries its own copy
+(Tesserae 0.465 and later; guard the import as for `app.artwork`):
+
+```python
+from app import commons
+
+pic = commons.file("File:HST-SM4.jpeg")                 # by title
+pic = commons.portrait("IMO 9458054", name="Maersk Elba", ident="9458054", descend="(ship")
+raw = commons.fetch(pic)                                 # the thumbnail's bytes, kept on disk
+ref = commons.data_uri(pic)                              # inline, for a painter that cannot fetch Commons
+credit = commons.credit(pic, painted_by="Nano Banana")   # "painted by … from a picture by … (Wikimedia Commons, CC BY-SA 4.0)"
+```
+
+A picture is `{title, src, link, by, lic, w, h}`, the author and licence read
+off the file. `portrait` ranks a category's files by name (an identifier such
+as an IMO number first, then the subject's name, never a plaque, a cabin, a
+model or a visit), asks for the best dozen, and picks a landscape picture of
+a good size; when the category holds only a subcategory (Commons files a ship
+under `Category:IMO <n>` → `Category:<Name> (ship, <year>)`) it reads that.
+`category(name)` gives a category's files and subcategories; `search(query)`
+is for a tool that builds a curated table, not for a page at render time.
+
+Everything is kept under `<data root>/commons/` (a hit a month, a miss a
+week, bytes three months), requests go one at a time with a small gap, and
+each carries the host's User-Agent with the contact set under Settings ›
+Generative AI, as Wikimedia asks. Credit the author and the licence on the
+page, as CC BY and CC BY-SA ask; a painting made from the picture is a
+derivative, and anyone who publishes one should say so.
+
 ### A send waits for the pictures
 
 A push of a page with a widget that declares `render.warm_ahead_s` first

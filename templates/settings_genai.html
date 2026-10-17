@@ -40,6 +40,11 @@
         {% endif %}
       </p>
     </div>
+    <div class="field">
+      <label for="genai-contact">Contact for Wikimedia Commons and other services</label>
+      <input id="genai-contact" type="text" name="contact" value="{{ form.contact }}" autocomplete="off" placeholder="you@example.org">
+      <p class="help">Sent in this server's User-Agent when widgets fetch pictures from Wikimedia Commons, as Wikimedia asks of every application. Saved with the ceilings below.{% if commons_cache.files %} The Commons cache holds {{ commons_cache.files }} file{{ '' if commons_cache.files == 1 else 's' }}, {{ (commons_cache.bytes / 1048576) | round(1) }} MB.{% endif %}</p>
+    </div>
   </form>
 </section>
 

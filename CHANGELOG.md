@@ -6,6 +6,24 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ## [Unreleased]
 
+## [0.465.0], 2026-10-18
+
+### Added
+
+- `app.commons`: free pictures from Wikimedia Commons for every widget that
+  paints. A file by title, a category's files, the best portrait of a
+  subject in a category (ranked by name: an identifier first, then the
+  subject's name, never a plaque, a cabin or a visit), the picture's bytes
+  for the painter, and one wording for the credit with the author and
+  licence read off the file. One cache under `<data root>/commons/`, one
+  User-Agent with the contact set under Settings › Generative AI, requests
+  one at a time with a small gap as Commons asks. Underway, Orbit and
+  Overhead carried a copy each; they use the host's when it is there.
+- Settings › Generative AI has the contact field and shows the size of the
+  Commons cache.
+- The artwork page says when a picture is an impression, painted from a
+  description rather than a picture (`meta["impression"]`).
+
 ### Fixed
 
 - **Setup text now gives the server's own address** (#344). The access-token

@@ -9,7 +9,7 @@ from typing import Any
 from flask import current_app, flash, redirect, render_template, request, url_for
 from werkzeug.wrappers import Response
 
-from app import artwork, fal, genai
+from app import artwork, commons, fal, genai
 from app.state.settings_store import SECRET_MASK
 
 from ._shared import bp, plugins, settings_store
@@ -130,6 +130,7 @@ def genai_index() -> str:
         who=who,
         went=went,
         kept=sum(w["kept"] for w in who),
+        commons_cache=commons.cache_size(),
         checked=request.args.get("checked", ""),
         check_ok=request.args.get("ok") == "1",
         dollars=genai.dollars,

@@ -9,6 +9,7 @@
   {% else %}<div class="aw-pic aw-none"><span>{% if b.painting %}painting…{% elif b.held %}waiting for Paint now{% else %}not painted yet{% endif %}</span></div>{% endif %}
   <h3>{{ b.title }}</h3>
   <p class="aw-line">{% if b.facet_label %}<span class="aw-tag">{{ b.facet_label }}</span>{% endif %}{% if b.painting %}<span class="aw-tag aw-tag--run">painting…</span>{% endif %}{% if b.meta and b.meta.credit %}<span class="aw-credit">{{ b.meta.credit }}</span>{% endif %}</p>
+  {% if b.meta and b.meta.impression %}<p class="aw-ref"><i class="ph ph-pencil-line" aria-hidden="true"></i> An impression: painted from a description, not a picture</p>{% endif %}
   {% if b.meta and b.meta.link %}<p class="aw-ref"><a href="{{ b.meta.link }}" target="_blank" rel="noopener"><i class="ph ph-camera" aria-hidden="true"></i> Reference picture{% if b.meta.by %} by {{ b.meta.by }}{% endif %}</a></p>{% endif %}
   {% if b.error %}<div class="aw-error"><span><i class="ph ph-warning" aria-hidden="true"></i> {{ b.error }}</span><form method="post" action="{{ url_for('artwork.clear_error', plugin_id=plugin.id, name=c.name, key=b.key) }}"><button type="submit" class="ghost aw-link">Clear</button></form></div>{% endif %}
   <div class="aw-actions">

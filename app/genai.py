@@ -25,6 +25,7 @@ FIELDS: list[dict[str, Any]] = [
     {"name": "api_key", "secret": True},
     {"name": "daily_usd", "type": "number", "default": 0},
     {"name": "monthly_usd", "type": "number", "default": 0},
+    {"name": "contact", "type": "string", "default": ""},
 ]
 UNLIMITED = 10**9
 KEEP_DAYS = 400  # ledger lines older than this are dropped on the next append
@@ -41,12 +42,13 @@ CHECK_URL = (
 def settings(store: Any) -> dict[str, Any]:
     """The runtime values: the key, and the ceilings in US dollars (0 is none)."""
     if store is None:
-        return {"api_key": "", "daily_usd": 0, "monthly_usd": 0}
+        return {"api_key": "", "daily_usd": 0, "monthly_usd": 0, "contact": ""}
     vals = store.get_for_runtime("app", "fal", FIELDS)
     return {
         "api_key": str(vals.get("api_key") or "").strip(),
         "daily_usd": _usd(vals.get("daily_usd")),
         "monthly_usd": _usd(vals.get("monthly_usd")),
+        "contact": " ".join(str(vals.get("contact") or "").split())[:120],
     }
 
 
@@ -59,6 +61,7 @@ def for_admin(store: Any) -> dict[str, Any]:
         "has_key": bool(str(vals.get("api_key") or "").strip()),
         "daily_usd": _usd(vals.get("daily_usd")),
         "monthly_usd": _usd(vals.get("monthly_usd")),
+        "contact": " ".join(str(vals.get("contact") or "").split())[:120],
     }
 
 
@@ -70,6 +73,8 @@ def save(store: Any, form: dict[str, Any]) -> None:
     for name in ("daily_usd", "monthly_usd"):
         if name in form:
             values[name] = _usd(form.get(name))
+    if "contact" in form:
+        values["contact"] = " ".join(str(form.get("contact") or "").split())[:120]
     store.update_for_namespace("app", "fal", values, FIELDS)
 
 

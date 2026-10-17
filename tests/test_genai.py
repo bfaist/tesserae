@@ -56,9 +56,14 @@ def test_settings_round_trip_and_the_key_is_what_resolve_key_finds(app, tmp_path
     monkeypatch.delenv("FAL_KEY", raising=False)
     monkeypatch.delenv("FAL_API_KEY", raising=False)
     store = app.config["SETTINGS_STORE"]
-    assert genai.settings(store) == {"api_key": "", "daily_usd": 0, "monthly_usd": 0}
+    assert genai.settings(store) == {"api_key": "", "daily_usd": 0, "monthly_usd": 0, "contact": ""}
     genai.save(store, {"api_key": " fal_sk_abc ", "daily_usd": "6", "monthly_usd": "$60"})
-    assert genai.settings(store) == {"api_key": "fal_sk_abc", "daily_usd": 6.0, "monthly_usd": 60.0}
+    assert genai.settings(store) == {
+        "api_key": "fal_sk_abc",
+        "daily_usd": 6.0,
+        "monthly_usd": 60.0,
+        "contact": "",
+    }
     assert genai.ceilings(store) == (600, 6000)
     with app.app_context():
         assert fal.resolve_key({}) == "fal_sk_abc"
