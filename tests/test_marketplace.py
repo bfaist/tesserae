@@ -1521,3 +1521,21 @@ def test_a_url_or_path_shaped_icon_asset_is_dropped(
     entries = marketplace.fetch_index()
     assert len(entries) == 1, "a bad icon must not drop the entry"
     assert entries[0].icon_asset is None
+
+
+def test_catalog_entries_carry_the_least_tesserae_they_need():
+    from app.marketplace import CatalogEntry
+
+    raw = {
+        "id": "x",
+        "name": "X",
+        "description": "d",
+        "kind": "widget",
+        "tesserae_compat": "1.x",
+        "tesserae_min": "0.463.0",
+        "release": {"version": "1.0.0", "tarball_url": "https://e/x.tar.gz", "sha256": "AB"},
+    }
+    assert CatalogEntry.from_dict(raw).tesserae_min == "0.463.0"
+    assert CatalogEntry.from_dict({**raw, "tesserae_min": None}).tesserae_min is None
+    del raw["tesserae_min"]
+    assert CatalogEntry.from_dict(raw).tesserae_min is None

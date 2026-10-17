@@ -34,6 +34,7 @@ from pydantic import BaseModel
 from werkzeug.wrappers import Response
 
 from app import (
+    artwork_routes,
     auth,
     bloomin8_api,
     composer,
@@ -1152,6 +1153,7 @@ def create_app(
     deck_routes.register(app)
     send_routes.register(app)
     history_routes.register(app)
+    artwork_routes.register(app)
     device_battery_routes.register(app)
     stats_routes.register(app)
     events_routes.register(app)

@@ -132,6 +132,9 @@ class CatalogEntry:
     # the widget repo has zero stars; positive int means real signal.
     # The Browse template hides the chip when this is None or 0.
     stars: int | None = None
+    # The least Tesserae the widget runs on (``"0.463.0"``); None when the
+    # catalog says nothing. The host refuses to install or update past it.
+    tesserae_min: str | None = None
     # Optional image icon, a filename the catalog ships under
     # ``icons/``. For entries wrapping a recognisable third-party
     # service, the project's own mark reads faster than any glyph the
@@ -163,6 +166,7 @@ class CatalogEntry:
             release_version=str(release["version"]),
             release_tarball_url=str(release["tarball_url"]),
             release_sha256=str(release["sha256"]).lower(),
+            tesserae_min=(str(raw["tesserae_min"]) if raw.get("tesserae_min") else None),
             source=(str(raw["source"]) if raw.get("source") else None),
             icon_asset=_clean_icon_asset(raw.get("icon_asset")),
         )
@@ -519,12 +523,17 @@ class Marketplace:
         Raises ``InstallRefused`` or ``TarballRejected`` on any of the
         above. The route layer catches both and flashes the message.
         """
-        from app.plugin_loader import HOST_MAJOR_VERSION, _compat_ok
+        from app.plugin_loader import HOST_MAJOR_VERSION, _compat_ok, too_new_for_host
 
         if not _compat_ok(entry.tesserae_compat, HOST_MAJOR_VERSION):
             raise InstallRefused(
                 f"Widget compat {entry.tesserae_compat!r} doesn't match host "
                 f"major version {HOST_MAJOR_VERSION}."
+            )
+        too_new = too_new_for_host(entry.tesserae_min)
+        if too_new:
+            raise InstallRefused(
+                f"{entry.name} {entry.release_version} {too_new}. Update Tesserae first."
             )
 
         # Themes are a different shape from widgets / fonts (two flat

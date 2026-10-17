@@ -270,6 +270,8 @@ def _entries_payload(
                 "stars": entry.stars,
                 "installs": counts.get(entry.id),
                 "version": entry.release_version,
+                "tesserae_min": entry.tesserae_min,
+                "too_new": plugin_loader.too_new_for_host(entry.tesserae_min),
                 "installed": is_installed,
                 "installed_from_disk": installed_from_disk,
                 "installed_version": installed_version,

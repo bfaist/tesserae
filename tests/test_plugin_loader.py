@@ -457,3 +457,25 @@ def test_locales_rejected_on_non_widget_kind(tmp_path: Path, schema_path: Path) 
     )
     assert "data_source" not in registry.plugins
     assert any("manifest schema" in err.message for err in registry.errors)
+
+
+def test_a_plugin_that_needs_a_newer_tesserae_is_refused(tmp_path):
+    from app.plugin_loader import too_new_for_host, version_tuple
+
+    assert (
+        version_tuple("0.463.1") == (0, 463, 1)
+        and version_tuple("v1.2") == (1, 2)
+        and version_tuple("junk") == ()
+    )
+    assert (
+        too_new_for_host("0.463.0", "0.436.1")
+        == "needs Tesserae 0.463.0 or later; this server is 0.436.1"
+    )
+    assert (
+        too_new_for_host("0.463.0", "0.463.0") is None
+        and too_new_for_host("0.463.0", "1.0.0") is None
+    )
+    assert too_new_for_host(None, "0.1.0") is None and too_new_for_host("0.463.0", "") is None, (
+        "an unknown host never blocks"
+    )
+    assert too_new_for_host("", "0.1.0") is None

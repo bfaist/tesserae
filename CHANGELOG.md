@@ -8,6 +8,24 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ### Added
 
+- **A widget can say the least Tesserae it needs.** `tesserae_min` in a
+  plugin's manifest and on its catalog entry (`"0.463.0"`). A host at or
+  above this version refuses to install or update past it, says so on the
+  Browse card and in the plugin list, and leaves the installed version in
+  place. Older hosts ignore the field, so a widget that uses it still has
+  to load there and say what it is missing.
+- **Artwork: pictures a widget makes and keeps, once for every widget.**
+  `app.artwork.Collection` takes the function that makes one picture and
+  does the rest: the store with earlier versions and panel-converted copies,
+  a budget in US dollars at the models' listed prices, the queue and its
+  workers (resumed after a restart), the hold while a dashboard is being
+  edited, what each dashboard asked for, the job tray cards, and an admin
+  page at `/plugins/<id>/artwork/<name>/` with Render now, Paint the held,
+  Purge, a live ticker and per-picture Repaint, Delete and versions.
+  `app.fal` is the one fal.ai client behind it. Widgets get
+  `ctx["cell_id"]` and `ctx["settled"]` so the hold no longer guesses from
+  a timer. See "Pictures a widget makes and keeps" in the widget docs.
+
 - **History folds follow-ups under the send they finish.** A page sent
   again once its paintings landed now sits under the original push as
   small dots on the rail, with its outcome and timing, and one line says

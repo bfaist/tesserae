@@ -1,0 +1,172 @@
+{% extends "_base.html" %}
+{% from "_components.html" import card_head, empty_state %}
+{% block title %}{{ c.label }}: {{ c.name }}, Tesserae{% endblock %}
+
+{% macro card(b) %}
+<article class="aw-card" data-name="{{ (b.title ~ ' ' ~ b.key ~ ' ' ~ (b.facet_label or ''))|lower }}">
+  {% if b.file %}
+  <a href="{{ url_for('artwork.file', plugin_id=plugin.id, name=c.name, filename=b.file) }}" data-lightbox class="aw-pic"><img src="{{ url_for('artwork.file', plugin_id=plugin.id, name=c.name, filename=b.file) }}" alt="{{ b.title }}" loading="lazy"></a>
+  {% else %}<div class="aw-pic aw-none"><span>{% if b.painting %}painting…{% elif b.held %}waiting for Paint now{% else %}not painted yet{% endif %}</span></div>{% endif %}
+  <h3>{{ b.title }}</h3>
+  <p class="aw-line">{% if b.facet_label %}<span class="aw-tag">{{ b.facet_label }}</span>{% endif %}{% if b.painting %}<span class="aw-tag aw-tag--run">painting…</span>{% endif %}{% if b.meta and b.meta.credit %}<span class="aw-credit">{{ b.meta.credit }}</span>{% endif %}</p>
+  {% if b.meta and b.meta.link %}<p class="aw-ref"><a href="{{ b.meta.link }}" target="_blank" rel="noopener"><i class="ph ph-camera" aria-hidden="true"></i> Reference picture{% if b.meta.by %} by {{ b.meta.by }}{% endif %}</a></p>{% endif %}
+  {% if b.error %}<div class="aw-error"><span><i class="ph ph-warning" aria-hidden="true"></i> {{ b.error }}</span><form method="post" action="{{ url_for('artwork.clear_error', plugin_id=plugin.id, name=c.name, key=b.key) }}"><button type="submit" class="ghost aw-link">Clear</button></form></div>{% endif %}
+  <div class="aw-actions">
+    <form method="post" action="{{ url_for('artwork.repaint', plugin_id=plugin.id, name=c.name, key=b.key) }}" onsubmit="return confirm('Paint {{ b.title|e }} again? The current picture is kept as an earlier version.');"><button type="submit" class="aw-icon" {% if not has_key or b.painting %}disabled{% endif %} title="Paint again"><i class="ph ph-paint-brush" aria-hidden="true"></i></button></form>
+    {% for slug, label, fn in c.actions %}<form method="post" action="{{ url_for('artwork.action', plugin_id=plugin.id, name=c.name, key=b.key, slug=slug) }}"><button type="submit" class="aw-icon aw-icon--text" {% if not b.file %}disabled{% endif %}>{{ label }}</button></form>{% endfor %}
+    {% if b.file %}<form method="post" action="{{ url_for('artwork.delete', plugin_id=plugin.id, name=c.name, key=b.key) }}" onsubmit="return confirm('Delete the current picture of {{ b.title|e }}?{% if c.keep_versions %} It is kept as an earlier version.{% endif %}');"><button type="submit" class="aw-icon aw-icon--danger" title="Delete"><i class="ph ph-trash" aria-hidden="true"></i></button></form>{% endif %}
+    {% if b.versions %}<details class="aw-archive"><summary>{{ b.versions|length }} earlier</summary><div class="aw-archive-grid">{% for a in b.versions %}<figure><a href="{{ url_for('artwork.file', plugin_id=plugin.id, name=c.name, filename='archive/' ~ a.file) }}" data-lightbox><img src="{{ url_for('artwork.file', plugin_id=plugin.id, name=c.name, filename='archive/' ~ a.file) }}" alt="" loading="lazy"></a><figcaption><span>{{ a.made }}</span><form method="post" action="{{ url_for('artwork.use_version', plugin_id=plugin.id, name=c.name, stem=a.stem) }}"><button type="submit" class="aw-icon" title="Use this version"><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i></button></form><form method="post" action="{{ url_for('artwork.delete_version', plugin_id=plugin.id, name=c.name, stem=a.stem) }}" onsubmit="return confirm('Delete this earlier version for good?');"><button type="submit" class="aw-icon aw-icon--danger" title="Delete"><i class="ph ph-trash" aria-hidden="true"></i></button></form></figcaption></figure>{% endfor %}</div></details>{% endif %}
+  </div>
+</article>
+{% endmacro %}
+
+{% block main %}
+<div class="page-head">
+  <h1><i class="ph-bold ph-images" aria-hidden="true"></i> {{ c.label }}: {{ c.title|lower }}</h1>
+  <p class="page-blurb">The pictures {{ c.label }} has made and kept, one per key, reused until deleted. Its settings are under Settings › Plugins › {{ plugin.name }}.</p>
+</div>
+
+<section class="card">
+  {{ card_head('To-day', icon_name='gauge', level=2) }}
+  <div class="aw-today">
+    <div><strong>{{ progress.used_text }}{% if progress.cap < 1000000 %} of {{ progress.cap_text }}{% endif %}</strong> spent to-day
+      {% if progress.used %}<form method="post" action="{{ url_for('artwork.budget_reset', plugin_id=plugin.id, name=c.name) }}" class="aw-inline" onsubmit="return confirm('Reset to-day\'s spend to US$0?');"><button type="submit" class="ghost aw-link">Reset</button></form>{% endif %}
+      {% if not has_key %}<span class="aw-warn"><i class="ph ph-warning" aria-hidden="true"></i> No fal.ai key yet: add one to this widget's settings, or to the app under Settings.</span>{% endif %}
+    </div>
+    <div class="aw-row">
+      <form method="post" action="{{ url_for('artwork.render_now', plugin_id=plugin.id, name=c.name) }}" class="aw-inline"><button type="submit" {% if not has_key %}disabled{% endif %} title="Paints what the panels showed lately and are missing"><i class="ph ph-play" aria-hidden="true"></i> Render now</button></form>
+      {% if held %}<form method="post" action="{{ url_for('artwork.paint_held', plugin_id=plugin.id, name=c.name) }}" class="aw-inline"><button type="submit" {% if not has_key %}disabled{% endif %}><i class="ph ph-paint-brush" aria-hidden="true"></i> Paint the {{ held }} waiting</button></form>{% endif %}
+      <span class="aw-meta">Render now paints what the panels' pages ask for and do not have{% if not wanted %}; no page has rendered to a panel yet{% endif %}.</span>
+      <form method="post" action="{{ url_for('artwork.purge', plugin_id=plugin.id, name=c.name) }}" class="aw-inline aw-purge" onsubmit="return confirm('Delete every picture and every earlier version? Nothing comes back; the pages make them again as they are shown, within the budget.');"><button type="submit" class="ghost danger"><i class="ph ph-trash" aria-hidden="true"></i> Purge everything</button></form>
+    </div>
+  </div>
+  <div id="aw-queue" class="aw-ticker" hidden aria-live="polite" data-progress="{{ url_for('artwork.progress', plugin_id=plugin.id, name=c.name) }}" data-stop="{{ url_for('artwork.stop', plugin_id=plugin.id, name=c.name) }}" data-stop-all="{{ url_for('artwork.stop_all', plugin_id=plugin.id, name=c.name) }}">
+    <div class="aw-queue-head"><span class="aw-dot" aria-hidden="true"></span><strong id="aw-queue-title"></strong><button type="button" class="ghost danger aw-stop-all" id="aw-stop-all"><i class="ph ph-stop" aria-hidden="true"></i> Stop all</button></div>
+    <ul class="aw-queue-list" id="aw-queue-list"></ul>
+  </div>
+</section>
+
+{% if c.extra_template %}
+<section class="card">
+  {% include c.extra_template %}
+</section>
+{% endif %}
+
+<section class="card">
+  {{ card_head('Pictures', icon_name='images', level=2) }}
+  {% if g.count or g.groups %}
+  <div class="aw-tools"><input type="search" id="aw-search" class="aw-search" placeholder="Find by name" aria-label="Find"></div>
+  {% for grp in g.groups %}
+  <section class="aw-group" data-group>
+    <h3 class="aw-group-head">{% if grp.icon %}<i class="ph {{ grp.icon if grp.icon.startswith('ph-') else 'ph-' ~ grp.icon }}" aria-hidden="true"></i>{% else %}<i class="ph ph-squares-four" aria-hidden="true"></i>{% endif %} {{ grp.name or 'A dashboard without a name' }}
+      <span class="aw-tabs" role="tablist">{% for tab in grp.tabs %}<button type="button" role="tab" class="aw-tab{% if loop.first %} on{% endif %}" data-tab="{{ loop.index0 }}">{{ tab.label }}{% if tab.missing %} <span class="aw-tab-n">{{ tab.missing }}</span>{% endif %}</button>{% endfor %}</span>
+    </h3>
+    {% for tab in grp.tabs %}
+    <div class="aw-pane" data-pane="{{ loop.index0 }}"{% if not loop.first %} hidden{% endif %}>
+      <p class="aw-pane-line"><span class="aw-meta">{{ tab.cards|length - tab.missing }} made{% if tab.missing %} · {{ tab.missing }} still to make{% endif %}</span>
+        {% if tab.missing %}<form method="post" action="{{ url_for('artwork.render_now', plugin_id=plugin.id, name=c.name) }}" class="aw-inline"><input type="hidden" name="who" value="{{ tab.id }}"><button type="submit" class="ghost" {% if not has_key %}disabled{% endif %}><i class="ph ph-play" aria-hidden="true"></i> Make these</button></form>{% endif %}</p>
+      <div class="aw-grid">{% for b in tab.cards %}{{ card(b) }}{% endfor %}</div>
+    </div>
+    {% endfor %}
+  </section>
+  {% endfor %}
+  {% if g.rest %}
+  <section class="aw-group" data-group>
+    <h3 class="aw-group-head"><i class="ph ph-archive" aria-hidden="true"></i> Not on a dashboard <span class="aw-meta">{{ g.rest|length }} no panel has asked for lately</span></h3>
+    <div class="aw-grid">{% for b in g.rest %}{{ card(b) }}{% endfor %}</div>
+  </section>
+  {% endif %}
+  {% if g.errors %}
+  <section class="aw-group" data-group>
+    <h3 class="aw-group-head"><i class="ph ph-warning" aria-hidden="true"></i> Failed lately</h3>
+    <div class="aw-grid">{% for b in g.errors %}{{ card({'key': b.key, 'title': b.title, 'file': '', 'meta': {}, 'versions': [], 'facet_label': '', 'error': b.why, 'painting': False, 'held': False}) }}{% endfor %}</div>
+  </section>
+  {% endif %}
+  {% else %}
+  {{ empty_state('paint-brush', 'Nothing made yet', 'Pictures appear here as the widget\'s pages ask for them.') }}
+  {% endif %}
+</section>
+
+<script>
+  (function () {
+    const box = document.getElementById('aw-queue'); if (!box) return;
+    const title = document.getElementById('aw-queue-title'), list = document.getElementById('aw-queue-list');
+    let sig = null;
+    const post = (url, key) => { const body = new FormData(); if (key) body.append('key', key); return fetch(url, { method: 'POST', body, headers: { Accept: 'application/json' } }).then(tick); };
+    const row = (r, state) => { const li = document.createElement('li'); const what = document.createElement('span'); what.textContent = r.title; const when = document.createElement('span'); when.className = 'aw-meta'; when.textContent = state === 'run' ? `${r.seconds}s` : 'waiting'; const stop = document.createElement('button'); stop.type = 'button'; stop.className = 'ghost aw-link'; stop.textContent = 'Stop'; stop.addEventListener('click', () => post(box.dataset.stop, r.key)); li.append(what, when, stop); return li; };
+    async function tick() {
+      let p; try { p = await (await fetch(box.dataset.progress, { headers: { Accept: 'application/json' } })).json(); } catch { return; }
+      const rows = [...p.running.map((r) => row(r, 'run')), ...p.queued.map((r) => row(r, 'queued'))];
+      box.hidden = !rows.length; list.replaceChildren(...rows);
+      title.textContent = rows.length ? `${p.running.length} making, ${p.queued.length} waiting · ${p.used_text}${p.cap < 1e6 ? ` of ${p.cap_text}` : ''} to-day` : '';
+      const now = p.finished.map((f) => f.key + ':' + f.at).join(',');
+      if (sig === null) sig = now; else if (now !== sig) { sig = now; location.reload(); }
+    }
+    document.getElementById('aw-stop-all').addEventListener('click', () => { if (confirm('Stop everything, waiting or under way?')) post(box.dataset.stopAll); });
+    tick(); setInterval(tick, 3000);
+  })();
+  document.addEventListener('click', (ev) => {
+    const tab = ev.target.closest('.aw-tab'); if (!tab) return;
+    const group = tab.closest('[data-group]');
+    group.querySelectorAll('.aw-tab').forEach((t) => t.classList.toggle('on', t === tab));
+    group.querySelectorAll('.aw-pane').forEach((p) => { p.hidden = p.dataset.pane !== tab.dataset.tab; });
+  });
+  const search = document.getElementById('aw-search');
+  if (search) search.addEventListener('input', () => {
+    const q = search.value.trim().toLowerCase();
+    document.querySelectorAll('.aw-card').forEach((c) => { c.hidden = !!q && !c.dataset.name.includes(q); });
+    document.querySelectorAll('[data-group]').forEach((g) => { g.hidden = !g.querySelector('.aw-card:not([hidden])'); });
+  });
+</script>
+<style>
+  .aw-today { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+  .aw-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+  .aw-purge { margin-left: auto; }
+  .aw-inline { display: inline; margin: 0; }
+  .aw-link { padding: 0 4px; font-size: inherit; text-decoration: underline; }
+  .aw-warn { margin-left: 8px; }
+  .aw-meta { font-size: 12px; color: var(--t-fg-soft); }
+  .aw-ticker { display: flex; flex-direction: column; gap: 6px; padding: 8px 12px; border: 1px solid var(--t-border); border-radius: 8px; background: var(--t-surface); font-size: 13px; }
+  .aw-queue-head { display: flex; align-items: center; gap: 8px; }
+  .aw-stop-all { margin-left: auto; }
+  .aw-queue-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .aw-queue-list li { display: flex; align-items: center; gap: 10px; }
+  .aw-queue-list li > :first-child { flex: 1; min-width: 0; }
+  .aw-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--t-accent, #c8281e); }
+  .aw-tools { margin-bottom: 12px; }
+  .aw-search { max-width: 320px; }
+  .aw-group { margin-bottom: 22px; }
+  .aw-group[hidden] { display: none; }
+  .aw-group-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; margin: 0 0 10px; font-size: 15px; }
+  .aw-tabs { display: inline-flex; gap: 4px; margin-left: 6px; }
+  .aw-tab { border: 1px solid var(--t-border); background: var(--t-surface); color: var(--t-fg-soft); border-radius: 999px; padding: 2px 10px; font-size: 12px; cursor: pointer; }
+  .aw-tab.on { color: var(--t-fg); border-color: var(--t-fg-soft); }
+  .aw-tab-n { display: inline-block; min-width: 16px; padding: 0 5px; border-radius: 999px; background: var(--t-pill-warn-bg, #f3e3b0); color: var(--t-fg); font-size: 11px; text-align: center; }
+  .aw-pane-line { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; }
+  .aw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+  .aw-card { border: 1px solid var(--t-border); border-radius: 8px; padding: 8px; background: var(--t-surface); display: flex; flex-direction: column; gap: 4px; }
+  .aw-card[hidden] { display: none; }
+  .aw-pic { display: block; aspect-ratio: 4 / 3; border-radius: 4px; overflow: hidden; background: #f3ead6; }
+  .aw-pic img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .aw-none { display: grid; place-items: center; color: var(--t-fg-soft); font-size: 12px; font-style: italic; }
+  .aw-card h3 { margin: 4px 0 0; font-size: 14px; }
+  .aw-line { margin: 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 12px; }
+  .aw-tag { padding: 1px 7px; border-radius: 999px; background: var(--t-pill-bg, #eee); font-size: 11px; }
+  .aw-tag--run { background: var(--t-pill-ok-bg, #dbeedd); }
+  .aw-credit { color: var(--t-fg-soft); font-style: italic; }
+  .aw-ref { margin: 0; font-size: 12px; }
+  .aw-error { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--t-danger); }
+  .aw-error form { margin: 0; }
+  .aw-actions { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: auto; }
+  .aw-actions form { margin: 0; }
+  .aw-icon { border: 1px solid var(--t-border); background: var(--t-surface); border-radius: 6px; padding: 4px 7px; cursor: pointer; font-size: 12px; }
+  .aw-icon--danger { color: var(--t-danger); }
+  .aw-icon[disabled] { opacity: .5; cursor: default; }
+  .aw-archive { font-size: 12px; width: 100%; }
+  .aw-archive-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 6px; margin-top: 6px; }
+  .aw-archive figure { margin: 0; }
+  .aw-archive img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 3px; }
+  .aw-archive figcaption { display: flex; align-items: center; gap: 2px; padding: 2px 0; font-size: 10px; color: var(--t-fg-soft); }
+  .aw-archive figcaption span { flex: 1; }
+</style>
+{% endblock %}

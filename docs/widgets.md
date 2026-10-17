@@ -790,6 +790,80 @@ report `live_refresh_s` (and `live_pending`) while any of it is pending; those
 are what the warm acts on. A send that still catches work in flight is followed up:
 the push pipeline sends the page again once the hint clears.
 
+## Pictures a widget makes and keeps: `app.artwork`
+
+A widget that paints with fal.ai (or makes any slow, paid picture) does not
+carry a queue, a budget, a hold rule or an admin page of its own. It declares
+a collection once, with the function that makes one picture, and asks for
+pictures by key:
+
+```python
+from app import artwork
+
+ART = artwork.Collection("specimen_sheet", "paintings", make=paint,
+                         label="Specimen Sheet", title="Painting specimens",
+                         facet="style", facet_label=lambda s: STYLES[s][0])
+
+def paint(job: artwork.Job) -> tuple[bytes, dict]:
+    prompt = prompt_for(job.payload)                          # the widget's own words
+    raw = job.fal.generate("nano_banana", prompt, refs=[job.payload["photo"]])
+    return raw, {"credit": "AI painting (Nano Banana on fal.ai)", "style": job.payload["style"]}
+
+def fetch(options, settings, *, ctx):
+    art = ART.open(ctx, settings, subject=subject_id(options))
+    for row in rows:
+        key = f"{slug(row['name'])}--{style}--p3"
+        got = art.request(key, payload={"style": style, "photo": row["photo"]}, title=row["name"])
+        if got.ready:
+            row["pic"] = art.url(key, px=400, levels=options.get("panel", "colour"), cut=False)
+    art.finish(ctx, facet=style)
+    return {..., "notices": art.notes(), "status": art.status(), **art.live()}
+```
+
+What the host does with that:
+
+- **Store.** `<data_dir>/<name>/<key>.jpg` (or `.png`), its `.json` credit and
+  the payload it was made from, `.err` with why it failed, `archive/` of
+  earlier versions, `derived/` of resized and panel-converted copies.
+  `art.url(key, px=, levels=, cut=)` hands back a data URI, cached per size
+  and panel; `cut=True` keeps transparency for a cut-out.
+- **Budget.** US cents at the models' listed prices, per collection per
+  day, from the widget's `gen_daily_usd` setting (an older `gen_daily_cap`
+  count still counts at the typical price). `job.fal.generate` charges it
+  before each call; a spent day answers `capped`.
+- **The queue.** Worker threads (`gen_parallel`), one job per key, persisted
+  so a restart resumes what was waiting. Stop one or all from the tray or
+  the admin page.
+- **Hold.** A preview (the editors, the dashboard list) is not settled:
+  `ctx["settled"]` is false, the picture is held and the tray shows "N
+  waiting, Paint now". A push, a warm-ahead or an MCP render is settled and
+  starts what its page needs. `ctx["cell_id"]` identifies the placement; on
+  an older host without either field the collection falls back to a settle
+  timer.
+- **What the dashboards asked for.** A panel render records its page's keys
+  with the payloads, so the admin page groups pictures by dashboard with a
+  tab per facet and "Render now" paints exactly what the panels are missing.
+- **The admin page** at `/plugins/<id>/artwork/<name>/`: spend and budget,
+  Render now, Paint the held, Purge, a live ticker, the grid, and per picture
+  Repaint, Delete, Clear error and earlier versions. Add your own per-picture
+  action with `ART.action("recut", "Cut out again", fn)`.
+- **The tray and the editors.** `art.live()` returns `live_refresh_s` and
+  `live_pending`, so the editors poll while work is on the way and a
+  warm-ahead learns the page's pace.
+
+A widget that uses this needs Tesserae 0.463 or later: say so with
+`"tesserae_min": "0.463.0"` in `plugin.json` and on the catalog entry, which
+keeps a host at or above 0.463 from installing a version it cannot run.
+Older hosts ignore the field, so guard the import and fall back to what the
+widget can draw without paintings, with a notice that says what it is
+missing: the Overhead and Specimen Sheet widgets show the shape.
+
+`make` runs on a worker thread. Raise `artwork.ArtworkError("why")` for a
+failure worth keeping (no reference photo, say); `fal.FalError` from the client
+is kept the same way. `app.fal` holds the model table (`fal.MODELS`,
+`fal.EDIT_MODELS`) and resolves the key: the widget's `fal_api_key` setting,
+else the app's key under Settings, else `FAL_KEY` in the environment.
+
 ## `design.palette`, opting out of strict colour tokens
 
 The Spectra colour tokens (`--accent-1` through `--accent-6`, plus

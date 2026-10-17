@@ -143,6 +143,8 @@
       installedFromDisk: !!e.installed_from_disk,
       installedVersion: e.installed_version || null,
       updateAvailable: !!e.update_available,
+      tesseraeMin: e.tesserae_min || null,
+      tooNew: e.too_new || null,
       icon: e.icon || "ph-puzzle-piece",
       iconUrl: e.icon_url || null,
       previews: e.screenshot_urls || [],
@@ -590,6 +592,8 @@
       return state.pending[item.id] === "install" ? "Working…" : "Removing…";
     }
     if (item.kind === "template") return "View & install";
+    if (item.tooNew && !item.installed) return "Needs Tesserae " + item.tesseraeMin;
+    if (item.tooNew && item.updateAvailable) return "v" + item.version + " needs Tesserae " + item.tesseraeMin;
     if (item.updateAvailable) return "Update to v" + item.version;
     return item.installed ? "Uninstall" : "Install";
   }
@@ -793,7 +797,7 @@
       type: "button",
       class: actionClass(item),
       text: actionLabel(item),
-      disabled: state.pending[item.id] ? "disabled" : null,
+      disabled: state.pending[item.id] || (item.tooNew && (!item.installed || item.updateAvailable)) ? "disabled" : null,
     });
     btn.addEventListener("click", function (ev) {
       ev.stopPropagation();
@@ -1066,7 +1070,7 @@
       type: "button",
       class: actionClass(item) + " cat-btn--wide",
       text: actionLabel(item),
-      disabled: state.pending[item.id] ? "disabled" : null,
+      disabled: state.pending[item.id] || (item.tooNew && (!item.installed || item.updateAvailable)) ? "disabled" : null,
     });
     primary.addEventListener("click", function () {
       runAction(item, primary);

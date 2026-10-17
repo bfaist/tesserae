@@ -282,6 +282,51 @@ def _import_server_module(plugin_id: str, server_path: Path) -> ModuleType:
     return module
 
 
+def host_version() -> str:
+    """The running server's version, as the footer shows it; "" when it
+    cannot be told (a bare unit test)."""
+    try:
+        from flask import current_app
+
+        got = str(current_app.config.get("APP_VERSION") or "")
+        if got:
+            return got
+    except Exception:
+        pass
+    try:
+        from importlib.metadata import version
+
+        return version("tesserae")
+    except Exception:
+        return ""
+
+
+def version_tuple(text: str) -> tuple[int, ...]:
+    """``"0.463.1"`` -> ``(0, 463, 1)``; anything unreadable is ``()``."""
+    out: list[int] = []
+    for part in str(text).strip().lstrip("v").split("."):
+        m = re.match(r"\d+", part)
+        if not m:
+            break
+        out.append(int(m.group(0)))
+    return tuple(out)
+
+
+def too_new_for_host(needed: Any, host: str | None = None) -> str | None:
+    """A sentence when a plugin's ``tesserae_min`` is above the running
+    server's version, else None. An unreadable or missing host version never
+    blocks, since a developer checkout may carry none."""
+    if not isinstance(needed, str) or not needed.strip():
+        return None
+    have = host if host is not None else host_version()
+    need_t, have_t = version_tuple(needed), version_tuple(have)
+    if not need_t or not have_t:
+        return None
+    if have_t < need_t:
+        return f"needs Tesserae {needed.strip()} or later; this server is {have.strip()}"
+    return None
+
+
 def _compat_ok(declared: str, host_major: int) -> bool:
     """Return True if ``declared`` (e.g. ``"1.x"`` or ``"1.2"``) is compatible
     with the host's major version. Same-major is the rule; minor / patch are
@@ -386,6 +431,11 @@ def _scan_plugin_dir(
                     f"tesserae_compat={compat!r} does not match host major {HOST_MAJOR_VERSION}",
                 )
             )
+            continue
+
+        too_new = too_new_for_host(manifest.get("tesserae_min"))
+        if too_new:
+            registry.errors.append(LoaderError(plugin_id, child, too_new))
             continue
 
         try:

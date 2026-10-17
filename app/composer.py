@@ -37,6 +37,7 @@ from flask import (
 from werkzeug.wrappers import Response as WerkzeugResponse
 
 from app import widget_next_change
+from app.artwork import cell_id_of
 from app.bindings import apply_binding
 from app.locale_resolve import resolve_locale
 from app.location_time import is_iana_zone
@@ -585,6 +586,7 @@ def _parallel_fetch_plugin_data(
     panel_w: int,
     panel_h: int,
     preview: bool,
+    settled: bool | None = None,
     *,
     sample: bool = False,
     fresh: bool = False,
@@ -646,6 +648,7 @@ def _parallel_fetch_plugin_data(
                 panel_w,
                 panel_h,
                 preview,
+                settled=settled,
                 cell_w=cell_w,
                 cell_h=cell_h,
                 fresh=fresh,
@@ -744,6 +747,7 @@ def _fetch_plugin_data(
     panel_w: int,
     panel_h: int,
     preview: bool,
+    settled: bool | None = None,
     *,
     cell_w: int = 0,
     cell_h: int = 0,
@@ -815,6 +819,12 @@ def _fetch_plugin_data(
         "data_dir": str(plugin.data_dir),
         "home_lat": home_lat,
         "home_lon": home_lon,
+        # ``app.artwork``: a stable id for this placement's settings (secrets
+        # left out), and whether this render is one to act on. A preview is
+        # not settled: a widget that paints holds its paid work while the
+        # dashboard is being edited; a push, a warm-ahead or an MCP render is.
+        "cell_id": cell_id_of(plugin_id, _client_safe_options(plugin_id, options)),
+        "settled": (not preview) if settled is None else settled,
     }
     # ``fresh`` (from ?fresh=1 on the probe / render) tells a widget to bypass
     # its own data_dir cache, so an edit to server.py is instantly verifiable.
@@ -912,6 +922,7 @@ def _hydrate_page(
     page_dict: dict[str, Any],
     *,
     preview: bool = False,
+    settled: bool | None = None,
     sample: bool = False,
     fresh: bool = False,
     locale: str | None = None,
@@ -1043,6 +1054,7 @@ def _hydrate_page(
         panel_w,
         panel_h,
         preview,
+        settled=settled,
         sample=sample,
         fresh=fresh,
         target_device_id=str(page_dict.get("target_device_id") or ""),
@@ -2176,7 +2188,12 @@ def test_render() -> str:
     return render_template(
         "compose.html",
         page=_hydrate_page(
-            page, preview=True, sample=sample_mode, fresh=fresh, locale=locale_override
+            page,
+            preview=True,
+            sample=sample_mode,
+            fresh=fresh,
+            locale=locale_override,
+            settled=True,
         ),
         for_push=False,
         preview_mode=False,
