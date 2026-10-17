@@ -60,6 +60,11 @@ if [ "$(id -u)" = "0" ]; then
     # wrote). Errors suppressed because read-only mounts will fail
     # here harmlessly.
     chown -R pwuser:pwuser /app/data 2>/dev/null || true
+    # Owner bits too: a NAS that keeps share permissions in its own ACL
+    # layer (Ugreen OS, Synology) can leave the real mode at 000, which
+    # the host's tools display as rwx but the kernel enforces against
+    # pwuser once gosu drops root (#372). Only the owner's bits change.
+    chmod -R u+rwX /app/data 2>/dev/null || true
     # HA Add-on path: TESSERAE_DATA_ROOT redirects Tesserae's data
     # directory away from /app/data (typically to /data, HA Supervisor's
     # per-add-on persistent volume which is mounted root-owned). Same
@@ -69,6 +74,7 @@ if [ "$(id -u)" = "0" ]; then
        && [ "${TESSERAE_DATA_ROOT}" != "/app/data" ]; then
         chown pwuser:pwuser "${TESSERAE_DATA_ROOT}"
         chown -R pwuser:pwuser "${TESSERAE_DATA_ROOT}" 2>/dev/null || true
+        chmod -R u+rwX "${TESSERAE_DATA_ROOT}" 2>/dev/null || true
     fi
     # HA Add-on path: the OpenDisplay-via-HA device kind writes frames
     # into HA's media folder (/media, mapped media:rw) so it can hand HA

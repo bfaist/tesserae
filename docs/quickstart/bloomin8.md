@@ -13,7 +13,9 @@ The Bloomin8 Canvas is a battery colour e-paper frame. Its firmware has a Schedu
 
 ## 02 — Point the Canvas at Tesserae
 
-The Canvas takes its pull settings over its own local HTTP API, so it has to be awake: press its button, or wake it from the Bloomin8 app. Then, from any machine on the same network (replace `CANVAS_IP`, `TESSERAE`, `TOKEN` and the time):
+The Canvas takes its pull settings over its own local HTTP API, so it has to be awake: press its button, or wake it from the Bloomin8 app. Then, from any machine on the same network (replace `CANVAS_IP`, `TESSERAE`, `TOKEN` and the time).
+
+macOS or Linux:
 
 ```sh
 curl -X PUT http://CANVAS_IP/upstream/pull_settings \
@@ -26,7 +28,17 @@ curl -X PUT http://CANVAS_IP/upstream/pull_settings \
   }'
 ```
 
-`cron_time` is the first wake, in UTC with a trailing `Z`. A minute or two ahead is fine. After that first pull Tesserae sets every wake.
+Windows PowerShell (the `curl` there is a different program, so use this form):
+
+```powershell
+$cron = (Get-Date).ToUniversalTime().AddMinutes(2).ToString("yyyy-MM-ddTHH:mm:ssZ")
+$body = @{ upstream_on = $true; upstream_url = "http://TESSERAE:8765/api/bloomin8"; token = "TOKEN"; cron_time = $cron } | ConvertTo-Json
+Invoke-RestMethod -Method Put -Uri "http://CANVAS_IP/upstream/pull_settings" -ContentType "application/json" -Body $body
+```
+
+`cron_time` is the first wake, in UTC with a trailing `Z`. A minute or two ahead is fine. After that first pull Tesserae sets every wake. To check what the Canvas holds, `GET` the same address (in PowerShell, `Invoke-RestMethod http://CANVAS_IP/upstream/pull_settings`).
+
+`TESSERAE` is the address and port of Tesserae itself, which the token pop-up fills in for you. With the Home Assistant App that is the HA host on the App's port, 8765 unless you changed it, not HA's own port 8123.
 
 The Canvas downloads its picture from the same address, so `upstream_url` must be reachable from the Canvas: plain `http://` on your network works, and `https://` needs a certificate from a public authority (Let's Encrypt is fine). It doesn't follow redirects, so point it at Tesserae directly rather than at a URL that forwards.
 

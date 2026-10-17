@@ -99,8 +99,13 @@ def settings_area(area: str) -> str | Response:
         sections = [s for s in sections if s["kind"] != "app"]
     # Devices area needs the kinds list (for the Add-device form) so the
     # template doesn't have to dig into the registry directly.
+    # Sorted by the name the picker shows, since that is what a person
+    # scans for (#344); the registry's own order is by folder id.
     device_kinds_list = (
-        [{"id": d.id, "name": d.name, "panel": d.panel} for d in device_kinds()]
+        sorted(
+            ({"id": d.id, "name": d.name, "panel": d.panel} for d in device_kinds()),
+            key=lambda k: str(k["name"]).casefold(),
+        )
         if area == "devices"
         else []
     )

@@ -1309,6 +1309,26 @@ def create_app(
 
     app.jinja_env.globals["option_visible"] = _option_visible
 
+    def _device_base_url() -> str:
+        """The address a panel reaches this server on, for setup text that
+        a person copies into a device. The browser's own host is wrong for
+        that whenever the admin UI is reached through a proxy: under Home
+        Assistant ingress it is HA's address and port, which the device
+        would then call instead of Tesserae (#344). The frame URLs already
+        use the detected LAN address and bind port, so setup text does too;
+        the request host stays as the fallback until that is known."""
+        fn = app.config.get("BASE_URL_FN")
+        if fn is not None:
+            try:
+                base = str(fn() or "").rstrip("/")
+            except Exception:
+                base = ""
+            if base:
+                return base
+        return f"{request.scheme}://{request.host}"
+
+    app.jinja_env.globals["device_base_url"] = _device_base_url
+
     @app.context_processor
     def _inject_nav_data() -> dict[str, Any]:
         """Make the list of admin-equipped plugins available to every

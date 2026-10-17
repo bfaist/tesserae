@@ -25,11 +25,17 @@
           <i class="ph ph-copy"></i> Copy
         </button>
       </div>
-      <p class="field-help">Upstream URL: <code>{{ request.scheme }}://{{ request.host }}/api/bloomin8</code></p>
+      {% set bloomin8_upstream = device_base_url() ~ '/api/bloomin8' %}
+      <p class="field-help">Upstream URL: <code>{{ bloomin8_upstream }}</code></p>
+      <p class="field-help">macOS or Linux terminal:</p>
       <pre class="field-help"><code>curl -X PUT http://CANVAS_IP/upstream/pull_settings \
   -H 'Content-Type: application/json' \
-  -d '{"upstream_on": true, "upstream_url": "{{ request.scheme }}://{{ request.host }}/api/bloomin8", "token": "{{ trmnl_token_reveal.token }}", "cron_time": "'$(date -u -v+1M +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d '+1 min' +%Y-%m-%dT%H:%M:%SZ)'"}'</code></pre>
-      <p class="field-help">The Canvas fetches its image from the same address, so it has to reach this URL directly: plain <code>http://</code> on your network, or <code>https://</code> with a public certificate.</p>
+  -d '{"upstream_on": true, "upstream_url": "{{ bloomin8_upstream }}", "token": "{{ trmnl_token_reveal.token }}", "cron_time": "'$(date -u -v+2M +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d '+2 min' +%Y-%m-%dT%H:%M:%SZ)'"}'</code></pre>
+      <p class="field-help">Windows PowerShell:</p>
+      <pre class="field-help"><code>$cron = (Get-Date).ToUniversalTime().AddMinutes(2).ToString("yyyy-MM-ddTHH:mm:ssZ")
+$body = @{ upstream_on = $true; upstream_url = "{{ bloomin8_upstream }}"; token = "{{ trmnl_token_reveal.token }}"; cron_time = $cron } | ConvertTo-Json
+Invoke-RestMethod -Method Put -Uri "http://CANVAS_IP/upstream/pull_settings" -ContentType "application/json" -Body $body</code></pre>
+      <p class="field-help">The Canvas fetches its image from the same address, so it has to reach this URL directly: plain <code>http://</code> on your network, or <code>https://</code> with a public certificate. This is Tesserae's own address and port, not a proxy's; if your panels reach Tesserae on a different address, use that one.</p>
     </div>
 {% else %}
     <div class="modal-body">
@@ -43,7 +49,7 @@
           <i class="ph ph-copy"></i> Copy
         </button>
       </div>
-      <p class="field-help">Server URL: <code>http://{{ request.host }}</code></p>
+      <p class="field-help">Server URL: <code>{{ device_base_url() }}</code></p>
       <p class="field-help"><strong>LAN-safe, not internet-safe.</strong> The short token is fine for a homelab Tesserae behind a firewall / Tailscale / VPN. If your instance is reachable from the public internet, stack additional auth in front (reverse proxy with HTTP basic auth, OAuth, Cloudflare Access, anything), five characters won't survive a determined brute-force.</p>
 {% endif %}
     </div>

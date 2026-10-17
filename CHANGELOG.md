@@ -6,6 +6,24 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Setup text now gives the server's own address** (#344). The access-token
+  pop-up for the Bloomin8 Canvas and TRMNL kinds built its URL from the
+  browser's address, which through Home Assistant ingress is HA's host and
+  port 8123, so a Canvas set up from it called Home Assistant instead of
+  Tesserae. It now uses the detected LAN address and bind port the frame
+  URLs already use. The Canvas pop-up and quickstart also carry a Windows
+  PowerShell form of the pull-settings command; the previous one only ran in
+  a Unix shell.
+- **Add device lists kinds alphabetically** by their display name (#344).
+- **Docker: the data directory's owner bits are restored on start** (#372).
+  A NAS that keeps share permissions in its own ACL layer (Ugreen OS,
+  Synology) can leave the bind mount's real mode at 000, which its own tools
+  show as rwx; the container then failed at start with a permission error on
+  `data/plugins` even though the listing looked right. The entrypoint now
+  adds the owner's read, write and search bits after the chown.
+
 ## [0.464.1], 2026-10-18
 
 ### Fixed
