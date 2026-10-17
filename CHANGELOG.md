@@ -6,6 +6,31 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ## [Unreleased]
 
+## [0.464.0], 2026-10-18
+
+### Added
+
+- Settings › Generative AI: the fal.ai key every painting widget shares (a
+  widget's own key still comes first), a Check that asks fal.ai about the
+  key without painting anything, and two spending ceilings, US dollars a
+  day and a month, over every widget together; a widget's own budget
+  applies inside them. The page shows to-day and the month, a strip of the
+  last thirty days, who is painting with a link to each widget's pictures,
+  and the month by widget and model, from a ledger every charge is written
+  to (`<data root>/artwork/ledger.jsonl`).
+- A send waits for the page's paintings: a push of a page with a widget
+  that asks to be run ahead first runs the page and, while it still asks
+  for a refresh, runs it again after that wait, up to five minutes, so the
+  panel paints the finished page once. Manual sends wait too; follow-ups
+  and warms do not. History says how long a send waited.
+
+### Fixed
+
+- The host version the `tesserae_min` gate compares against is the
+  checkout's pyproject.toml when there is one, not the installed package's
+  metadata, which goes stale on a source install run after a bump and
+  turned current widgets away as too new.
+
 ## [0.463.0], 2026-10-18
 
 ### Added

@@ -479,3 +479,20 @@ def test_a_plugin_that_needs_a_newer_tesserae_is_refused(tmp_path):
         "an unknown host never blocks"
     )
     assert too_new_for_host("", "0.1.0") is None
+
+
+def test_host_version_is_the_checkouts_not_stale_package_metadata(monkeypatch):
+    """A source checkout run after a bump still carries the old version in
+    its package metadata; the gate must read the version the footer shows."""
+    import tomllib
+    from pathlib import Path
+
+    from app import plugin_loader
+
+    want = tomllib.loads(
+        (Path(plugin_loader.__file__).resolve().parent.parent / "pyproject.toml").read_text(
+            encoding="utf-8"
+        )
+    )["project"]["version"]
+    assert plugin_loader.host_version() == want
+    assert plugin_loader.too_new_for_host(want) is None

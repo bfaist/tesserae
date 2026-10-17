@@ -34,6 +34,7 @@ from pydantic import BaseModel
 from werkzeug.wrappers import Response
 
 from app import (
+    artwork,
     artwork_routes,
     auth,
     bloomin8_api,
@@ -42,6 +43,7 @@ from app import (
     device_loader,
     events_routes,
     experiments,
+    genai,
     history_routes,
     onboarding,
     online,
@@ -1154,6 +1156,10 @@ def create_app(
     send_routes.register(app)
     history_routes.register(app)
     artwork_routes.register(app)
+    artwork.host_configure(
+        ledger=genai.Ledger(Path(app.config["DATA_ROOT"]) / "artwork"),
+        ceilings=lambda: genai.ceilings(app.config.get("SETTINGS_STORE")),
+    )
     device_battery_routes.register(app)
     stats_routes.register(app)
     events_routes.register(app)

@@ -258,14 +258,14 @@ def _explain(err: Exception) -> str:
 class FalClient:
     """A key and a budget to charge, with one ``generate`` for every model.
 
-    ``charge(cents)`` is called before each request with the model's listed
-    price; raise from it to refuse the call (the day's budget is spent)."""
+    ``charge(cents, model)`` is called before each request with the model's
+    listed price; raise from it to refuse the call (the day's budget is spent)."""
 
     def __init__(
         self,
         key: str,
         *,
-        charge: Callable[[int], None] | None = None,
+        charge: Callable[[int, str], None] | None = None,
         stop: threading.Event | None = None,
         timeout: float = TIMEOUT_S,
     ) -> None:
@@ -304,7 +304,7 @@ class FalClient:
             if self.stopped:
                 raise FalError("stopped")
             if self._charge is not None:
-                self._charge(int(spec["cents"]))
+                self._charge(int(spec["cents"]), model)
             self.spent_cents += int(spec["cents"])
             try:
                 answer = _http_json(url, body, self.key, self._timeout)

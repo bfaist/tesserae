@@ -283,8 +283,10 @@ def _import_server_module(plugin_id: str, server_path: Path) -> ModuleType:
 
 
 def host_version() -> str:
-    """The running server's version, as the footer shows it; "" when it
-    cannot be told (a bare unit test)."""
+    """The running server's version, as the footer shows it: the app's
+    ``APP_VERSION`` when there is an app, else the checkout's pyproject.toml
+    (a source install's package metadata goes stale between bumps), else
+    the installed package's metadata; "" when it cannot be told."""
     try:
         from flask import current_app
 
@@ -292,6 +294,13 @@ def host_version() -> str:
         if got:
             return got
     except Exception:
+        pass
+    pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
+    try:
+        import tomllib
+
+        return str(tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]["version"])
+    except (OSError, KeyError, ValueError, TypeError):
         pass
     try:
         from importlib.metadata import version

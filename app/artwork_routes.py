@@ -164,7 +164,8 @@ def render_now(plugin_id: str, name: str) -> WerkzeugResponse:
     key = fal.resolve_key(settings)
     if not key:
         flash(
-            "No fal.ai key: add one to this widget's settings, or the app's under Settings.", "warn"
+            "No fal.ai key: add one under Settings › Generative AI, or to this widget's settings.",
+            "warn",
         )
         return _back(plugin_id, name)
     started, found = c.render_now(data_dir, key, settings, str(request.form.get("who") or ""))

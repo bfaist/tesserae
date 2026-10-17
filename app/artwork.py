@@ -104,6 +104,36 @@ def dollars(cents: int) -> str:
     return "no limit" if cents >= UNLIMITED else f"US${cents / 100:.2f}"
 
 
+# The host's ledger and ceiling over every collection (Settings › Generative
+# AI), set once by the app factory; nothing here needs Flask.
+_HOST: dict[str, Any] = {"ledger": None, "ceilings": None}
+
+
+def host_configure(
+    ledger: Any | None = None, ceilings: Callable[[], tuple[int, int]] | None = None
+) -> None:
+    """``ledger.append(plugin_id, name, model, cents)`` is told every charge;
+    ``ceilings()`` gives (daily, monthly) cents, UNLIMITED for none."""
+    _HOST["ledger"] = ledger
+    _HOST["ceilings"] = ceilings
+
+
+def ceiling_spent() -> str:
+    """Why nothing more may be painted server-wide, or empty."""
+    ledger, ceilings = _HOST.get("ledger"), _HOST.get("ceilings")
+    if ledger is None or ceilings is None:
+        return ""
+    try:
+        daily, monthly = ceilings()
+        if daily < UNLIMITED and ledger.today_cents() >= daily:
+            return "the server's daily ceiling for paintings is reached"
+        if monthly < UNLIMITED and ledger.month_cents() >= monthly:
+            return "the server's monthly ceiling for paintings is reached"
+    except Exception:
+        logger.exception("artwork: the ceiling could not be read")
+    return ""
+
+
 def cell_id_of(plugin_id: str, options: dict[str, Any]) -> str:
     """A stable id for one placement's settings: the plugin and its options,
     secrets left out by the caller. The host computes this into
@@ -400,18 +430,24 @@ class Collection:
         got = _read_json(self.folder(data_dir) / "budget.json", {})
         return int(got.get(_today(), 0)) if isinstance(got, dict) else 0
 
-    def spend(self, data_dir: Path, cents: int) -> None:
+    def spend(self, data_dir: Path, cents: int, model: str = "") -> None:
         with self._q.lock:
             _write(
                 self.folder(data_dir) / "budget.json",
                 json.dumps({_today(): self.budget_used(data_dir) + int(cents)}).encode(),
             )
+        ledger = _HOST.get("ledger")
+        if ledger is not None:
+            with contextlib.suppress(Exception):
+                ledger.append(self.plugin_id, self.name, model, int(cents))
 
     def budget_reset(self, data_dir: Path) -> None:
         _write(self.folder(data_dir) / "budget.json", b"{}")
 
     def room(self, data_dir: Path, cap: int) -> int:
         """How many pictures at the typical price the day's budget still allows."""
+        if ceiling_spent():
+            return 0
         if cap >= UNLIMITED:
             return 10**6
         return max(0, cap - self.budget_used(data_dir)) // max(1, self.typical_cents)
@@ -682,10 +718,13 @@ class Collection:
     # -- the queue -----------------------------------------------------------
 
     def _fal_for(self, data_dir: Path, key: str, stop: threading.Event, cap: int) -> fal.FalClient:
-        def charge(cents: int) -> None:
+        def charge(cents: int, model: str = "") -> None:
             if cap < UNLIMITED and self.budget_used(data_dir) >= cap:
                 raise ArtworkError("the day's budget is spent")
-            self.spend(data_dir, cents)
+            why = ceiling_spent()
+            if why:
+                raise ArtworkError(why)
+            self.spend(data_dir, cents, model)
 
         return fal.FalClient(key, charge=charge, stop=stop)
 
@@ -729,6 +768,10 @@ class Collection:
             try:
                 if cap < UNLIMITED and self.budget_used(job.data_dir) >= cap:
                     self._note_error(job, "the day's budget is spent")
+                    continue
+                why = ceiling_spent()
+                if why:
+                    self._note_error(job, why)
                     continue
                 self._run_one(job, cap)
             finally:
@@ -1334,7 +1377,7 @@ class Art:
         if not self.key:
             self._count("no_key")
             return Got(key, "no_key")
-        if self.cap < UNLIMITED and c.budget_used(self.data_dir) >= self.cap:
+        if (self.cap < UNLIMITED and c.budget_used(self.data_dir) >= self.cap) or ceiling_spent():
             self._count("capped")
             return Got(key, "capped")
         job = c.job(

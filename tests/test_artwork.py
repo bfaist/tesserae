@@ -279,7 +279,7 @@ def test_fal_request_bodies_and_key_resolution(monkeypatch):
     monkeypatch.setenv("FAL_KEY", "env")
     assert fal.resolve_key({}) == "env"
     client = fal.FalClient(
-        "k", charge=lambda c: (_ for _ in ()).throw(artwork.ArtworkError("spent"))
+        "k", charge=lambda c, m: (_ for _ in ()).throw(artwork.ArtworkError("spent"))
     )
     with pytest.raises(artwork.ArtworkError):
         client.generate("nano_banana", "p", refs=["u"])

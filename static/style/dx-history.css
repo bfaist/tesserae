@@ -391,3 +391,7 @@ a.dx-hist-time[href]:hover { color: var(--t-accent); }
   .dx-hist-err { order: 10; flex-basis: 100%; min-width: 0; }
   .dx-hist-detail { order: 11; }
 }
+
+/* A send that waited for the page's paintings before it went out. */
+.dx-hist-waited { margin: 2px 0 0; font-size: 12px; color: var(--t-fg-soft); display: flex; gap: 5px; align-items: center; }
+.dx-hist-waited i { color: var(--t-muted); }

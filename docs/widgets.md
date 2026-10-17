@@ -864,6 +864,34 @@ is kept the same way. `app.fal` holds the model table (`fal.MODELS`,
 `fal.EDIT_MODELS`) and resolves the key: the widget's `fal_api_key` setting,
 else the app's key under Settings, else `FAL_KEY` in the environment.
 
+### The server's ceiling and ledger
+
+Every charge a collection makes is also written to the server's ledger
+(`<data root>/artwork/ledger.jsonl`: when, which widget and collection,
+which model, how many US cents). Settings › Generative AI shows it: to-day
+and the month, a strip of the last thirty days, each widget's spend with a
+link to its pictures page, and the month by widget and model.
+
+The same page holds the fal.ai key every widget without one of its own
+uses (`fal.resolve_key` finds it after the widget's own `fal_api_key`),
+and two ceilings over every collection together, US dollars a day and a
+month. When either is reached, `Art.request` answers `capped` for every
+collection, `room()` is 0 and a queued job is noted as failed with the
+reason, exactly as a widget's own budget behaves; a widget's budget still
+applies inside the ceiling. A widget needs nothing for this: it comes with
+`app.artwork`.
+
+### A send waits for the pictures
+
+A push of a page with a widget that declares `render.warm_ahead_s` first
+runs the page as a push would (nothing sent) and, while the page carries a
+refresh hint, runs it again after that wait, up to five minutes in all
+(`push.SETTLE_MAX_S`), so the panel paints the finished page once. Manual
+sends, schedules, rotations and webhooks all wait; follow-ups and warms do
+not. The History row says how long the send waited and for how many pieces
+of work. Past the cap the page goes as it is and the follow-up pushes
+finish it.
+
 ## `design.palette`, opting out of strict colour tokens
 
 The Spectra colour tokens (`--accent-1` through `--accent-6`, plus

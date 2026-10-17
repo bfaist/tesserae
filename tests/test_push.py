@@ -1501,3 +1501,51 @@ def test_push_sends_the_page_again_after_a_refresh_hint(
     ):
         manager.push("home")
         assert manager.pending_followup("home") is None, "no hint, no follow-up"
+
+
+def test_a_send_waits_for_the_page_to_finish_painting(
+    tmp_path: Path, composition_png: bytes, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A page with a widget that asks to be run ahead is run before the send
+    and, while it asks for a refresh, run again after that wait; the page
+    goes out once, finished, and the event says how long it waited."""
+    from app import push as push_mod
+
+    renderers = [_make_renderer(tmp_path, "pi_png", "png", retain=False)]
+    manager, mqtt_client, png = _wired(tmp_path, composition_png, renderers)
+    naps: list[float] = []
+    monkeypatch.setattr(push_mod, "_settle_sleep", naps.append)
+    answers = iter([(10, 3), (10, 1), (0, 0)])
+    monkeypatch.setattr(manager, "warm_page", lambda page_id: next(answers))
+
+    with patch("app.push.capture_composed", return_value=(png, [])):
+        result = manager.push("home")
+    assert result.status == "sent" and naps == [], (
+        "a page with no widget that asks to be run ahead is not waited for"
+    )
+
+    import app.warm_ahead as warm_mod
+
+    monkeypatch.setattr(warm_mod, "page_warm_ahead_s", lambda page, registry: 150)
+    answers = iter([(10, 3), (10, 1), (0, 0)])
+    sent_before = len(mqtt_client.published)
+    with patch("app.push.capture_composed", return_value=(_distinct_png((7, 7, 7)), [])):
+        result = manager.push("home")
+    assert result.status == "sent" and naps == [10.0, 10.0], "ran until the page stopped asking"
+    assert len(mqtt_client.published) == sent_before + 1, "then sent once"
+    last = max(manager._event_log.list(type="push", limit=5), key=lambda e: e.id)
+    assert last.extra.get("waited_for") == 3 and "waited_s" in last.extra
+
+    # past the cap the page goes as it is
+    naps.clear()
+    monkeypatch.setattr(push_mod, "SETTLE_MAX_S", 12)
+    answers = iter([(10, 2), (10, 2), (10, 2), (0, 0)])
+    with patch("app.push.capture_composed", return_value=(_distinct_png((8, 8, 8)), [])):
+        result = manager.push("home", source="scheduler")
+    assert result.status == "sent" and naps == [10.0], "one wait fits in twelve seconds, not two"
+    # follow-ups never wait
+    naps.clear()
+    answers = iter([(10, 2), (0, 0)])
+    with patch("app.push.capture_composed", return_value=(_distinct_png((9, 9, 9)), [])):
+        manager.push("home", source="follow-up", followup=1)
+    assert naps == []

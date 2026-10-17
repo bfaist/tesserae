@@ -255,6 +255,14 @@ FOLLOWUP_LIMIT = 8
 # A warm-ahead compose may run every widget on the page; the composer's own
 # hydrate budget is shorter, this only bounds a stuck socket.
 WARM_TIMEOUT_S = 90
+# A send waits for the page's widgets to finish what they are painting, up to
+# this long, polling the page at the wait it asks for (``live_refresh_s``), so
+# the panel paints the finished page once; past it the page goes as it is and
+# the follow-ups finish it. Only pages with a widget that asks to be run ahead
+# (``render.warm_ahead_s``) are waited for.
+SETTLE_MAX_S = 300
+SETTLE_POLL_MAX_S = 30
+_settle_sleep = time.sleep
 
 PushStatus = Literal[
     "sent", "busy", "failed", "not_found", "quiet", "held", "superseded", "no_change", "unbound"
@@ -1661,6 +1669,7 @@ class PushManager:
         bypass_coalesce: bool = False,
         force_publish: bool = False,
         followup: int = 0,
+        settle: bool = True,
     ) -> PushResult:
         """Render a saved Page through the composer and publish.
 
@@ -1680,7 +1689,15 @@ class PushManager:
 
         ``source`` (default ``"page"``): the trigger label written to the
         event log so History can chip what kicked it off. Callers pass
-        ``"scheduler"``, ``"webhook"``, ``"home_assistant"``, etc."""
+        ``"scheduler"``, ``"webhook"``, ``"home_assistant"``, etc.
+
+        ``settle`` (default ``True``): wait for the page's widgets to finish
+        what they are painting before the page is rendered and sent, up to
+        ``SETTLE_MAX_S``; see :meth:`settle_page`. Follow-ups and warms
+        never wait."""
+        waited: tuple[float, int] = (0.0, 0)
+        if settle and followup == 0 and source not in ("follow-up", "deck_warm", "album_warm"):
+            waited = self.settle_page(page_id)
         # v0.69 coalescing: page pushes with a single-device target
         # coalesce against that device_id (later pushes for the same
         # device supersede earlier ones). Multi-device or unbound
@@ -1712,11 +1729,54 @@ class PushManager:
                     source=source,
                     force_publish=force_publish,
                     followup=followup,
+                    waited=waited,
                 )
             finally:
                 self._lock.release()
         self._notify(result)
         return result
+
+    def settle_page(self, page_id: str, *, max_s: float | None = None) -> tuple[float, int]:
+        """Wait until the widgets on ``page_id`` stop asking for a refresh:
+        the page is run as a push would (nothing sent) and, while it carries a
+        refresh hint, run again after that wait, up to ``max_s`` in all.
+        Returns (seconds waited, the most pieces of work seen pending). A page
+        with no widget that asks to be run ahead returns at once."""
+        if max_s is None:
+            max_s = SETTLE_MAX_S
+        page = self._page_store.get(page_id)
+        if page is None:
+            return 0.0, 0
+        from app.warm_ahead import page_warm_ahead_s
+
+        if page_warm_ahead_s(page, self._plugin_registry_fn()) <= 0:
+            return 0.0, 0
+        started = time.monotonic()
+        most = 0
+        slept = 0.0
+        while True:
+            try:
+                hint, pending = self.warm_page(page_id)
+            except Exception as err:
+                logger.warning("settle: %s could not be run ahead of the send (%s)", page_id, err)
+                break
+            most = max(most, pending)
+            if hint <= 0:
+                break
+            waited = max(time.monotonic() - started, slept)
+            nap = float(min(SETTLE_POLL_MAX_S, max(FOLLOWUP_MIN_S, hint)))
+            if waited + nap > max_s:
+                logger.info(
+                    "settle: %s still has %d pending after %.0fs; sending as it is",
+                    page_id,
+                    pending,
+                    waited,
+                )
+                break
+            logger.info("settle: %s has %d pending; sending in %.0fs", page_id, pending, nap)
+            _settle_sleep(nap)
+            slept += nap
+        return round(max(time.monotonic() - started, slept), 1), most
 
     # -- follow-ups ------------------------------------------------------
 
@@ -2259,6 +2319,7 @@ class PushManager:
         force_publish: bool = False,
         stamp_into: dict[str, dict[str, Any]] | None = None,
         followup: int = 0,
+        waited: tuple[float, int] = (0.0, 0),
     ) -> PushResult:
         started = time.monotonic()
         refresh_wanted = 0
@@ -2393,6 +2454,7 @@ class PushManager:
                     overlay_slots=overlay_slots,
                     stamp_into=stamp_into,
                     page_id=page_id,
+                    waited=waited,
                 )
                 all_renderers.extend(result.renderers)
                 group_results.append(result)
@@ -2506,6 +2568,7 @@ class PushManager:
         overlay_slots: list[dict[str, Any]] | None = None,
         stamp_into: dict[str, dict[str, Any]] | None = None,
         page_id: str | None = None,
+        waited: tuple[float, int] = (0.0, 0),
     ) -> PushResult:
         """Common fanout: thumbnail + per-renderer transform / publish / log.
 
@@ -2830,6 +2893,10 @@ class PushManager:
             # History returns it for reproduce / re-target; the retained
             # composition is already framed, so resend needs nothing more.
             event_extra["framing"] = dict(framing)
+        if waited[0] > 0:
+            # The send waited for the page's widgets to finish painting first.
+            event_extra["waited_s"] = waited[0]
+            event_extra["waited_for"] = waited[1]
         # A successful warm (deck / album background refresh) rendered into
         # the side cache and never repainted a panel, so it must not be
         # logged with the same status as a push a display actually showed.
