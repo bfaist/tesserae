@@ -39,6 +39,7 @@ import contextlib
 import hashlib
 import json
 import logging
+import re
 import threading
 import time
 import urllib.error
@@ -251,6 +252,9 @@ def _unbound_broadcast_enabled(settings: Any) -> bool:
 FOLLOWUP_MIN_S = 5
 FOLLOWUP_MAX_S = 120
 FOLLOWUP_LIMIT = 8
+# A warm-ahead compose may run every widget on the page; the composer's own
+# hydrate budget is shorter, this only bounds a stuck socket.
+WARM_TIMEOUT_S = 90
 
 PushStatus = Literal[
     "sent", "busy", "failed", "not_found", "quiet", "held", "superseded", "no_change", "unbound"
@@ -898,6 +902,27 @@ class PushManager:
 
         threading.Thread(target=_repaint, name=f"repaint-{device_id}", daemon=True).start()
         return True
+
+    def warm_page(self, page_id: str) -> tuple[int, int]:
+        """Run the page's widgets as a push would (panel context, no
+        screenshot, nothing sent) and return ``(refresh hint, pending)`` as
+        the composed page carries them: how long a widget on it asked to
+        wait before it is rendered again (0 once nothing is waiting) and how
+        many pieces of work it says are still pending. The scheduler's
+        warm-ahead pass calls this before a scheduled send (``app.warm_ahead``)."""
+        page = self._page_store.get(page_id)
+        if page is None:
+            return 0, 0
+        groups = panel_groups_for_push(page, self._devices, self._settings)
+        if not groups:
+            return 0, 0
+        url = self._compose_url_for(page_id, groups[0][0], "")
+        req = urllib.request.Request(url, headers={"User-Agent": "tesserae-warm-ahead"})
+        with urllib.request.urlopen(req, timeout=WARM_TIMEOUT_S) as resp:
+            html = resp.read(4_000_000).decode("utf-8", "replace")
+        hint = re.search(r'name="tesserae-refresh-s" content="(\d+)"', html)
+        pending = re.search(r'name="tesserae-pending" content="(\d+)"', html)
+        return (int(hint.group(1)) if hint else 0), (int(pending.group(1)) if pending else 0)
 
     def warm_deck_page(self, page_id: str, device_id: str) -> bool:
         """Render a deck page for a device into the pre-render cache WITHOUT

@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   {% if page.refresh_s %}<meta name="tesserae-refresh-s" content="{{ page.refresh_s }}">{% endif %}
+  {% if page.pending %}<meta name="tesserae-pending" content="{{ page.pending }}">{% endif %}
   <title>{{ page.name|default("Compose") }}</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='brand/favicon.svg') }}">
   <link rel="alternate icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='brand/favicon-32.png') }}">

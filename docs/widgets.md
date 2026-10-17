@@ -756,6 +756,40 @@ the field, so it is safe to always send. Keep `fetch()` cheap enough to run
 every few seconds, and never start paid work from a fetch more often than the
 widget's own limits allow.
 
+### Work ahead of a scheduled send
+
+A scheduled send renders the page the moment it fires, and `fetch()` has a few
+seconds. A widget whose work takes longer than that (an AI painting is ten to
+forty seconds) can ask to be run ahead of time:
+
+```json
+"render": {"warm_ahead_s": 150}
+```
+
+Before each projected send of a page carrying such a widget (a schedule, a
+rotation step, the page's own refresh cadence), the server runs the page's
+widgets as the send will, with `ctx["preview"]` false, that many seconds early,
+and keeps running them every ten to thirty seconds until the page stops
+sending `live_refresh_s`. Nothing is sent to a panel by a warm. The number in
+the manifest is only the first guess: the server learns from each warm. Say
+how much work is pending alongside the hint:
+
+```python
+return {..., "live_refresh_s": 6, "live_pending": 3}   # three paintings still to land
+```
+
+and the server works out seconds per item from how long the page took to
+settle against the count it started with, keeps a typical count per send, and
+sizes the next lead from the two with a margin (30 s to 15 min): a page that
+paints three aircraft at fifteen seconds each is warmed about a minute ahead,
+one that paints ten gets three. Without `live_pending` the page is learned as
+a whole. A warm that runs out of lead asks for more next time.
+
+So `fetch()` must start the work it needs when `ctx["preview"]` is false and
+report `live_refresh_s` (and `live_pending`) while any of it is pending; those
+are what the warm acts on. A send that still catches work in flight is followed up:
+the push pipeline sends the page again once the hint clears.
+
 ## `design.palette`, opting out of strict colour tokens
 
 The Spectra colour tokens (`--accent-1` through `--accent-6`, plus

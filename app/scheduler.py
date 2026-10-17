@@ -49,6 +49,7 @@ from app.state.deck_store import DeckStore
 from app.state.event_log import EventLog
 from app.state.rotation_model import Rotation, RotationStep
 from app.state.schedule_model import Schedule
+from app.warm_ahead import WarmAhead, page_warm_ahead_s
 
 if TYPE_CHECKING:  # pragma: no cover - import cycle: the projection reads us
     from app.device_upcoming import UpcomingEvent
@@ -412,6 +413,11 @@ class Scheduler:
         # warm passes from stacking when one runs longer than a tick.
         self._deck_last_warm: dict[str, float] = {}
         self._deck_warm_lock = threading.Lock()
+        # Warm-ahead (``app.warm_ahead``): pages whose widgets ask to be run
+        # ahead of a send are warmed before each projected fire and learn
+        # how long they take.
+        self._warm_ahead = WarmAhead(warm=lambda page_id: self._push_factory().warm_page(page_id))
+        self._warm_ahead_lock = threading.Lock()
         # "<deck_id>:<device_id>" -> the page last pushed by timer advance, so we
         # push only at step transitions (a manual nav in "both" mode holds until
         # the next boundary, matching rotation behaviour).
@@ -788,6 +794,8 @@ class Scheduler:
             fire()
         # Deck pre-render refresh (silent, off the tick thread).
         self._maybe_warm_decks(now)
+        # Warm-ahead of the next fires (silent, off the tick thread).
+        self._maybe_warm_ahead(now)
         # Deck home card: return idle panels to the deck's home page
         # once the configured timeout lapses. Server-side enforcement
         # for server-navigated devices; SD-cache firmware gets the same
@@ -1559,6 +1567,88 @@ class Scheduler:
             cadence_min,
         )
         return True
+
+    def warm_ahead_status(self) -> dict[str, dict[str, float]]:
+        """What warm-ahead has learned: per page, the settle time seen and
+        the lead it now uses."""
+        return self._warm_ahead.status()
+
+    def _maybe_warm_ahead(self, now: datetime) -> None:
+        """Kick a background warm-ahead pass unless one is already running."""
+        if self._page_store is None or self._plugin_registry is None:
+            return
+        if not self._warm_ahead_lock.acquire(blocking=False):
+            return
+
+        def _run() -> None:
+            try:
+                self._warm_ahead_pass(now)
+            except Exception:
+                logger.exception("warm-ahead pass failed")
+            finally:
+                self._warm_ahead_lock.release()
+
+        threading.Thread(target=_run, name="tesserae-warm-ahead-pass", daemon=True).start()
+
+    def _warm_ahead_pass(self, now: datetime) -> int:
+        """Start a warm for every projected fire, on every display, of a page
+        whose widgets ask for one, when the fire is within the page's lead.
+        Timed records and rotation steps come from the same projection the
+        device timeline shows; a page's own refresh cadence is projected
+        here. Returns how many warms started."""
+        if self._page_store is None or self._plugin_registry is None:
+            return 0
+        registry = self._plugin_registry()
+        if registry is None:
+            return 0
+        try:
+            pages = [p for p in self._page_store.list() if not getattr(p, "archived", False)]
+        except Exception:
+            return 0
+        wants = {p.id: page_warm_ahead_s(p, registry) for p in pages}
+        wants = {page_id: lead for page_id, lead in wants.items() if lead > 0}
+        if not wants:
+            return 0
+        now_ts = now.timestamp()
+        started = 0
+        devices: set[str] = set()
+        for p in pages:
+            if p.id in wants:
+                devices.update(p.device_ids or ())
+        for device_id in sorted(devices):
+            try:
+                events = self.upcoming_for_device(device_id, now=now, hours=1, limit=12)
+            except Exception:
+                logger.exception("warm ahead: projection failed for %s", device_id)
+                continue
+            for event in events:
+                page_id = event.dashboard_id
+                if (
+                    page_id
+                    and page_id in wants
+                    and event.scheduled_at > now
+                    and self._warm_ahead.consider(
+                        page_id, event.scheduled_at.timestamp(), wants[page_id], now_ts
+                    )
+                ):
+                    started += 1
+        tz = self._tz_provider()
+        showing: dict[str, set[str]] | None = None
+        for p in pages:
+            minutes = getattr(p, "refresh_minutes", 0) or 0
+            if p.id not in wants or minutes <= 0:
+                continue
+            if showing is None:
+                showing = self._devices_showing_pages(now)
+            if not showing.get(p.id):
+                continue
+            period = minutes * 60
+            offset = now.astimezone(tz).utcoffset()
+            offset_s = offset.total_seconds() if offset else 0.0
+            next_ts = (_refresh_slot(now, minutes, tz) + 1) * period - offset_s
+            if self._warm_ahead.consider(p.id, next_ts, wants[p.id], now_ts):
+                started += 1
+        return started
 
     def _maybe_warm_decks(self, now: datetime) -> None:
         """Kick a background deck-warm pass unless one is already running, so a

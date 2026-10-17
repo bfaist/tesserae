@@ -1013,3 +1013,20 @@ def test_refresh_hint_is_the_longest_wait_within_the_window() -> None:
         refresh_hint_s([{"data": {"live_refresh_s": 500}}, {"data": {"live_refresh_s": 30}}]) == 120
     )
     assert refresh_hint_s([{"data": {"live_refresh_s": 0}}, {"data": {}}]) == 0
+
+
+def test_pending_hint_sums_the_widgets_pending_work() -> None:
+    from app.composer import pending_hint
+
+    assert (
+        pending_hint(
+            [
+                {"data": {"live_pending": 3}},
+                {"data": {"live_pending": "2"}},
+                {"data": {}},
+                {"data": None},
+            ]
+        )
+        == 5
+    )
+    assert pending_hint([{"data": {"live_pending": -4}}, {"data": {"live_pending": "x"}}]) == 0

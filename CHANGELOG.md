@@ -8,6 +8,18 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ### Added
 
+- **Widgets can be run ahead of a scheduled send.** A widget whose work
+  takes longer than a fetch may (an AI painting) declares
+  `render.warm_ahead_s` in its manifest, and the scheduler runs its page
+  that long before each projected send (schedules, rotation steps, the
+  page's own refresh cadence), polling until the page stops asking for a
+  refresh, so the panel paints the finished page once. The lead learns:
+  a widget says how many pieces of work are pending (`live_pending`), the
+  server works out seconds per item from how long the page took to settle,
+  keeps a typical count per send, and sizes the next lead from the two,
+  30 s to 15 min, asking for more after a warm that ran out of time.
+  Nothing reaches a panel from a warm.
+
 - **A page still painting is sent again when it is done.** A widget that is
   waiting on something (an AI painting in flight, say) already tells the
   editors to fetch it again in a few seconds through `live_refresh_s`. A push

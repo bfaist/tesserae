@@ -892,6 +892,22 @@ def refresh_hint_s(items: Iterable[Mapping[str, Any]]) -> int:
     return best
 
 
+def pending_hint(items: Iterable[Mapping[str, Any]]) -> int:
+    """How many pieces of work the items' widgets say are still pending
+    (``live_pending`` in their data): what a warm-ahead learns its seconds
+    per item from. 0 when nothing says."""
+    total = 0
+    for item in items:
+        data = item.get("data") if isinstance(item, Mapping) else None
+        if not isinstance(data, Mapping):
+            continue
+        try:
+            total += max(0, int(float(data.get("live_pending") or 0)))
+        except (TypeError, ValueError):
+            continue
+    return min(total, 10_000)
+
+
 def _hydrate_page(
     page_dict: dict[str, Any],
     *,
@@ -1101,6 +1117,7 @@ def _hydrate_page(
         "corner_radius": corner_radius,
         "locale": locale,
         "refresh_s": refresh_hint_s(cells_out),
+        "pending": pending_hint(cells_out),
     }
 
 
@@ -1507,6 +1524,7 @@ def _render_canvas(
         "panels_compose.html",
         els=els,
         refresh_s=refresh_hint_s(els),
+        pending=pending_hint(els),
         cw=cw,
         ch=ch,
         w=target_w,
