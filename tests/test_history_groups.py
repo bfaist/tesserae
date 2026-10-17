@@ -163,3 +163,48 @@ def test_history_page_by_dashboard_groups_by_target(app: Flask) -> None:
     by_dash = filters[filters.index("By dashboard") - 400 : filters.index("By dashboard")]
     assert "is-on" in by_dash
     assert filters.count("sort=dashboard") >= 3
+
+
+def test_followups_fold_under_the_send_they_finish() -> None:
+    from app.history_routes import attach_followups
+
+    def row(i, ts, source, status="sent", target="Overhead", devices=("framed",)):
+        return {
+            "id": i,
+            "ids": [i],
+            "timestamp": ts,
+            "time": f"t{i}",
+            "source": source,
+            "status": status,
+            "target": target,
+            "device_ids": list(devices),
+            "failed": status not in ("sent", "no_change"),
+        }
+
+    rows = [  # newest first, as History lists them
+        row(5, 1044.0, "follow-up"),
+        row(4, 1035.0, "follow-up", "no_change"),
+        row(3, 1030.0, "follow-up", target="LCARS"),
+        row(2, 1027.0, "scheduler"),
+        row(1, 900.0, "scheduler", target="LCARS"),
+    ]
+    out = attach_followups(rows)
+    assert [r["id"] for r in out] == [2, 1], (
+        "both follow-ups of the send fold under it; LCARS gets its own"
+    )
+    send = out[0]
+    assert [f["id"] for f in send["followups"]] == [4, 5], "oldest first under the send"
+    assert send["ids"] == [2, 4, 5], "deleting the send deletes the chain"
+    assert send["finished_at"] == "t5" and send["finished_after_s"] == 17
+    assert ([f["id"] for f in out[1]["followups"]] == [3] and "finished_at" not in out[1]) or out[
+        1
+    ]["finished_at"] == "t3"
+
+    stray = attach_followups([row(9, 5000.0, "follow-up"), row(8, 100.0, "scheduler")])
+    assert [r["id"] for r in stray] == [9, 8] and "followups" not in stray[1], (
+        "too long after the send: shown on its own"
+    )
+    lone = attach_followups(
+        [row(7, 100.0, "scheduler", "no_change"), row(6, 95.0, "follow-up", "no_change")]
+    )
+    assert [r["id"] for r in lone] == [7, 6], "a follow-up is never attached to a newer row"

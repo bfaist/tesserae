@@ -142,3 +142,42 @@ def test_history_view_without_fold_keeps_both_rows(app: Flask) -> None:
     assert press["ids"] == [press_id]
     assert press["can_resend"] is False
     assert press["resend_id"] == press_id
+
+
+def test_history_page_shows_followups_on_the_rail(app: Flask) -> None:
+    log = app.config["EVENT_LOG"]
+    send = log.record(
+        type="push",
+        source="scheduler",
+        target="home",
+        status="sent",
+        digest="d1",
+        duration_s=7.8,
+        extra={"device_ids": ["panel_one"]},
+    )
+    log.record(
+        type="push",
+        source="follow-up",
+        target="home",
+        status="no_change",
+        digest=None,
+        duration_s=1.3,
+        extra={"device_ids": ["panel_one"]},
+    )
+    log.record(
+        type="push",
+        source="follow-up",
+        target="home",
+        status="sent",
+        digest="d2",
+        duration_s=2.9,
+        extra={"device_ids": ["panel_one"]},
+    )
+    client = app.test_client()
+    _sign_in(client)
+    body = client.get("/history").get_data(as_text=True)
+    assert body.count('data-history-row="') == 1, "one row for the send"
+    assert body.count('data-history-followup="') == 2, "its two follow-ups under it"
+    assert "finished page on the panel at" in body and "s after the send" in body
+    assert f"/send/history/{send}/resend" in body
+    assert ">Follow-up</span>" in body

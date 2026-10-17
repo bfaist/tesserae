@@ -44,7 +44,60 @@ FILTERABLE_SOURCES = (
     "resend",
     "onboarding",
     "button",
+    "follow-up",
 )
+
+#: A follow-up push (``PushManager`` sending a page again once a widget's
+#: pending work landed) folds under the send it finishes when that send is
+#: this close before it. Beyond that it is shown on its own.
+FOLLOWUP_WINDOW_S = 30 * 60
+
+
+def attach_followups(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Fold follow-up rows under the push they finish.
+
+    ``rows`` are shaped History rows, newest first. A row whose source is
+    ``follow-up`` is attached to the nearest older row for the same target
+    and the same displays that is not itself a follow-up, within
+    ``FOLLOWUP_WINDOW_S``; the parent gains ``followups`` (oldest first),
+    ``ids`` covering the chain for bulk delete, and ``finished_at`` /
+    ``finished_after_s`` from the last follow-up that actually pushed. A
+    follow-up with no such parent in the list stays a row of its own."""
+    out: list[dict[str, Any]] = []
+    pending: list[dict[str, Any]] = []
+    for row in rows:
+        if row.get("source") == "follow-up":
+            pending.append(row)
+            continue
+        mine = [
+            f
+            for f in pending
+            if f.get("target") == row.get("target")
+            and set(f.get("device_ids") or ()) == set(row.get("device_ids") or ())
+            and 0 <= float(f["timestamp"]) - float(row["timestamp"]) <= FOLLOWUP_WINDOW_S
+        ]
+        if mine:
+            chain = sorted(mine, key=lambda f: float(f["timestamp"]))
+            row = {
+                **row,
+                "followups": chain,
+                "ids": list(row.get("ids") or []) + [i for f in chain for i in f.get("ids") or []],
+            }
+            landed = [f for f in chain if f.get("status") == "sent"]
+            if landed:
+                row["finished_at"] = landed[-1]["time"]
+                row["finished_after_s"] = round(
+                    float(landed[-1]["timestamp"]) - float(row["timestamp"])
+                )
+            if any(f.get("failed") for f in chain):
+                row["failed"] = True
+            pending = [f for f in pending if f not in mine]
+        out.append(row)
+    # Follow-ups that found no parent on this page stay where they were.
+    if pending:
+        out.extend(pending)
+        out.sort(key=lambda r: -float(r["timestamp"]))
+    return out
 
 
 def _events() -> EventLog:
@@ -297,7 +350,7 @@ def group_history(
             group = index[key] = _group(key, label)
             groups.append(group)
         group["rows"].append(row)
-        group["count"] += 1
+        group["count"] += 1 + len(row.get("followups") or ())
         if row.get("failed"):
             group["failed"] += 1
     return groups
@@ -460,6 +513,9 @@ def index() -> str:
     device_chips = _device_chips(history, active=device)
     if device:
         history = [row for row in history if device in row["device_ids"]][:HISTORY_PAGE_ROWS]
+    # A follow-up (the page sent again once its paintings landed) sits under
+    # the send it finishes, as small dots on the rail.
+    history = attach_followups(history)
     if sort_mode == "dashboard":
         # Stable-sort by the resolved target label (page name or
         # device name for button rows) so entries of the same

@@ -8,6 +8,12 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ### Added
 
+- **History folds follow-ups under the send they finish.** A page sent
+  again once its paintings landed now sits under the original push as
+  small dots on the rail, with its outcome and timing, and one line says
+  when the finished page reached the panel. Deleting the send deletes
+  the chain; the follow-up chip still filters to them on their own.
+
 - **Widgets can be run ahead of a scheduled send.** A widget whose work
   takes longer than a fetch may (an AI painting) declares
   `render.warm_ahead_s` in its manifest, and the scheduler runs its page

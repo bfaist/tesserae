@@ -25,6 +25,7 @@
   'onboarding':     ('Setup',              'sparkle',           'setup',    'slate'),
   'deck_warm':      ('Background refresh', 'clock-clockwise',   'warm',     ''),
   'album_warm':     ('Album refresh',      'images',            'warm',     ''),
+  'follow-up':      ('Follow-up',          'arrow-bend-down-right', 'followup', 'ochre'),
 } %}
 
 {# Status → (label, tone). "pushed" only promises the server published the
@@ -206,7 +207,7 @@
       {% set _smeta = SOURCE_META.get(ev.source) %}
       <li class="dx-hist-row{% if ev.failed %} dx-hist-row--failed{% endif %}" data-history-row="{{ ev.id }}"
           data-lf-item
-          data-lf-text="{{ (ev.target ~ ' ' ~ (ev.target_devices|map(attribute='name')|join(' ')) ~ ' ' ~ (_smeta[0] if _smeta else ev.source) ~ ' ' ~ ev.status ~ ' ' ~ (ev.push_status or '') ~ ' ' ~ (ev.error or '') ~ ' ' ~ ev.time)|lower }}"
+          data-lf-text="{{ (ev.target ~ ' ' ~ (ev.target_devices|map(attribute='name')|join(' ')) ~ ' ' ~ (_smeta[0] if _smeta else ev.source) ~ ' ' ~ ev.status ~ ' ' ~ (ev.push_status or '') ~ ' ' ~ (ev.error or '') ~ ' ' ~ ev.time ~ (' follow-up ' ~ (ev.followups|map(attribute='time')|join(' ')) if ev.followups else ''))|lower }}"
           data-lf-outcome="{{ 'failed' if ev.failed else ('ok' if _tone == 'ok' else ('held' if _tone == 'warn' else 'other')) }}"
           data-sort-time="{{ ev.timestamp }}" data-sort-dur="{{ ev.duration_s or 0 }}" data-sort-target="{{ ev.target }}">
         <span class="dx-hist-dot{% if ev.failed %} is-bad{% endif %}" aria-hidden="true"></span>
@@ -263,6 +264,26 @@
             </div>
           </details>
         </span>
+        {% if ev.followups %}
+        {# The page sent again once a widget's pending work landed: small
+           dots on the same rail, then when the finished page got there. #}
+        <ul class="dx-hist-fu" aria-label="Follow-ups to push #{{ ev.id }}">
+          {% for fu in ev.followups %}
+          {% set _ftone = STATUS_META.get(fu.status, ('', 'bad'))[1] %}
+          <li class="dx-hist-fu-row{% if fu.failed %} is-bad{% elif _ftone == 'ok' %} is-ok{% endif %}" data-history-followup="{{ fu.id }}">
+            <a class="dx-hist-time" {% if fu.preview_digest %}href="{{ url_for('renders', filename=fu.preview_digest ~ '.png') }}" data-lightbox{% endif %} title="{{ fu.abs }} ({{ fu.rel }})">{{ fu.time }}</a>
+            {{ source_tag(fu.source) }}
+            {{ status_tag(fu.status) }}
+            <span class="dx-hist-dur">{% if fu.duration_s %}{{ '%.1f'|format(fu.duration_s) }}s{% endif %}</span>
+            {% if fu.error %}<span class="dx-hist-err" title="{{ fu.error }}">{{ fu.error }}</span>{% endif %}
+          </li>
+          {% endfor %}
+          <li class="dx-hist-fu-sum">
+            {% if ev.finished_at %}finished page on the panel at <strong>{{ ev.finished_at }}</strong>, {{ ev.finished_after_s }} s after the send
+            {% else %}sent again {{ ev.followups|length }} time{{ 's' if ev.followups|length != 1 }}, nothing changed{% endif %}
+          </li>
+        </ul>
+        {% endif %}
       </li>
       {% endfor %}
     </ul>

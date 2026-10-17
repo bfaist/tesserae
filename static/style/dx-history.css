@@ -128,6 +128,49 @@
   box-shadow: 0 0 0 3px var(--t-surface);
 }
 .dx-hist-dot.is-bad { background: var(--t-danger); }
+
+/* Follow-ups: the page sent again once a widget's pending work landed.
+   They sit under the send they finish as small dots on the same rail,
+   then one line says when the finished page reached the panel. */
+.dx-hist-row { --dx-hist-pad: 10px; }
+.dx-hist-fu {
+  grid-column: 1 / -1;
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0 0 0 calc(var(--dx-hist-rail) - var(--dx-hist-pad) + 22px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--t-fg-soft);
+}
+.dx-hist-fu-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 20px;
+}
+.dx-hist-fu-row::before {
+  content: "";
+  position: absolute;
+  left: calc(-22px - 3px);
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--t-fg-soft);
+  box-shadow: 0 0 0 3px var(--t-surface);
+  z-index: 2;
+}
+.dx-hist-fu-row.is-ok::before { background: var(--t-accent); }
+.dx-hist-fu-row.is-bad::before { background: var(--t-danger); }
+.dx-hist-fu-row .dx-hist-time { width: auto; font-size: 12.5px; }
+.dx-hist-fu-row .dx-hist-dur { width: auto; font-size: 12px; }
+.dx-hist-fu-row .tg { font-size: 11.5px; padding: 2px 6px; }
+.dx-hist-fu-sum { color: var(--t-fg-soft); }
+.dx-hist-fu-sum strong { color: var(--t-fg); font-weight: 600; font-variant-numeric: tabular-nums; }
 .dx-hist-row--failed .dx-hist-dot { box-shadow: 0 0 0 3px var(--t-pill-danger-bg); }
 .dx-hist-select {
   width: 16px;
@@ -325,12 +368,15 @@ a.dx-hist-time[href]:hover { color: var(--t-accent); }
      status + duration + actions. The mid wrapper dissolves so its
      children join the row's flex flow. */
   .dx-hist-row {
+    --dx-hist-pad: 6px;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 6px 8px;
     padding: 10px 6px 10px 28px;
   }
+  .dx-hist-fu { order: 99; flex-basis: 100%; padding-left: calc(var(--dx-hist-rail) - 28px + 22px); }
+  .dx-hist-fu-row > .dx-hist-time, .dx-hist-fu-row > .dx-hist-dur, .dx-hist-fu-row > .tg { order: 0; }
   .dx-hist-dot { position: absolute; left: 8px; top: 19px; }
   .dx-hist-mid { display: contents; }
   .dx-hist-select { order: 1; }
