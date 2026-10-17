@@ -6,6 +6,8 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ## [Unreleased]
 
+## [0.463.0], 2026-10-18
+
 ### Added
 
 - **A widget can say the least Tesserae it needs.** `tesserae_min` in a
