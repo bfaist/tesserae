@@ -2,6 +2,7 @@
 <html lang="{{ locale|default('en') }}">
 <head>
   <meta charset="utf-8">
+  {% if refresh_s %}<meta name="tesserae-refresh-s" content="{{ refresh_s }}">{% endif %}
   {# Canvas render target (issue #60). Playwright screenshots this at panel
      dims; the packed frame goes to the device. Each element is a real widget
      mounted by composer.js with ctx.fragment set, so what a panel paints is

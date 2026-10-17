@@ -359,9 +359,23 @@ EXTRACT_INTERACTIVE_JS: Final[str] = (
         }
     };
     walk(document);
-    return {regions: regions, slots: slots};
+    const hint = document.querySelector('meta[name="tesserae-refresh-s"]');
+    const refresh = hint ? parseInt(hint.getAttribute('content') || '0', 10) : 0;
+    return {regions: regions, slots: slots, refresh_s: refresh > 0 ? refresh : 0};
 }"""
 )
+
+
+def capture_refresh_s(raw: Any) -> int:
+    """The page's refresh hint from a capture script result: how long a
+    widget on it asked to wait before it is rendered again, 0 when none did
+    (or the result is the legacy bare list)."""
+    if not isinstance(raw, dict):
+        return 0
+    try:
+        return max(0, int(raw.get("refresh_s") or 0))
+    except (TypeError, ValueError):
+        return 0
 
 
 def split_capture_result(raw: Any) -> tuple[Any, Any]:

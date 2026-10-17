@@ -1455,3 +1455,49 @@ def test_delete_history_keeps_live_frame_artifacts(tmp_path: Path, composition_p
     assert manager.delete_history(event_id) is True
     assert (renders / "livecomp12345.png").exists()
     assert (renders / "livecomp12345.regions.json").exists()
+
+
+def test_push_sends_the_page_again_after_a_refresh_hint(
+    tmp_path: Path, composition_png: bytes, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A widget still painting puts a refresh hint in the composed page; the
+    capture reads it back and the push pipeline sends the page again after
+    the wait, until the page stops asking or the run of follow-ups is spent."""
+    from app import push as push_mod
+
+    renderers = [_make_renderer(tmp_path, "pi_png", "png", retain=False)]
+    manager, mqtt_client, _png = _wired(tmp_path, composition_png, renderers)
+    frames = iter(
+        [_distinct_png((0, 0, 255)), _distinct_png((0, 255, 0)), _distinct_png((9, 9, 9))]
+    )
+    hint = {"regions": [], "slots": [], "refresh_s": 3}
+
+    with patch("app.push.capture_composed", side_effect=lambda *a, **k: (next(frames), hint)):
+        result = manager.push("home")
+        assert result.status == "sent"
+        timer = manager.pending_followup("home")
+        assert timer is not None and timer.interval == push_mod.FOLLOWUP_MIN_S, (
+            "a hint below the floor waits the floor"
+        )
+        timer.cancel()
+        sent_before = len(mqtt_client.published)
+        timer.function()  # the follow-up, as the timer would fire it
+        assert len(mqtt_client.published) == sent_before + 1, "the page went out again"
+        assert manager.pending_followup("home") is not None, (
+            "and it still asks, so another is pending"
+        )
+
+        monkeypatch.setattr(push_mod, "FOLLOWUP_LIMIT", 2)
+        timer = manager.pending_followup("home")
+        timer.cancel()
+        timer.function()
+        assert manager.pending_followup("home") is None, (
+            "the run of follow-ups is spent; the page is left alone"
+        )
+
+    with patch(
+        "app.push.capture_composed",
+        return_value=(_distinct_png((1, 2, 3)), {"regions": [], "slots": []}),
+    ):
+        manager.push("home")
+        assert manager.pending_followup("home") is None, "no hint, no follow-up"

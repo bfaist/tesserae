@@ -87,6 +87,7 @@ from app.state.page_store import PageStore, Panel
 from app.state.settings_store import SettingsStore
 from app.touch_regions import (
     EXTRACT_INTERACTIVE_JS,
+    capture_refresh_s,
     load_regions,
     load_slots,
     normalize_regions,
@@ -244,6 +245,12 @@ def _unbound_broadcast_enabled(settings: Any) -> bool:
         return value.strip().lower() in ("1", "true", "yes", "on")
     return bool(value)
 
+
+# Follow-up pushes after a refresh hint: how long to wait at least and at most,
+# and how many times in a row one page may be sent again before it is left alone.
+FOLLOWUP_MIN_S = 5
+FOLLOWUP_MAX_S = 120
+FOLLOWUP_LIMIT = 8
 
 PushStatus = Literal[
     "sent", "busy", "failed", "not_found", "quiet", "held", "superseded", "no_change", "unbound"
@@ -495,6 +502,13 @@ class PushManager:
         # or the nominal palette (behaviour before v0.67).
         self._palette_profile_store = palette_profile_store
         self._lock = threading.Lock()
+        # Follow-up pushes: a composed page can carry a refresh hint (a widget
+        # still painting, see ``composer.refresh_hint_s``). After such a push
+        # the page is sent again once the wait is over, up to
+        # ``FOLLOWUP_LIMIT`` times in a row, one timer per page so a burst of
+        # hints collapses into one follow-up.
+        self._followup_lock = threading.Lock()
+        self._followups: dict[str, threading.Timer] = {}
         # Per-device latest-wins coalescing (v0.69). Each call to
         # ``_acquire_or_supersede`` bumps this map before waiting on
         # ``_lock``; on acquire, if the caller's generation is stale
@@ -1621,6 +1635,7 @@ class PushManager:
         source: str = "page",
         bypass_coalesce: bool = False,
         force_publish: bool = False,
+        followup: int = 0,
     ) -> PushResult:
         """Render a saved Page through the composer and publish.
 
@@ -1671,11 +1686,67 @@ class PushManager:
                     respect_quiet_hours=respect_quiet_hours,
                     source=source,
                     force_publish=force_publish,
+                    followup=followup,
                 )
             finally:
                 self._lock.release()
         self._notify(result)
         return result
+
+    # -- follow-ups ------------------------------------------------------
+
+    def _schedule_followup(
+        self, page_id: str, device_ids: set[str] | None, wait_s: int, followup: int
+    ) -> None:
+        """Send ``page_id`` again in ``wait_s`` seconds (within the window),
+        because a widget on it said it was still working. One timer per
+        page: a newer hint replaces an older pending one."""
+        if followup >= FOLLOWUP_LIMIT:
+            logger.info(
+                "push follow-up: %s still asks for a refresh after %d follow-ups; stopping",
+                page_id,
+                followup,
+            )
+            return
+        delay = float(min(FOLLOWUP_MAX_S, max(FOLLOWUP_MIN_S, wait_s)))
+
+        def fire() -> None:
+            with self._followup_lock:
+                if self._followups.get(page_id) is not timer:
+                    return
+                self._followups.pop(page_id, None)
+            try:
+                # The first push already passed quiet hours (or was a Send,
+                # which ignores them); a follow-up only finishes that page.
+                self.push(
+                    page_id,
+                    device_ids=device_ids,
+                    source="follow-up",
+                    followup=followup + 1,
+                )
+            except Exception:
+                logger.exception("push follow-up for %s failed", page_id)
+
+        timer = threading.Timer(delay, fire)
+        timer.daemon = True
+        with self._followup_lock:
+            old = self._followups.pop(page_id, None)
+            if old is not None:
+                old.cancel()
+            self._followups[page_id] = timer
+        timer.start()
+        logger.info(
+            "push follow-up: %s again in %.0fs (follow-up %d of %d)",
+            page_id,
+            delay,
+            followup + 1,
+            FOLLOWUP_LIMIT,
+        )
+
+    def pending_followup(self, page_id: str) -> threading.Timer | None:
+        """The timer that will send ``page_id`` again, if one is pending."""
+        with self._followup_lock:
+            return self._followups.get(page_id)
 
     def push_image(
         self,
@@ -2162,8 +2233,10 @@ class PushManager:
         source: str = "page",
         force_publish: bool = False,
         stamp_into: dict[str, dict[str, Any]] | None = None,
+        followup: int = 0,
     ) -> PushResult:
         started = time.monotonic()
+        refresh_wanted = 0
         page = self._page_store.get(page_id)
         if page is None:
             return self._log_failure(
@@ -2270,6 +2343,7 @@ class PushManager:
                         raw_regions, raw_slots = split_capture_result(raw_result)
                         touch_regions = normalize_regions(raw_regions)
                         overlay_slots = normalize_slots(raw_slots)
+                        refresh_wanted = max(refresh_wanted, capture_refresh_s(raw_result))
                     except Exception as err:
                         err_msg = str(err) or type(err).__name__
                         group_results.append(
@@ -2306,6 +2380,8 @@ class PushManager:
         # ``failed`` when any group failed.
         good = [r for r in group_results if r.status in ("sent", "no_change")]
         failed = [r for r in group_results if r not in good]
+        if refresh_wanted and good:
+            self._schedule_followup(page_id, device_ids, refresh_wanted, followup)
         if not group_results:
             status: PushStatus = "failed"
         elif failed:

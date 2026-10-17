@@ -6,6 +6,17 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+
+- **A page still painting is sent again when it is done.** A widget that is
+  waiting on something (an AI painting in flight, say) already tells the
+  editors to fetch it again in a few seconds through `live_refresh_s`. A push
+  now honours the same hint: the composed page carries it as a `<meta>`, the
+  capture reads it back, and the push pipeline sends the page to the same
+  devices again after the wait, up to eight follow-ups in a row, one pending
+  follow-up per page. A scheduled send of an Overhead or Specimen Sheet page
+  no longer leaves the panel showing the page as it was caught mid-work.
+
 ### Fixed
 
 - **A big picture no longer reaches the panel as an empty box.** The

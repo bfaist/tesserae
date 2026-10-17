@@ -996,3 +996,20 @@ def test_preview_render_eviction_is_scoped(tmp_path: Path) -> None:
         )
     assert other_page.exists() and sibling.exists() and mine_old.exists()
     assert not ancient.exists()
+
+
+def test_refresh_hint_is_the_longest_wait_within_the_window() -> None:
+    from app.composer import refresh_hint_s
+
+    assert refresh_hint_s([]) == 0
+    assert (
+        refresh_hint_s(
+            [{"data": {"live_refresh_s": 6}}, {"data": None}, {"data": {"live_refresh_s": "x"}}]
+        )
+        == 6
+    )
+    assert refresh_hint_s([{"data": {"live_refresh_s": 1}}]) == 2, "below the floor rounds up to it"
+    assert (
+        refresh_hint_s([{"data": {"live_refresh_s": 500}}, {"data": {"live_refresh_s": 30}}]) == 120
+    )
+    assert refresh_hint_s([{"data": {"live_refresh_s": 0}}, {"data": {}}]) == 0

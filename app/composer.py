@@ -20,6 +20,7 @@ import json
 import logging
 import re
 import time
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any, Final
 from urllib.parse import quote
@@ -864,6 +865,33 @@ def _fetch_plugin_data(
         return {"error": f"{type(err).__name__}: {err}"}
 
 
+# A widget whose data carries ``live_refresh_s`` (2 to 120) is waiting on
+# something: a painting in flight, a slow upstream. The editors fetch the cell
+# again after that long. For a push the hint is written into the composed page
+# as a <meta>, the capture reads it back, and the push pipeline sends the page
+# again after the wait (``PushManager`` follow-ups), so a panel gets the finished
+# page instead of the one caught mid-work.
+REFRESH_HINT_MIN_S: Final = 2
+REFRESH_HINT_MAX_S: Final = 120
+
+
+def refresh_hint_s(items: Iterable[Mapping[str, Any]]) -> int:
+    """The longest ``live_refresh_s`` among the items' widget data, clamped to
+    the allowed window; 0 when nothing is waiting."""
+    best = 0
+    for item in items:
+        data = item.get("data") if isinstance(item, Mapping) else None
+        if not isinstance(data, Mapping):
+            continue
+        try:
+            wait = int(float(data.get("live_refresh_s") or 0))
+        except (TypeError, ValueError):
+            continue
+        if wait > 0:
+            best = max(best, min(REFRESH_HINT_MAX_S, max(REFRESH_HINT_MIN_S, wait)))
+    return best
+
+
 def _hydrate_page(
     page_dict: dict[str, Any],
     *,
@@ -1072,6 +1100,7 @@ def _hydrate_page(
         "font_face_css": _all_font_face_css(registry),
         "corner_radius": corner_radius,
         "locale": locale,
+        "refresh_s": refresh_hint_s(cells_out),
     }
 
 
@@ -1471,11 +1500,13 @@ def _render_canvas(
     oy = round((target_h - ch * scale) / 2)
     registry = current_app.config["PLUGIN_REGISTRY"]
     font = _resolve_font(layout.font or None, registry)
+    els = _build_canvas_els(
+        layout.els, cw, ch, target_device_id=target_device_id, fresh=fresh, preview=preview
+    )
     return render_template(
         "panels_compose.html",
-        els=_build_canvas_els(
-            layout.els, cw, ch, target_device_id=target_device_id, fresh=fresh, preview=preview
-        ),
+        els=els,
+        refresh_s=refresh_hint_s(els),
         cw=cw,
         ch=ch,
         w=target_w,
