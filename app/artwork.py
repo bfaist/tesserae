@@ -142,7 +142,9 @@ def cell_id_of(plugin_id: str, options: dict[str, Any]) -> str:
         blob = json.dumps(options, sort_keys=True, default=str)
     except (TypeError, ValueError):
         blob = repr(sorted(options.items(), key=lambda kv: kv[0]))
-    return hashlib.sha1((plugin_id + "\n" + blob).encode("utf-8")).hexdigest()[:16]
+    return hashlib.sha1(
+        (plugin_id + "\n" + blob).encode("utf-8"), usedforsecurity=False
+    ).hexdigest()[:16]
 
 
 # ----------------------------------------------------------------------

@@ -6,6 +6,13 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ## [Unreleased]
 
+## [0.464.1], 2026-10-18
+
+### Fixed
+
+- The cell id hash is marked as not for security, which the CI security scan
+  flagged on 0.463.0 and 0.464.0 (bandit B324); nothing else changes.
+
 ## [0.464.0], 2026-10-18
 
 ### Added
