@@ -89,8 +89,10 @@ class WarmAhead:
         clock: Callable[[], float] = time.time,
         sleep: Callable[[float], None] = time.sleep,
         threaded: bool = True,
+        name: Callable[[str], str] | None = None,
     ) -> None:
         self._warm = warm
+        self._name = name
         self._clock = clock
         self._sleep = sleep
         self._threaded = threaded
@@ -182,23 +184,45 @@ class WarmAhead:
         settled = False
         polls = 0
         items = 0
-        while True:
-            try:
-                hint, pending = self._warm(page_id)
-                hint, pending = int(hint or 0), int(pending or 0)
-            except Exception:
-                logger.exception("warm ahead: %s failed", page_id)
-                break
-            polls += 1
-            if polls == 1:
-                items = pending
-            now = self._clock()
-            if hint <= 0:
-                settled = True
-                break
-            if now + POLL_MIN_S >= fire_at:
-                break
-            self._sleep(float(min(POLL_MAX_S, max(POLL_MIN_S, hint), max(1, fire_at - now))))
+        from app import jobs
+
+        name = (self._name(page_id) if self._name else "") or page_id
+        key = f"warm:{page_id}"
+        title = f"Running {name} ahead of its send"
+        try:
+            while True:
+                jobs.report(
+                    "scheduler",
+                    key,
+                    title,
+                    detail="running the page" if not polls else f"{items} pending; looking again",
+                    label="Warm-ahead",
+                )
+                try:
+                    hint, pending = self._warm(page_id)
+                    hint, pending = int(hint or 0), int(pending or 0)
+                except Exception:
+                    logger.exception("warm ahead: %s failed", page_id)
+                    break
+                polls += 1
+                if polls == 1:
+                    items = pending
+                now = self._clock()
+                if hint <= 0:
+                    settled = True
+                    break
+                if now + POLL_MIN_S >= fire_at:
+                    break
+                jobs.report(
+                    "scheduler",
+                    key,
+                    title,
+                    detail=f"{pending} still painting, {max(0.0, fire_at - now):.0f} s to the send",
+                    label="Warm-ahead",
+                )
+                self._sleep(float(min(POLL_MAX_S, max(POLL_MIN_S, hint), max(1, fire_at - now))))
+        finally:
+            jobs.finish("scheduler", key, "settled" if settled else "sent as it was")
         took = max(0.0, self._clock() - started)
         if not settled:
             # Out of lead (or a failure) before the page settled: next time

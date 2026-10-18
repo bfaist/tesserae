@@ -6,6 +6,16 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ## [Unreleased]
 
+## [0.466.1], 2026-10-18
+
+### Fixed
+
+- **Settings › Generative AI keeps a key you Check.** The Account card's Check button asked fal.ai about a freshly typed key and then threw it away, and the only Save button sat at the bottom of the Spending card, so a key typed and checked read as "no key" on the next visit and every widget that paints stayed waiting. Check now saves a new key that fal.ai accepts (the note says "Saved."), a refused key is not kept, and the Account card has its own Save button.
+
+### Added
+
+- **Background paintings in the status pop-up.** A send waiting for a page's pictures and a page run ahead of its scheduled send each show a card in the job tray while they run: whose page, how many pictures are still painting and when they look again.
+
 ## [0.466.0], 2026-10-18
 
 ### Added

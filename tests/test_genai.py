@@ -144,6 +144,15 @@ def test_the_page_saves_checks_and_resets(app, tmp_path, monkeypatch):
     assert "Accepted" in r.get_data(as_text=True)
     r = client.post("/settings/genai/check", data={"api_key": "other"}, follow_redirects=True)
     assert "Refused" in r.get_data(as_text=True)
+    assert genai.settings(app.config["SETTINGS_STORE"])["api_key"] == "fal_sk_abc", (
+        "a refused key is not kept"
+    )
+    monkeypatch.setattr(genai, "check_key", lambda key, timeout=8.0: (True, "ok"))
+    r = client.post("/settings/genai/check", data={"api_key": "fal_sk_new"}, follow_redirects=True)
+    assert (
+        "Saved" in r.get_data(as_text=True)
+        and genai.settings(app.config["SETTINGS_STORE"])["api_key"] == "fal_sk_new"
+    ), "Check keeps a new key it accepts"
     led = genai.Ledger(tmp_path / "artwork")
     led.append("overhead_plate", "paintings", "nano_banana", 350)
     body = client.get("/settings/genai").get_data(as_text=True)

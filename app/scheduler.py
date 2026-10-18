@@ -416,7 +416,10 @@ class Scheduler:
         # Warm-ahead (``app.warm_ahead``): pages whose widgets ask to be run
         # ahead of a send are warmed before each projected fire and learn
         # how long they take.
-        self._warm_ahead = WarmAhead(warm=lambda page_id: self._push_factory().warm_page(page_id))
+        self._warm_ahead = WarmAhead(
+            warm=lambda page_id: self._push_factory().warm_page(page_id),
+            name=self._page_name,
+        )
         self._warm_ahead_lock = threading.Lock()
         # "<deck_id>:<device_id>" -> the page last pushed by timer advance, so we
         # push only at step transitions (a manual nav in "both" mode holds until
@@ -1572,6 +1575,14 @@ class Scheduler:
         """What warm-ahead has learned: per page, the settle time seen and
         the lead it now uses."""
         return self._warm_ahead.status()
+
+    def _page_name(self, page_id: str) -> str:
+        """The page's name for a job-tray card, or ''."""
+        try:
+            page = self._page_store.get(page_id) if self._page_store is not None else None
+        except Exception:
+            return ""
+        return str(getattr(page, "name", "") or "")
 
     def _maybe_warm_ahead(self, now: datetime) -> None:
         """Kick a background warm-ahead pass unless one is already running."""

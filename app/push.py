@@ -1754,28 +1754,47 @@ class PushManager:
         started = time.monotonic()
         most = 0
         slept = 0.0
-        while True:
-            try:
-                hint, pending = self.warm_page(page_id)
-            except Exception as err:
-                logger.warning("settle: %s could not be run ahead of the send (%s)", page_id, err)
-                break
-            most = max(most, pending)
-            if hint <= 0:
-                break
-            waited = max(time.monotonic() - started, slept)
-            nap = float(min(SETTLE_POLL_MAX_S, max(FOLLOWUP_MIN_S, hint)))
-            if waited + nap > max_s:
-                logger.info(
-                    "settle: %s still has %d pending after %.0fs; sending as it is",
-                    page_id,
-                    pending,
-                    waited,
+        from app import jobs
+
+        name = str(getattr(page, "name", "") or page_id)
+        title = f"Waiting for {name}'s pictures before sending"
+        try:
+            while True:
+                jobs.report(
+                    "push", f"settle:{page_id}", title, detail="running the page", label="Send"
                 )
-                break
-            logger.info("settle: %s has %d pending; sending in %.0fs", page_id, pending, nap)
-            _settle_sleep(nap)
-            slept += nap
+                try:
+                    hint, pending = self.warm_page(page_id)
+                except Exception as err:
+                    logger.warning(
+                        "settle: %s could not be run ahead of the send (%s)", page_id, err
+                    )
+                    break
+                most = max(most, pending)
+                if hint <= 0:
+                    break
+                waited = max(time.monotonic() - started, slept)
+                nap = float(min(SETTLE_POLL_MAX_S, max(FOLLOWUP_MIN_S, hint)))
+                if waited + nap > max_s:
+                    logger.info(
+                        "settle: %s still has %d pending after %.0fs; sending as it is",
+                        page_id,
+                        pending,
+                        waited,
+                    )
+                    break
+                jobs.report(
+                    "push",
+                    f"settle:{page_id}",
+                    title,
+                    detail=f"{pending} still painting; looking again in {nap:.0f} s",
+                    label="Send",
+                )
+                logger.info("settle: %s has %d pending; sending in %.0fs", page_id, pending, nap)
+                _settle_sleep(nap)
+                slept += nap
+        finally:
+            jobs.finish("push", f"settle:{page_id}", "sending" if most else "")
         return round(max(time.monotonic() - started, slept), 1), most
 
     # -- follow-ups ------------------------------------------------------

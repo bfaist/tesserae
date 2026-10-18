@@ -27,12 +27,13 @@
         <input id="genai-key" type="password" name="api_key" value="{{ form.api_key }}"
                autocomplete="off" spellcheck="false" placeholder="fal_sk_…">
         <button type="submit" class="btn" formaction="{{ url_for('auth.genai_check') }}">Check</button>
+        <button type="submit" class="btn btn-primary">Save</button>
       </div>
       <p class="help">
         {% if checked %}
           <span class="dx-pill {{ 'is-ok' if check_ok else 'is-danger' }}">{{ 'Accepted' if check_ok else 'Refused' }}</span> {{ checked }}
         {% elif form.has_key %}
-          <span class="dx-pill is-ok">Key set</span> Check asks fal.ai about the key without painting anything.
+          <span class="dx-pill is-ok">Key set</span> Check asks fal.ai about the key without painting anything; a new key it accepts is saved.
         {% elif env_key %}
           <span class="dx-pill is-neutral">From the environment</span> FAL_KEY is set for this server; a key saved here takes its place.
         {% else %}

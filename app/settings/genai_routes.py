@@ -147,14 +147,17 @@ def genai_save() -> Response:
 @bp.post("/settings/genai/check")
 def genai_check() -> Response:
     """Check the key as fal.ai sees it; the posted one when it is not the
-    mask, else the stored one. Nothing is painted."""
+    mask, else the stored one. Nothing is painted. A new key that fal.ai
+    accepts is kept: nobody types a key to check it and then throw it away."""
     posted = str(request.form.get("api_key") or "").strip()
-    key = (
-        posted if posted and posted != SECRET_MASK else genai.settings(settings_store())["api_key"]
-    )
+    fresh = bool(posted) and posted != SECRET_MASK
+    key = posted if fresh else genai.settings(settings_store())["api_key"]
     if not key:
         key = fal.resolve_key({})
     ok, note = genai.check_key(key)
+    if ok and fresh:
+        genai.save(settings_store(), {"api_key": posted})
+        note += " Saved."
     return redirect(url_for("auth.genai_index", checked=note, ok="1" if ok else "0"))
 
 
