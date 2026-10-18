@@ -120,6 +120,7 @@ nav:
   - Featured hardware:
       - Seeed reTerminal E-Series: hardware/seeed.md
       - PicPak 4.2" BWRY (community firmware): hardware/picpak.md
+      - ZecTrix NOTE4C Devkit (community firmware): hardware/note4c.md
   - Screens & compatibility: compatibility.md
   - Widgets:
       - Bundled widgets: widgets/gallery.md

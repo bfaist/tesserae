@@ -44,6 +44,7 @@ VENDOR_ORDER: list[tuple[str, str]] = [
     ("gooddisplay", "Good Display"),
     ("epdiy", "epdiy"),
     ("community", "Community"),
+    ("zectrix", "ZecTrix"),
 ]
 
 # Affiliate disclosure, rendered under the SKU-table intro.
