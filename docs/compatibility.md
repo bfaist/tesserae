@@ -207,6 +207,12 @@ Hardware supported by community-authored firmware. Each SKU below links to the f
 |---|---|---|---|---|
 | [PicPak 4.2" BWRY e-paper frame](https://github.com/varanu5/picpak-tesserae-client) | 400×300 | `bwry_4` | `picpak_client` <br> `esp32_bin` | `picpak_4_2` |
 
+### ZecTrix
+
+| SKU | Panel | Gamut | Protocol / Renderer | Kind id |
+|---|---|---|---|---|
+| [ZecTrix NOTE4C Devkit](https://github.com/varanu5/zectrix-note4c-devkit-tesserae-client) | 400×300 | `bwry_4` | `picpak_client` <br> `esp32_bin` | `note4c_client` |
+
 ### Soldered
 
 | SKU | Panel | Gamut | Protocol / Renderer | Kind id |

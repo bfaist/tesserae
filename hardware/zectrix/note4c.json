@@ -1,0 +1,24 @@
+{
+  "tesserae_compat": "1.x",
+  "id": "note4c_client",
+  "name": "ZecTrix NOTE4C Devkit",
+  "vendor": "ZecTrix",
+  "url": "https://github.com/varanu5/zectrix-note4c-devkit-tesserae-client",
+  "icon": "device-tablet",
+  "description": "Battery-powered 400x300 four-colour BWRY (black/white/red/yellow) e-paper devkit. Community firmware by varanu5 speaks Tesserae's REST device API and Cloud relay, and paints frames the esp32_bin renderer packs to 2-bpp BWRY. Shares the PicPak wire protocol.",
+  "protocol": "picpak_client",
+  "renderers": ["esp32_bin"],
+  "panel": {
+    "w": 400,
+    "h": 300,
+    "orientation": "landscape",
+    "name": "ZecTrix NOTE4C Devkit BWRY",
+    "gamut": "bwry_4",
+    "native_w": 400,
+    "native_h": 300,
+    "vflip": false
+  },
+  "refresh_floor_s": 60,
+  "image_format": "bin",
+  "notes_md": "Community firmware by [varanu5](https://github.com/varanu5/zectrix-note4c-devkit-tesserae-client), confirmed on real hardware over REST and Cloud relay. For the four-colour NOTE4C only, not the grayscale NOTE4. The firmware enforces a 30 second minimum sleep interval."
+}

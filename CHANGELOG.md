@@ -6,12 +6,14 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ## [Unreleased]
 
+## [0.467.0], 2026-10-19
+
 ### Added
 
-- ZecTrix NOTE4C Devkit device support for the 400 × 300 four-colour display,
-  using the `esp32_bin` renderer with battery telemetry and a configurable
-  sleep interval defaulting to 15 minutes. Community firmware supports REST
-  and Cloud relay; setup is documented in `docs/hardware/note4c.md`.
+- ZecTrix NOTE4C Devkit support for the 400 × 300 four-colour display, with
+  community firmware by @varanu5 for REST and Cloud relay. It is a hardware
+  entry on the PicPak protocol, so it shares battery telemetry and the
+  configurable sleep interval; setup is documented in `docs/hardware/note4c.md`.
 
 ## [0.466.1], 2026-10-18
 
