@@ -677,6 +677,7 @@ only decides type coercion, the consumers below key off the names.
 | --- | --- | --- |
 | `battery_pct` | number, 0-100 | Battery tile, battery history, HA sensor, `tesserae_status` widget |
 | `battery_mv` | int, mV | Same. Sent alone, the server derives `battery_pct` from a linear LiPo curve (3300 mV = 0 %, 4200 mV = 100 %) |
+| `power_plugged` | bool | Words the battery tile ("plugged in" / "on battery"). A UPS on a mains device, such as a PiSugar on a Pi, sends it so 100 % on the charger reads differently from a panel running down |
 | `rssi` | int, negative dBm | Signal tile, HA `signal_strength` sensor. **Not** `rssi_dbm`, which is the Companion app API's response field name |
 | `ip` | string | Firmware tile, HA IP address sensor |
 | `mac` / `model` | string | Device card |

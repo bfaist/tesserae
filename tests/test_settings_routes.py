@@ -1246,6 +1246,25 @@ def test_humanize_power_calls_zero_zero_mains_not_dead() -> None:
     }
 
 
+def test_humanize_power_words_a_ups_plugged_state() -> None:
+    """A PiSugar on a Pi reports power_plugged; without it a UPS at 100 %
+    and a panel running down look the same on the tile."""
+    from app.settings.index_routes import _humanize_power
+
+    assert _humanize_power({"battery_mv": 4127, "battery_pct": 100, "power_plugged": True}) == {
+        "label": "100%",
+        "sub": "4127 mV · plugged in",
+    }
+    assert _humanize_power({"battery_pct": 61, "power_plugged": False}) == {
+        "label": "61%",
+        "sub": "on battery",
+    }
+    assert _humanize_power({"battery_mv": 3700, "power_plugged": True}) == {
+        "label": "3700 mV",
+        "sub": "plugged in",
+    }
+
+
 def test_humanize_environment_formats_available_readings() -> None:
     from app.settings.index_routes import _humanize_environment
 

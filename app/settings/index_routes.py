@@ -1965,18 +1965,26 @@ def _humanize_signal(rssi: object) -> dict[str, Any] | None:
 def _humanize_power(parsed: dict[str, Any]) -> dict[str, Any]:
     """Map battery_mv / battery_pct to a {label, sub} tile. Treats both
     fields being absent or zero as a mains device so a Pi or ESP32 dev
-    board doesn't read as a dead battery (regression #/the-pico)."""
+    board doesn't read as a dead battery (regression #/the-pico).
+
+    ``power_plugged`` (a UPS such as a PiSugar on a Pi reports it) words
+    the sub-line: a battery sitting at 100 % plugged in and one running
+    down read the same without it."""
     pct = parsed.get("battery_pct")
     mv = parsed.get("battery_mv")
+    plugged = parsed.get("power_plugged")
+    plugged_word = "plugged in" if plugged is True else "on battery" if plugged is False else None
     if pct is None and mv is None:
         return {"label": "Mains", "sub": "No battery"}
     if isinstance(pct, (int, float)) and pct <= 0 and isinstance(mv, (int, float)) and mv <= 0:
         return {"label": "Mains", "sub": "No battery"}
     if isinstance(pct, (int, float)):
-        sub = f"{int(mv)} mV" if isinstance(mv, (int, float)) else None
-        return {"label": f"{int(pct)}%", "sub": sub}
+        parts = [f"{int(mv)} mV"] if isinstance(mv, (int, float)) else []
+        if plugged_word:
+            parts.append(plugged_word)
+        return {"label": f"{int(pct)}%", "sub": " · ".join(parts) or None}
     if isinstance(mv, (int, float)):
-        return {"label": f"{int(mv)} mV", "sub": None}
+        return {"label": f"{int(mv)} mV", "sub": plugged_word}
     return {"label": "Unknown", "sub": None}
 
 

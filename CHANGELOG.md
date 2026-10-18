@@ -6,6 +6,12 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ## [Unreleased]
 
+## [0.466.0], 2026-10-18
+
+### Added
+
+- Battery tile words a `power_plugged` heartbeat field as "plugged in" or "on battery", for a UPS on a mains device such as a PiSugar on a Pi. The Pi clients gained a `[battery]` config table that reads a PiSugar 3 over I²C or via pisugar-server.
+
 ## [0.465.0], 2026-10-18
 
 ### Added
