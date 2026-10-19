@@ -6,6 +6,12 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ## [Unreleased]
 
+## [0.467.1], 2026-10-19
+
+### Fixed
+
+- **Stay-awake panels keep partial refreshes during a render.** A board set to stay awake could poll for its patch while the page was still rendering, time out, and then reach the frame poll before it had fetched the patch. The server read that as a sleeping board and sent the whole frame, so a clock tick became a full repaint. For a stay-awake board the server now waits three poll intervals, and at least 30 seconds, before it falls back to the full frame. Sleeping boards are unchanged.
+
 ## [0.467.0], 2026-10-19
 
 ### Added

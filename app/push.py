@@ -255,6 +255,13 @@ FOLLOWUP_LIMIT = 8
 # A warm-ahead compose may run every widget on the page; the composer's own
 # hydrate budget is shorter, this only bounds a stuck socket.
 WARM_TIMEOUT_S = 90
+
+# Promote-on-poll grace for devices set to stay awake (fw #39): a parked
+# render is left for the patch path for this many of the device's poll
+# intervals, and never less than the floor, before /frame falls back to
+# the full frame.
+HELD_RENDER_GRACE_POLLS = 3
+HELD_RENDER_GRACE_MIN_S = 30.0
 # A send waits for the page's widgets to finish what they are painting, up to
 # this long, polling the page at the wait it asks for (``live_refresh_s``), so
 # the panel paints the finished page once; past it the page goes as it is and
@@ -599,6 +606,11 @@ class PushManager:
         # the entry is dropped instead. In-memory only, same lifetime
         # reasoning as ``_patch_docs``.
         self._held_renders: dict[str, dict[str, Any]] = {}
+        # When each held render was parked (monotonic seconds). A device
+        # set to stay awake picks its patches up on its next poll cycle,
+        # so promote_held_render() leaves a fresh entry alone for a grace
+        # window instead of racing the patch fetch (fw #39).
+        self._held_parked_at: dict[str, float] = {}
         # Grace slot: the entry each device's live frame most recently
         # replaced, kept answering digest-addressed lookups for ~60 s so
         # a device mid-linger on the old digest isn't orphaned by a
@@ -1180,6 +1192,8 @@ class PushManager:
         glass. Promoting moves the ETag, so this poll serves a 200 with
         the full frame. Returns whether a promotion happened."""
         with self._lock:
+            if self._held_render_in_grace_locked(device_id):
+                return False
             held = self._held_renders.pop(device_id, None)
             if held is None:
                 return False
@@ -1198,6 +1212,41 @@ class PushManager:
                 held.get("digest"),
             )
             return True
+
+    def _held_render_in_grace_locked(self, device_id: str) -> bool:
+        """Whether a parked render is too fresh to promote yet (fw #39).
+
+        A device set to stay awake polls ``/frame/data`` and then
+        ``/frame`` every cycle. When its data poll lands while the render
+        holds the push lock, the device times out before it sees the
+        patch document, and the same cycle's ``/frame`` poll used to
+        arrive with the blob unfetched and promote the full frame: a full
+        repaint for a clock tick, about 50 ms after the patch was staged.
+        Such a device will fetch the patch on its next cycle, so the
+        promotion waits a few poll intervals. A deep-sleep device keeps
+        the old behaviour: its timer-wake poll is the only chance to
+        deliver the change before it sleeps again."""
+        if device_id not in self._held_renders:
+            return False
+        parked_at = self._held_parked_at.get(device_id)
+        if parked_at is None:
+            return False
+        awake_poll_s = self._awake_poll_s_for(device_id)
+        if awake_poll_s is None:
+            return False
+        grace_s = max(HELD_RENDER_GRACE_MIN_S, HELD_RENDER_GRACE_POLLS * awake_poll_s)
+        return time.monotonic() - parked_at < grace_s
+
+    def _awake_poll_s_for(self, device_id: str) -> int | None:
+        """The device's stay-awake poll cadence, or None when it sleeps."""
+        from app.device_service import awake_poll_interval_s
+
+        try:
+            section = self._settings.get_section("devices") or {}
+        except Exception:
+            return None
+        entry = section.get(device_id) if isinstance(section, dict) else None
+        return awake_poll_interval_s(entry)
 
     def shadow_render_page(self, page_id: str, device_id: str) -> dict[str, Any] | None:
         """Render ``page_id`` for one device WITHOUT touching the live
@@ -1444,6 +1493,11 @@ class PushManager:
         # Park the full render for the promote-on-poll fallback (#271): a
         # deep-sleep device can't composite patches on a timer wake, so
         # its next /frame poll swaps this in and downloads the full frame.
+        # The grace clock starts at the FIRST unfetched park: a re-divert
+        # replaces the parked render but must not keep pushing the
+        # fallback out when patches never get fetched at all.
+        if device_id not in self._held_renders:
+            self._held_parked_at[device_id] = time.monotonic()
         self._held_renders[device_id] = dict(render_info)
         # Freshness bump only; digest / filename / signature stay the
         # anchor's, so the device keeps 304ing and the next render

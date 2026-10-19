@@ -317,6 +317,70 @@ def test_fetched_patch_blob_suppresses_the_promote(app: Flask) -> None:
     assert pm.frame_patches_for("e1003", anchor["digest"]) is not None
 
 
+def _stay_awake(app: Flask, poll_s: int = 10) -> None:
+    app.config["SETTINGS_STORE"].patch_section(
+        "devices", {"e1003": {"always_on": True, "awake_poll_s": poll_s}}
+    )
+
+
+def test_stay_awake_device_keeps_the_patch_path_inside_the_grace(app: Flask) -> None:
+    """fw #39: a stay-awake board whose /frame/data poll timed out on the
+    render lock reaches /frame with the blob unfetched, milliseconds after
+    the divert. Promoting there turned every clock tick into a full
+    repaint; the board fetches the patch on its next cycle instead."""
+    client = app.test_client()
+    token = _register(app, client)
+    pm, anchor, info = _diverted(app, client, token)
+    _stay_awake(app)
+
+    resp = client.get(
+        "/api/v1/device/e1003/frame",
+        headers={**_auth(token), "If-None-Match": f'"{anchor["digest"]}"'},
+    )
+    assert resp.status_code == 304
+    assert pm.latest_render_for("e1003")["digest"] == anchor["digest"]
+    assert pm.frame_patches_for("e1003", anchor["digest"]) is not None
+    assert pm.held_render_for("e1003")["digest"] == info["digest"]
+
+
+def test_stay_awake_device_promotes_once_the_grace_runs_out(
+    app: Flask, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Patches never fetched within a few poll intervals still fall back
+    to the full frame, so a broken patch path can't freeze the panel."""
+    import app.push as push_mod
+
+    client = app.test_client()
+    token = _register(app, client)
+    pm, anchor, info = _diverted(app, client, token)
+    _stay_awake(app)
+    parked = pm._held_parked_at["e1003"]
+    monkeypatch.setattr(push_mod.time, "monotonic", lambda: parked + 31.0)
+
+    resp = client.get(
+        "/api/v1/device/e1003/frame",
+        headers={**_auth(token), "If-None-Match": f'"{anchor["digest"]}"'},
+    )
+    assert resp.status_code == 200
+    assert pm.latest_render_for("e1003")["digest"] == info["digest"]
+
+
+def test_grace_clock_starts_at_the_first_unfetched_divert(app: Flask) -> None:
+    """A re-divert replaces the parked render but keeps the original park
+    time, so minute-by-minute renders can't postpone the fallback forever."""
+    client = app.test_client()
+    token = _register(app, client)
+    pm, _anchor, info = _diverted(app, client, token)
+    pm._held_parked_at["e1003"] -= 100.0
+    first = pm._held_parked_at["e1003"]
+    renderer = _renderer_for(app, "e1003")
+    again = dict(info, digest="f" * 16, timestamp=3000.0)
+    with pm._lock:
+        assert pm._divert_to_patches_locked(renderer, again, Panel(w=W, h=H)) is True
+    assert pm.held_render_for("e1003")["digest"] == "f" * 16
+    assert pm._held_parked_at["e1003"] == first
+
+
 def test_preview_serves_the_parked_composition(app: Flask) -> None:
     """/preview (and the /mirror page embedding it) must show the newest
     accepted content while the live slot is deliberately held at the
