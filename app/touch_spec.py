@@ -218,6 +218,25 @@ def touch_layout_digest(primitives: list[dict[str, Any]]) -> str:
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:16]
 
 
+def fold_atlas_digests(layout_digest: str, atlas_digests: Iterable[str]) -> str:
+    """The layout digest a spec carries once its glyph atlases are attached.
+
+    The firmware keeps its held spec, and the atlas strips it loaded, for as
+    long as ``layout_digest`` stays the same, and restores both from SD after a
+    reboot. So a strip that changes under an unchanged control layout never
+    reaches the panel: a rebuilt atlas (the #360 polarity fix) kept drawing the
+    old inverted labels, and a spec first served without its atlases (cold
+    cache) never gained text. Folding the attached atlas digests in moves the
+    digest exactly when the strips change. Atlas digests hash the strip bytes,
+    so a data-only redraw leaves this stable. With no atlases the primitive
+    digest is returned unchanged."""
+    digests = sorted(d for d in atlas_digests if d)
+    if not digests:
+        return layout_digest
+    blob = json.dumps([layout_digest, digests], separators=(",", ":"))
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:16]
+
+
 def build_frame_spec(
     els: Iterable[Element], *, wire: WireFn | None = None, upright: bool = True
 ) -> dict[str, Any]:

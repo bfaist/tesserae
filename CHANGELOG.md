@@ -6,6 +6,12 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ## [Unreleased]
 
+## [0.467.2], 2026-10-19
+
+### Fixed
+
+- **Touch labels pick up a rebuilt glyph atlas.** A touch panel keeps its control layout and the label atlases it loaded for as long as the layout digest stays the same, and restores both from its SD card after a reboot. The 0.448.9 polarity fix rebuilt the atlases but left the layout digest alone, so panels that already had a button kept drawing white letters in black boxes (#360). The layout digest now includes the attached atlas digests, so a changed atlas reaches the panel with its next new frame. This also lets a layout first served before its atlases were built gain its labels later.
+
 ## [0.467.1], 2026-10-19
 
 ### Fixed

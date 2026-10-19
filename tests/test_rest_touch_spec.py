@@ -147,3 +147,80 @@ def test_frame_spec_requires_auth(app: Flask) -> None:
     _register(app, client, "e1003")
     resp = client.get("/api/v1/device/e1003/frame/spec")
     assert resp.status_code in (401, 403)
+
+
+def _button_page(app: Flask) -> None:
+    app.config["PAGE_STORE"].save(
+        Page(
+            id="p1",
+            name="Touch",
+            layout_kind="canvas",
+            canvas=CanvasLayout(
+                els=[
+                    Element(
+                        id="btn",
+                        kind="button",
+                        x=10,
+                        y=10,
+                        w=160,
+                        h=80,
+                        on_tap="refresh",
+                        label="Lights",
+                    )
+                ]
+            ),
+        )
+    )
+
+
+def _fake_atlas(monkeypatch: pytest.MonkeyPatch, digest: str) -> None:
+    import app.touch_atlas as touch_atlas
+
+    def fake(role_id: str, *, renders_dir: Path, rasterize: object) -> dict[str, object]:
+        return {"id": role_id, "digest": digest, "format": "gray4", "glyphs": {}}
+
+    monkeypatch.setattr(touch_atlas, "build_touch_atlas", fake)
+
+
+def test_rebuilt_atlas_moves_the_layout_digest(app: Flask, monkeypatch: pytest.MonkeyPatch) -> None:
+    """#360: the firmware keeps its held spec and atlas strips while the layout
+    digest is unchanged, so a rebuilt strip under the same controls has to move
+    the digest or the panel keeps drawing the old one."""
+    client = app.test_client()
+    token = _register(app, client, "e1003")
+    _button_page(app)
+    _seed_frame(app, monkeypatch, "p1")
+
+    _fake_atlas(monkeypatch, "1" * 16)
+    first = client.get("/api/v1/device/e1003/frame/spec", headers=_auth(token)).get_json()
+    again = client.get("/api/v1/device/e1003/frame/spec", headers=_auth(token)).get_json()
+    assert first["atlases"] and first["layout_digest"] == again["layout_digest"]
+
+    _fake_atlas(monkeypatch, "2" * 16)
+    rebuilt = client.get("/api/v1/device/e1003/frame/spec", headers=_auth(token)).get_json()
+    assert rebuilt["atlases"][0]["digest"] == "2" * 16
+    assert rebuilt["layout_digest"] != first["layout_digest"]
+    assert len(rebuilt["layout_digest"]) == 16
+
+
+def test_atlases_arriving_later_move_the_layout_digest(
+    app: Flask, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A spec served on a cold atlas cache carries no strips; the firmware only
+    retries strips its held spec lists, so the warmed spec needs a new digest."""
+    import app.touch_atlas as touch_atlas
+
+    client = app.test_client()
+    token = _register(app, client, "e1003")
+    _button_page(app)
+    _seed_frame(app, monkeypatch, "p1")
+    monkeypatch.setattr(rest_api, "_schedule_touch_atlas_warm", lambda _roles: None)
+
+    monkeypatch.setattr(touch_atlas, "build_touch_atlas", lambda *_a, **_k: None)
+    cold = client.get("/api/v1/device/e1003/frame/spec", headers=_auth(token)).get_json()
+    assert "atlases" not in cold
+
+    _fake_atlas(monkeypatch, "1" * 16)
+    warm = client.get("/api/v1/device/e1003/frame/spec", headers=_auth(token)).get_json()
+    assert warm["atlases"]
+    assert warm["layout_digest"] != cold["layout_digest"]

@@ -2347,7 +2347,14 @@ def _attach_touch_atlases(spec: dict[str, Any], device: Device) -> None:
         else:
             missing.append(role)
     if atlases:
+        from app.touch_spec import fold_atlas_digests
+
         spec["atlases"] = atlases
+        # A changed strip must move the digest the firmware keys its held
+        # spec and atlas cache on, or it never refetches (#360).
+        spec["layout_digest"] = fold_atlas_digests(
+            str(spec.get("layout_digest") or ""), (str(a["digest"]) for a in atlases)
+        )
     if missing:
         _schedule_touch_atlas_warm(missing)
 
