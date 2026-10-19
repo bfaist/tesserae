@@ -6,6 +6,16 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ## [Unreleased]
 
+## [0.468.0], 2026-10-20
+
+### Added
+
+- Elecrow CrowPanel ESP32 5.79" E-Paper support for the 792 × 272
+  black-and-white display, on the native Tesserae device firmware (env
+  `elecrow-crowpanel-579`). Frames go through the `esp32_bw_bin` renderer as a
+  26928-byte 1-bit buffer; the rotary switch moves through the rotation and
+  its press re-renders.
+
 ## [0.467.2], 2026-10-19
 
 ### Fixed

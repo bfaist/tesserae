@@ -1,0 +1,25 @@
+{
+  "tesserae_compat": "1.x",
+  "id": "elecrow_crowpanel_579",
+  "name": "Elecrow CrowPanel 5.79\" E-Paper",
+  "vendor": "Elecrow",
+  "url": "https://www.elecrow.com/crowpanel-esp32-5-79-e-paper-hmi-display-with-272-792-resolution-black-white-color-driven-by-spi-interface.html",
+  "icon": "device-tablet",
+  "description": "Elecrow CrowPanel ESP32-S3 5.79 inch black/white e-paper HMI display (792x272, two cascaded SSD1683 controllers). Runs the native Tesserae device firmware (env `elecrow-crowpanel-579`) over the v1 REST device API and paints a raw 1-bpp mono buffer (26928 bytes) produced by the esp32_bw_bin renderer. The rotary switch moves through the rotation and its press re-renders; microSD slot supported; no battery sense on this board.",
+  "protocol": "esp32_bw_client",
+  "panel": {
+    "w": 792,
+    "h": 272,
+    "orientation": "landscape",
+    "name": "5.79 inch monochrome ePaper (792x272)",
+    "gamut": "mono",
+    "native_w": 792,
+    "native_h": 272
+  },
+  "protocol_config": {
+    "model_header": "CrowPanel_579"
+  },
+  "refresh_floor_s": 60,
+  "image_format": "bin",
+  "notes_md": "Awaiting confirmed test on real hardware. Wire format is exactly 26928 bytes (792*272/8), MSB=leftmost pixel, bit-set=white, bit-clear=black; no header, no padding, no checksum. The two controllers each drive 396 columns and leave an 8-column seam in their shared RAM; the firmware inserts it, so the frame carries only visible pixels. Default device ids look like CrowPanel_579_<mac-suffix>."
+}

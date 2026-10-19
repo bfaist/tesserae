@@ -42,6 +42,7 @@ VENDOR_ORDER: list[tuple[str, str]] = [
     ("amazon", "Amazon Kindle"),
     ("kobo", "Kobo"),
     ("gooddisplay", "Good Display"),
+    ("elecrow", "Elecrow"),
     ("epdiy", "epdiy"),
     ("community", "Community"),
     ("zectrix", "ZecTrix"),

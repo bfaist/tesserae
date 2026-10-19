@@ -193,6 +193,12 @@ Kobo readers run KOReader without a jailbreak. The same [Tesserae KOReader plugi
 |---|---|---|---|---|
 | [Good Display ESP32-133C02 (13.3")](https://www.good-display.com/product/546.html) | 1200×1600 portrait | `spectra_6` | `esp32_client` <br> `esp32_bin` | `gooddisplay_esp32_133c02` |
 
+### Elecrow
+
+| SKU | Panel | Gamut | Protocol / Renderer | Kind id |
+|---|---|---|---|---|
+| [Elecrow CrowPanel 5.79" E-Paper](https://www.elecrow.com/crowpanel-esp32-5-79-e-paper-hmi-display-with-272-792-resolution-black-white-color-driven-by-spi-interface.html) | 792×272 | `mono` | `esp32_bw_client` (inherit) | `elecrow_crowpanel_579` |
+
 ### [epdiy](https://github.com/vroland/epdiy)
 
 | SKU | Panel | Gamut | Protocol / Renderer | Kind id |
