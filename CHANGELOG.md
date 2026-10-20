@@ -6,6 +6,19 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ## [Unreleased]
 
+## [0.470.1], 2026-10-20
+
+### Fixed
+
+- The Settings tab bar no longer scrolls up and down by a pixel under a
+  mouse wheel or trackpad. Each tab was pulled 1px down into the bar's
+  bottom border so its underline could overlap it, and because the bar
+  scrolls sideways the browser also made it scroll vertically by that
+  overhang. The baseline is now drawn inside the bar, so nothing hangs
+  over and the bar only scrolls sideways. The active tab's underline,
+  which that overhang was clipping to a thin grey line, shows in full
+  again. The Paper design's Settings sidebar is unchanged.
+
 ## [0.470.0], 2026-10-20
 
 ### Added

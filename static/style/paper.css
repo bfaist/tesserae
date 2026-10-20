@@ -589,6 +589,7 @@
     margin: 0;
     padding: 32px 12px 24px;
     border-bottom: 0;
+    box-shadow: none;
     border-right: 1px solid var(--t-border);
     background: var(--p-subnav);
     overflow-x: hidden;
