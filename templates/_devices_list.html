@@ -106,7 +106,7 @@
             <i class="ph ph-{{ section.icon or 'device-mobile' }} dx-devrow-icon" aria-hidden="true"></i>
             <span>{{ section.device_name }}</span>
           </span>
-          <span class="dx-devrow-link"><span class="tg tg--sm tg--mono">{{ section.transport_badge }}</span></span>
+          <span class="dx-devrow-link"><span class="tg tg--sm tg--mono">{{ section.transport_badge }}</span>{% if section.colour_depth and section.colour_depth.prompt %} <span class="tg tg--sm tg--teal" title="This display's firmware can paint 4-level grey. Open its settings to switch." data-grey-badge>Grey ready</span>{% endif %}</span>
         </span>
         <span class="dx-devrow-l dx-devrow-l2">
           <span class="dx-devrow-kind">{{ section.kind_name }}</span>

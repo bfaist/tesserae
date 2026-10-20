@@ -539,6 +539,56 @@ def discover(
     return registry
 
 
+def colour_depths(kind_manifest: dict[str, Any]) -> dict[str, str]:
+    """A kind's ``colour_depths`` catalog block (gamut -> renderer id),
+    limited to renderers the kind offers. Empty for every kind without one."""
+    raw = kind_manifest.get("colour_depths")
+    if not isinstance(raw, dict):
+        return {}
+    offered = {str(r) for r in kind_manifest.get("renderers") or []}
+    return {
+        str(g): str(r)
+        for g, r in raw.items()
+        if isinstance(g, str) and isinstance(r, str) and r in offered
+    }
+
+
+def effective_renderer_pick(
+    kind_manifest: dict[str, Any], pick: str | None, advertised: Any
+) -> str | None:
+    """The renderer an instance actually uses, given its stored ``pick``
+    (``None`` = no pick) and the gamuts its firmware has advertised.
+    ``None`` means the kind's primary renderer.
+
+    Without a ``colour_depths`` block this is just ``pick``. With one, the
+    primary renderer is the baseline every firmware paints, and any other
+    depth's renderer is used only when the device advertised that gamut.
+    With no pick, ``colour_depth_default`` names the depth a capable device
+    starts on; it says ``mono`` on every kind today, so nothing changes
+    until a kind's catalog entry flips it."""
+    depths = colour_depths(kind_manifest)
+    if not depths:
+        return pick
+    renderers = [str(r) for r in kind_manifest.get("renderers") or []]
+    primary = renderers[0] if renderers else None
+    gamut_of = {r: g for g, r in depths.items()}
+    capable = {str(g) for g in advertised} if isinstance(advertised, list) else set()
+
+    def allowed(rid: str) -> bool:
+        if rid == primary:
+            return True
+        gamut = gamut_of.get(rid)
+        return gamut is None or gamut in capable
+
+    if pick is None:
+        default = kind_manifest.get("colour_depth_default")
+        rid = depths.get(default) if isinstance(default, str) else None
+        if rid is not None and rid != primary and allowed(rid):
+            return rid
+        return None
+    return pick if allowed(pick) else None
+
+
 def load_instance_file(
     registry: DeviceRegistry,
     *,
@@ -648,11 +698,32 @@ def load_instance_file(
     # never fight over the device's single latest-render slot. Ignored
     # unless it names one of the kind's renderers; absent means the
     # kind's first renderer, which is every single-renderer built-in.
+    #
+    # Kinds with ``colour_depths`` (one board, firmware that paints mono or
+    # 4-level grey) gate the pick on what the device has advertised it can
+    # paint: ``renderer_pick`` keeps the operator's stored choice, and
+    # ``renderer_id`` is only the renderer that is actually used. A grey pick
+    # on a unit that never advertised ``gray_4`` (or rolled its firmware
+    # back) renders mono, since its firmware rejects a grey frame on length.
+    advertised = raw_inst.get("advertised_gamuts")
+    if isinstance(advertised, list):
+        inst_manifest["advertised_gamuts"] = [str(g) for g in advertised if isinstance(g, str)]
+    if raw_inst.get("grey_prompt_dismissed") is True:
+        inst_manifest["grey_prompt_dismissed"] = True
     selected_renderer = raw_inst.get("renderer_id")
-    if isinstance(selected_renderer, str) and selected_renderer in kind.renderer_ids:
-        inst_manifest["renderer_id"] = selected_renderer
-        chosen_renderers = [selected_renderer]
+    pick = (
+        selected_renderer
+        if isinstance(selected_renderer, str) and selected_renderer in kind.renderer_ids
+        else None
+    )
+    if pick is not None:
+        inst_manifest["renderer_pick"] = pick
+    effective = effective_renderer_pick(kind.manifest, pick, inst_manifest.get("advertised_gamuts"))
+    if effective is not None:
+        inst_manifest["renderer_id"] = effective
+        chosen_renderers = [effective]
     else:
+        inst_manifest.pop("renderer_id", None)
         chosen_renderers = kind.renderer_ids[:1]
     # Point the instance at its cloned renderers so the settings UI
     # and any code that reads device.renderer_ids sees the per-

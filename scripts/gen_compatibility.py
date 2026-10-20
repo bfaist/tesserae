@@ -349,7 +349,14 @@ def _hardware_sections() -> list[str]:
             else:
                 proto_cell = f"`{protocol}` (inherit)"
             kind_id = entry.get("id", "-")
-            rows_cells = [sku_cell, dims, f"`{gamut}`", proto_cell, f"`{kind_id}`"]
+            gamut_cell = f"`{gamut}`"
+            depths = entry.get("colour_depths")
+            if isinstance(depths, dict) and len(depths) > 1:
+                # Boards whose firmware paints more than one depth: list them,
+                # the panel's default first.
+                others = [g for g in depths if g != gamut]
+                gamut_cell = " / ".join(f"`{g}`" for g in [gamut, *others])
+            rows_cells = [sku_cell, dims, gamut_cell, proto_cell, f"`{kind_id}`"]
             out.append("| " + " | ".join(str(c) for c in rows_cells) + " |")
         out.append("")
     return out

@@ -26,7 +26,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from app.device_loader import Device, DeviceRegistry, load_instance_file
+from app.device_loader import Device, DeviceRegistry, colour_depths, load_instance_file
 from app.quantizer import canonicalise_gamut, refine_reported_gamut
 from app.renderer_loader import RendererRegistry, clone_for_instances
 
@@ -1043,6 +1043,19 @@ def update_instance_renderer(
     target = renderer_id_for_format(renderers, kind, wire_format)
     if not target or target == device.manifest.get("renderer_id"):
         return InstanceResult(device), False  # empty / unknown / already active
+    # Already on a renderer of the declared format: nothing to switch. A
+    # mono / grey board declaring ``bin`` must not be dragged off a grey
+    # ``.bin`` renderer onto the first ``.bin`` the kind lists.
+    in_use = device.manifest.get("renderer_pick") or device.manifest.get("renderer_id")
+    in_use = in_use or (kind.renderer_ids[0] if kind is not None and kind.renderer_ids else None)
+    current_renderer = renderers.get(str(in_use or ""))
+    target_renderer = renderers.get(target)
+    if (
+        current_renderer is not None
+        and target_renderer is not None
+        and current_renderer.extension == target_renderer.extension
+    ):
+        return InstanceResult(device), False
 
     inst_file = device.path
     try:
@@ -1101,7 +1114,11 @@ def set_instance_renderer_id(
     if target not in kind_renderer_ids:
         return InstanceResult(None, f"Unknown renderer {target!r} for this device."), False
 
-    current = device.manifest.get("renderer_id") or primary
+    # The stored pick, else the renderer in use. On a ``colour_depths`` kind
+    # these differ when a grey pick is waiting on firmware that advertises
+    # grey; comparing against the pick keeps that choice from reading as
+    # "already mono" and being dropped.
+    current = device.manifest.get("renderer_pick") or device.manifest.get("renderer_id") or primary
     if target == current:
         return InstanceResult(device), False
 
@@ -1112,12 +1129,16 @@ def set_instance_renderer_id(
         return InstanceResult(None, f"Couldn't read {inst_file.name}: {err}"), False
     # An operator pick always replaces an automatic one.
     raw.pop("renderer_auto", None)
-    if target == primary and not renderer_min_firmware(kind):
+    keeps_explicit_pin = bool(renderer_min_firmware(kind)) or bool(
+        colour_depths(getattr(kind, "manifest", {}) or {})
+    )
+    if target == primary and not keeps_explicit_pin:
         raw.pop("renderer_id", None)  # back to the kind default; don't pin
     else:
-        # A kind whose renderer follows the firmware version keeps even a
-        # pick of its primary as an explicit pin, so the next poll's
-        # firmware check does not move the device off it again.
+        # A kind whose renderer follows the firmware version, or whose
+        # colour depth has a catalog default, keeps even a pick of its
+        # primary as an explicit pin, so neither the next poll's firmware
+        # check nor a later default flip moves the device off it.
         raw["renderer_id"] = target
     inst_file.write_text(json.dumps(raw, indent=2) + "\n", encoding="utf-8")
 
@@ -1129,6 +1150,122 @@ def set_instance_renderer_id(
         return InstanceResult(None, last_err.message if last_err else "unknown error"), False
     clone_for_instances(renderers, devices)
     return InstanceResult(reloaded), True
+
+
+_MAX_ADVERTISED_GAMUTS = 8
+
+
+def parse_advertised_gamuts(payload: Any) -> list[str] | None:
+    """The ``gamuts`` array a device advertises in its register / status
+    body (``["mono", "gray_4"]``): the colour depths its firmware can paint.
+    Canonicalised, unknown values dropped, order kept, de-duplicated.
+
+    ``None`` when the body has no such key, or it isn't a list: the caller
+    keeps the last known value, the same sticky rule as ``can_stay_awake``
+    (a firmware property, not something that comes and goes between wakes).
+    """
+    if isinstance(payload, (bytes, bytearray, str)):
+        try:
+            body = json.loads(payload)
+        except (ValueError, TypeError):
+            return None
+    else:
+        body = payload
+    if not isinstance(body, dict):
+        return None
+    raw = body.get("gamuts")
+    if not isinstance(raw, list):
+        return None
+    from app.quantizer import ACCEPTED_GAMUTS
+
+    out: list[str] = []
+    for value in raw:
+        if not isinstance(value, str) or value.strip() not in ACCEPTED_GAMUTS:
+            continue
+        gamut = canonicalise_gamut(value.strip())
+        if gamut not in out:
+            out.append(gamut)
+        if len(out) >= _MAX_ADVERTISED_GAMUTS:
+            break
+    return out
+
+
+def update_advertised_gamuts(
+    *,
+    devices: DeviceRegistry,
+    renderers: RendererRegistry,
+    data_root: Path,
+    instance_id: str,
+    gamuts: list[str] | None,
+) -> tuple[InstanceResult, bool]:
+    """Persist the gamuts a device advertises (``advertised_gamuts`` on its
+    instance file) when they change, and reload it so the colour-depth gate
+    sees them.
+
+    The renderer an instance of a ``colour_depths`` kind uses depends on
+    this list (see :func:`app.device_loader.effective_renderer_pick`), so it
+    lives on the instance file, read at every load, rather than only in the
+    status cache. Written only on change, so steady beats cost nothing.
+
+    Returns ``(result, render_changed)``: ``render_changed`` is True only
+    when the renderer in use moved (a grey pick becoming paintable after a
+    firmware update, or falling back to mono after a rollback), which is
+    when the caller must drop the cached frame so its digest and ETag move
+    with it."""
+    device = devices.get(instance_id)
+    if device is None or device.kind_of is None:
+        return InstanceResult(None, f"Unknown device {instance_id!r}."), False
+    if gamuts is None or device.manifest.get("advertised_gamuts") == gamuts:
+        return InstanceResult(device), False
+    inst_file = device.path
+    try:
+        raw = json.loads(inst_file.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return InstanceResult(device), False
+    if not isinstance(raw, dict):
+        return InstanceResult(device), False
+    before = list(device.renderer_ids)
+    raw["advertised_gamuts"] = list(gamuts)
+    inst_file.write_text(json.dumps(raw, indent=2) + "\n", encoding="utf-8")
+
+    devices.devices.pop(instance_id, None)
+    _drop_clones(renderers, instance_id)
+    reloaded = load_instance_file(devices, inst_file=inst_file, data_root=data_root)
+    if reloaded is None:
+        last_err = devices.errors[-1] if devices.errors else None
+        return InstanceResult(None, last_err.message if last_err else "unknown error"), False
+    clone_for_instances(renderers, devices)
+    return InstanceResult(reloaded), list(reloaded.renderer_ids) != before
+
+
+def advertises_gamut(device: Any, gamut: str) -> bool:
+    """Whether the device's firmware has advertised it can paint ``gamut``."""
+    advertised = getattr(device, "manifest", {}).get("advertised_gamuts")
+    return isinstance(advertised, list) and gamut in advertised
+
+
+def set_grey_prompt_dismissed(
+    *,
+    devices: DeviceRegistry,
+    instance_id: str,
+) -> InstanceResult:
+    """Record "Keep mono" on the 4-level grey upgrade prompt for one device
+    (``grey_prompt_dismissed`` on its instance file), so the prompt never
+    returns for it. Patched in memory too; nothing about rendering changes,
+    so no reload."""
+    device = devices.get(instance_id)
+    if device is None or device.kind_of is None:
+        return InstanceResult(None, f"Unknown device {instance_id!r}.")
+    try:
+        raw = json.loads(device.path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as err:
+        return InstanceResult(None, f"Couldn't read {device.path.name}: {err}")
+    if not isinstance(raw, dict):
+        return InstanceResult(None, f"{device.path.name} is not a JSON object.")
+    raw["grey_prompt_dismissed"] = True
+    device.path.write_text(json.dumps(raw, indent=2) + "\n", encoding="utf-8")
+    device.manifest["grey_prompt_dismissed"] = True
+    return InstanceResult(device)
 
 
 def parse_firmware_version(value: Any) -> tuple[int, ...] | None:

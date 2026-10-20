@@ -290,7 +290,7 @@ class RelayPairingPoller:
         Scans registered kinds (catalog SKUs register as kinds carrying
         their ``protocol`` + ``panel``/``renderers`` overrides) rather than
         hardcoding a table, so a new SKU with a renderer override is picked
-        up automatically. A candidate must change the renderer set: a SKU
+        up automatically. A candidate must change the default renderer: a SKU
         that packs identically to the bare kind (mono / spectra_6 rows)
         adds no correctness, and relabeling the hardware on a guess would
         be wrong more often than right. When several SKUs share the same
@@ -342,7 +342,12 @@ class RelayPairingPoller:
             # says gray_8), so match through the refinement table.
             if not declared or not gamut_matches_report(declared, gamut):
                 continue
-            if list(manifest.get("renderers") or base_renderers) == base_renderers:
+            # Compare the default renderer, not the whole list: a board that
+            # adds a selectable grey renderer behind its mono default
+            # (``colour_depths``) still packs the bare kind's bytes for a
+            # relay panel, which never advertises grey.
+            renderers_of = list(manifest.get("renderers") or base_renderers)
+            if renderers_of[:1] == base_renderers[:1]:
                 continue
             candidates.append(dev)
         if not candidates:

@@ -6,6 +6,39 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ## [Unreleased]
 
+## [0.470.0], 2026-10-20
+
+### Added
+
+- **Mono or 4-level grey on the same board.** The Elecrow CrowPanel 5.79",
+  XIAO ePaper 7.5" (S3), XIAO 7.5" ePaper Panel (C3), XIAO EE04 7.5",
+  Waveshare ESP32 Driver Board 7.5" and the Xteink X4 on the native firmware
+  can now be sent a 4-level grey frame (`esp32_gray2_bin`) as well as the
+  mono one, on the same kind and device id. Their firmware tells the two
+  apart by length and says it can paint grey by sending
+  `"gamuts": ["mono", "gray_4"]` when it registers and on every status
+  beat. The server stores that on the device and only ever renders grey for
+  a device that has sent it, so a unit on older firmware, or one rolled
+  back, gets mono even when grey is picked; the frame is repainted whenever
+  the depth in use changes. Mono stays the default. The grey path is
+  unverified on hardware and needs the firmware build that sends `gamuts`.
+- **Colour depth on the device card.** These boards show a Mono / 4-level
+  grey control in Rendering. It stays disabled, with a note that a firmware
+  update adds grey, until the device has said it can paint grey.
+- **Grey upgrade prompt.** Once one of these devices says it can paint grey
+  while still on mono, its card offers "Switch to grey" or "Keep mono", and
+  the devices list marks it "Grey ready". Keep mono is remembered for that
+  device and the prompt does not come back.
+
+### Changed
+
+- Catalog entries can declare `colour_depths` (gamut to renderer) and
+  `colour_depth_default` (the depth a capable device starts on, `mono` on
+  every kind for now). The compatibility table lists both depths for these
+  boards.
+- A device declaring a wire format it is already on (for example `bin` while
+  on the grey `.bin` renderer) is left where it is.
+
 ## [0.469.0], 2026-10-20
 
 ### Added

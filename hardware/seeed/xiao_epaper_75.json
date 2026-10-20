@@ -7,6 +7,15 @@
   "icon": "device-tablet",
   "description": "Seeed XIAO ESP32-S3 Plus driver board plus a 7.5 inch monochrome ePaper panel (800x480), sold as the TRMNL 7.5\" (OG) DIY Kit. Not the integrated XIAO 7.5\" ePaper Panel (C3), which is a separate product around the same glass, see xiao_epaper_panel_75_c3. Speaks Tesserae's v1 REST device API and paints a raw 1-bpp mono buffer (48000 bytes) produced by the esp32_bw_bin renderer. Byte-identical wire contract to the Seeed reTerminal E1001; the two panels are cross-compatible on the frame side. Battery state is reported as unknown for now, sense pin not wired in the reference board.",
   "protocol": "esp32_bw_client",
+  "renderers": [
+    "esp32_bw_bin",
+    "esp32_gray2_bin"
+  ],
+  "colour_depths": {
+    "mono": "esp32_bw_bin",
+    "gray_4": "esp32_gray2_bin"
+  },
+  "colour_depth_default": "mono",
   "panel": {
     "w": 800,
     "h": 480,
@@ -21,5 +30,5 @@
   },
   "refresh_floor_s": 60,
   "image_format": "bin",
-  "notes_md": "Awaiting confirmed test on real hardware. Wire format is exactly 48000 bytes (800*480/8), MSB=leftmost pixel, bit-set=white, bit-clear=black; no header, no padding, no checksum. Frame is byte-identical to the seeed_reterminal_e1001 target, so validate cross-panel by pointing the same renderer output at both. Renderer keeps normal top-left orientation; the firmware handles any physical panel-side mirror itself."
+  "notes_md": "Awaiting confirmed test on real hardware. Wire format is exactly 48000 bytes (800*480/8), MSB=leftmost pixel, bit-set=white, bit-clear=black; no header, no padding, no checksum. Frame is byte-identical to the seeed_reterminal_e1001 target, so validate cross-panel by pointing the same renderer output at both. Renderer keeps normal top-left orientation; the firmware handles any physical panel-side mirror itself.\n\n**Colour depth.** Mono is the default. Firmware that advertises `\"gamuts\": [\"mono\", \"gray_4\"]` in its register and status bodies can also paint a 4-level grey frame from `esp32_gray2_bin`: exactly 96000 bytes (800*480/4), the same bytes as `seeed_reterminal_e1001_gray`, 4 px/byte MSB first, `0b00` black to `0b11` white. The firmware tells the two apart by byte length (48000 mono, 96000 grey), keeps the same kind, model and device id, and only firmware that advertises `gray_4` gets a grey frame, whatever the device card says. Older firmware omits the key and stays on mono. Pick the depth on the device card (Rendering, Colour depth). The grey path is UNVERIFIED ON HARDWARE and needs a firmware build that advertises `gamuts`. Relay-paired panels do not advertise it and stay mono."
 }

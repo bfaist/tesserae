@@ -7,6 +7,15 @@
   "icon": "device-tablet",
   "description": "Elecrow CrowPanel ESP32-S3 5.79 inch black/white e-paper HMI display (792x272, two cascaded SSD1683 controllers). Runs the native Tesserae device firmware (env `elecrow-crowpanel-579`) over the v1 REST device API and paints a raw 1-bpp mono buffer (26928 bytes) produced by the esp32_bw_bin renderer. The rotary switch moves through the rotation and its press re-renders; microSD slot supported; no battery sense on this board.",
   "protocol": "esp32_bw_client",
+  "renderers": [
+    "esp32_bw_bin",
+    "esp32_gray2_bin"
+  ],
+  "colour_depths": {
+    "mono": "esp32_bw_bin",
+    "gray_4": "esp32_gray2_bin"
+  },
+  "colour_depth_default": "mono",
   "panel": {
     "w": 792,
     "h": 272,
@@ -21,5 +30,5 @@
   },
   "refresh_floor_s": 60,
   "image_format": "bin",
-  "notes_md": "Awaiting confirmed test on real hardware. Wire format is exactly 26928 bytes (792*272/8), MSB=leftmost pixel, bit-set=white, bit-clear=black; no header, no padding, no checksum. The two controllers each drive 396 columns and leave an 8-column seam in their shared RAM; the firmware inserts it, so the frame carries only visible pixels. Default device ids look like CrowPanel_579_<mac-suffix>."
+  "notes_md": "Awaiting confirmed test on real hardware. Wire format is exactly 26928 bytes (792*272/8), MSB=leftmost pixel, bit-set=white, bit-clear=black; no header, no padding, no checksum. The two controllers each drive 396 columns and leave an 8-column seam in their shared RAM; the firmware inserts it, so the frame carries only visible pixels. Default device ids look like CrowPanel_579_<mac-suffix>.\n\n**Colour depth.** Mono is the default. Firmware that advertises `\"gamuts\": [\"mono\", \"gray_4\"]` in its register and status bodies can also paint a 4-level grey frame from `esp32_gray2_bin`: exactly 53856 bytes (792*272/4, 198 bytes per row, no row padding), 4 px/byte MSB first, `0b00` black to `0b11` white. The firmware tells the two apart by byte length (26928 mono, 53856 grey), keeps the same kind, model and device id, and only firmware that advertises `gray_4` gets a grey frame, whatever the device card says. Older firmware omits the key and stays on mono. Pick the depth on the device card (Rendering, Colour depth). The grey path is UNVERIFIED ON HARDWARE and needs a firmware build that advertises `gamuts`. Relay-paired panels do not advertise it and stay mono."
 }

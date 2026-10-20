@@ -1228,6 +1228,11 @@ def devices_update_combined(instance_id: str) -> Response:
             if pm is not None:
                 pm.invalidate_and_repaint(instance_id)
             device = rp_result.device
+            # A depth chosen on the card answers the grey upgrade prompt.
+            if device.manifest.get("colour_depths"):
+                device_service.set_grey_prompt_dismissed(
+                    devices=devices_registry, instance_id=instance_id
+                )
             renderer_loader.seed_device_settings_from_base(renderers(), store)
             ok_messages.append("renderer switched")
             any_change = True
@@ -1611,6 +1616,60 @@ def devices_update_combined(instance_id: str) -> Response:
 
 
 # -- delete + calibrate ------------------------------------------------
+
+
+@bp.post("/settings/devices/<instance_id>/colour-depth")
+def devices_colour_depth(instance_id: str) -> Response:
+    """Answer the 4-level grey upgrade prompt on a mono / grey board.
+
+    ``choice=grey`` switches the device to the kind's grey renderer (only
+    when its firmware has advertised ``gray_4``; the render gate would keep
+    it mono otherwise) and drops the cached frame. ``choice=mono`` is "Keep
+    mono": it records the dismissal so the prompt never returns for this
+    device. Either way the prompt is answered."""
+    from app.device_loader import colour_depths
+
+    device = devices().get(instance_id)
+    if device is None or device.kind_of is None:
+        flash(f"Unknown device {instance_id!r}.", "error")
+        return redirect(url_for("auth.settings_area", area="devices"))
+    kind = devices().get(device.kind_of)
+    depths = colour_depths(kind.manifest) if kind is not None else {}
+    choice = (request.form.get("choice") or "").strip()
+    if not depths:
+        flash(f"{device.name} has one colour depth.", "error")
+        return _device_page_redirect(instance_id, "rendering")
+    if choice == "grey":
+        if not device_service.advertises_gamut(device, "gray_4"):
+            flash(f"{device.name} hasn't reported grey support yet.", "error")
+            return _device_page_redirect(instance_id, "rendering")
+        result, changed = device_service.set_instance_renderer_id(
+            devices=devices(),
+            renderers=renderers(),
+            data_root=device_data_root(),
+            instance_id=instance_id,
+            renderer_id=depths["gray_4"],
+        )
+        if not result.ok:
+            flash(result.error or "Couldn't switch to grey.", "error")
+            return _device_page_redirect(instance_id, "rendering")
+        if changed:
+            pm = current_app.config.get("PUSH_MANAGER")
+            if pm is not None:
+                pm.invalidate_and_repaint(instance_id)
+            renderer_loader.seed_device_settings_from_base(renderers(), settings_store())
+        device_service.set_grey_prompt_dismissed(devices=devices(), instance_id=instance_id)
+        flash(f"{device.name} switched to 4-level grey.", "ok")
+        return _device_page_redirect(instance_id, "rendering")
+    if choice == "mono":
+        result_dismiss = device_service.set_grey_prompt_dismissed(
+            devices=devices(), instance_id=instance_id
+        )
+        if not result_dismiss.ok:
+            flash(result_dismiss.error or "Couldn't save that.", "error")
+        return _device_page_redirect(instance_id, "rendering")
+    flash("Pick grey or mono.", "error")
+    return _device_page_redirect(instance_id, "rendering")
 
 
 @bp.post("/settings/devices/<instance_id>/push-now")

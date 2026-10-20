@@ -227,6 +227,18 @@ def _derive_manifest(
     if isinstance(renderers_override, list) and renderers_override:
         manifest["renderers"] = [str(r) for r in renderers_override if isinstance(r, str)]
 
+    # Selectable colour depths for boards whose firmware paints more than
+    # one (gamut -> renderer id), and the depth a capable device starts on.
+    # ``app.device_loader.effective_renderer_pick`` applies both.
+    depths = entry.manifest.get("colour_depths")
+    if isinstance(depths, dict) and depths:
+        manifest["colour_depths"] = {
+            str(g): str(r) for g, r in depths.items() if isinstance(r, str)
+        }
+    depth_default = entry.manifest.get("colour_depth_default")
+    if isinstance(depth_default, str) and depth_default:
+        manifest["colour_depth_default"] = depth_default
+
     # Track the catalog origin on the manifest so the Settings UI and
     # compatibility-matrix generator can distinguish folder-defined kinds
     # from catalog-defined ones (different docs link, different edit

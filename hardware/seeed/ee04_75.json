@@ -7,6 +7,15 @@
   "icon": "device-tablet",
   "description": "Seeed XIAO ePaper Display Board EE04 (XIAO ESP32-S3 Plus) driving the 7.5 inch monochrome panel on the 24-pin FPC (800x480). Speaks Tesserae's v1 REST device API and paints a raw 1-bpp mono buffer (48000 bytes) produced by the esp32_bw_bin renderer; byte-identical wire contract to the Seeed reTerminal E1001 and the XIAO ePaper 7.5. Reports battery percentage via the onboard ADC divider and carries the refresh/left/right three-button set like the EE02; no onboard temperature/humidity sensor.",
   "protocol": "esp32_bw_client",
+  "renderers": [
+    "esp32_bw_bin",
+    "esp32_gray2_bin"
+  ],
+  "colour_depths": {
+    "mono": "esp32_bw_bin",
+    "gray_4": "esp32_gray2_bin"
+  },
+  "colour_depth_default": "mono",
   "panel": {
     "w": 800,
     "h": 480,
@@ -21,5 +30,5 @@
   },
   "refresh_floor_s": 60,
   "image_format": "bin",
-  "notes_md": "Awaiting confirmed test on real hardware; community bring-up in progress. Wire format is exactly 48000 bytes (800*480/8), MSB=leftmost pixel, bit-set=white, bit-clear=black; no header, no padding, no checksum. Frame is byte-identical to the seeed_reterminal_e1001 and xiao_epaper_75 targets, so validate cross-panel by pointing the same renderer output at any of them. Default device ids look like Seeed_EE04_75_<mac-suffix>. The board hosts one panel on either a 24-pin or 50-pin FPC; this kind is the 24-pin mono build variant, see seeed_ee04_73e6 for the 50-pin Spectra 6 variant."
+  "notes_md": "Awaiting confirmed test on real hardware; community bring-up in progress. Wire format is exactly 48000 bytes (800*480/8), MSB=leftmost pixel, bit-set=white, bit-clear=black; no header, no padding, no checksum. Frame is byte-identical to the seeed_reterminal_e1001 and xiao_epaper_75 targets, so validate cross-panel by pointing the same renderer output at any of them. Default device ids look like Seeed_EE04_75_<mac-suffix>. The board hosts one panel on either a 24-pin or 50-pin FPC; this kind is the 24-pin mono build variant, see seeed_ee04_73e6 for the 50-pin Spectra 6 variant.\n\n**Colour depth.** Mono is the default. Firmware that advertises `\"gamuts\": [\"mono\", \"gray_4\"]` in its register and status bodies can also paint a 4-level grey frame from `esp32_gray2_bin`: exactly 96000 bytes (800*480/4), the same bytes as `seeed_reterminal_e1001_gray`, 4 px/byte MSB first, `0b00` black to `0b11` white. The firmware tells the two apart by byte length (48000 mono, 96000 grey), keeps the same kind, model and device id, and only firmware that advertises `gray_4` gets a grey frame, whatever the device card says. Older firmware omits the key and stays on mono. Pick the depth on the device card (Rendering, Colour depth). The grey path is UNVERIFIED ON HARDWARE and needs a firmware build that advertises `gamuts`. Relay-paired panels do not advertise it and stay mono."
 }

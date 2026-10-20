@@ -91,6 +91,18 @@
       "minItems": 1,
       "description": "Optional override for the protocol's default renderer list. Present when the same wire protocol serves panels with meaningfully different output formats, e.g. a colour Spectra 6 panel wants an indexed-palette PNG while the mono panels on the same protocol take 1-bit output. Absent → inherit the protocol's renderers verbatim (the common case)."
     },
+    "colour_depths": {
+      "type": "object",
+      "minProperties": 2,
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
+      "additionalProperties": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+      "description": "Colour depths this board can paint, as panel gamut -> renderer id (each renderer must be one the kind offers). The depth served by the kind's first renderer is the baseline every firmware paints; any other depth is used only when the device has advertised that gamut in the 'gamuts' array of its register / status body, so a unit on older firmware stays on the baseline even if the operator picked another depth. Drives the device card's Colour depth control."
+    },
+    "colour_depth_default": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "The depth (a key of 'colour_depths') a device that advertises it starts on when no depth has been picked. Devices that have not advertised it stay on the baseline. Set to the baseline gamut to keep every device on it by default."
+    },
     "notes_md": {
       "type": "string",
       "description": "Free-form maintainer notes in markdown. Surfaced on the docs hardware page."

@@ -447,7 +447,47 @@
         </div>
       </header>
       <div class="dx-section-body">
+        {% set _cd = section.colour_depth %}
+        {% if _cd and _cd.prompt %}
+        {# One-time upgrade prompt: firmware on this board now paints 4-level
+           grey. "Keep mono" is remembered per device. #}
+        <div class="dx-band is-active" data-grey-prompt style="margin-bottom: 16px;">
+          <span class="dx-band-icon" aria-hidden="true"><i class="ph ph-circle-half"></i></span>
+          <div class="dx-band-text">
+            <p class="dx-band-title">This display can now show 4 shades of grey</p>
+            <p class="dx-band-desc">Its firmware paints 4-level grey as well as mono, so photos and shading look smoother. Grey takes a slower full refresh and uses a little more battery per update.</p>
+          </div>
+          <div class="dx-band-actions">
+            <form method="post" action="{{ url_for('auth.devices_colour_depth', instance_id=section.device_id) }}">
+              <input type="hidden" name="choice" value="grey">
+              <button type="submit" class="dx-btn is-primary"><span>Switch to grey</span></button>
+            </form>
+            <form method="post" action="{{ url_for('auth.devices_colour_depth', instance_id=section.device_id) }}">
+              <input type="hidden" name="choice" value="mono">
+              <button type="submit" class="dx-btn is-ghost"><span>Keep mono</span></button>
+            </form>
+          </div>
+        </div>
+        {% endif %}
         <div class="dx-field-grid">
+          {% if _cd %}
+          {% if _cd.enabled %}
+          {{ select_field(section.id ~ '-colour-depth', 'renderer_id', 'Colour depth',
+              value=_cd.value, options=_cd.options,
+              help='Mono or 4-level grey. Grey makes photos and shading smoother, and takes a slower full refresh and a little more battery per update.',
+              form=_combined_form_id) }}
+          {% else %}
+          <div class="field">
+            <label for="{{ section.id }}-colour-depth">Colour depth</label>
+            <select id="{{ section.id }}-colour-depth" disabled aria-describedby="{{ section.id }}-colour-depth-hint">
+              {% for opt in _cd.options %}
+              <option value="{{ opt.value }}" {% if opt.value == _cd.value %}selected{% endif %}>{{ opt.label }}</option>
+              {% endfor %}
+            </select>
+            <p class="field-help" id="{{ section.id }}-colour-depth-hint">A firmware update adds 4-level grey to this display.{% if _cd.waiting %} Grey is picked and starts once the display reports it can paint grey; until then it gets mono.{% endif %}</p>
+          </div>
+          {% endif %}
+          {% endif %}
           {% if section.renderer_choice %}
           {{ select_field(section.id ~ '-renderer', 'renderer_id', 'Renderer',
               value=section.renderer_choice.value, options=section.renderer_choice.options,

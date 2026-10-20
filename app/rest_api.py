@@ -669,6 +669,20 @@ def _maybe_heal_gamut(device_id: str, body: dict[str, Any]) -> None:
         current_app.logger.exception("rest: gamut heal failed for device=%s", device_id)
 
 
+def _maybe_record_gamuts(device_id: str, body: dict[str, Any]) -> None:
+    """Store the ``gamuts`` array a registering firmware advertises (the
+    colour depths it can paint), same as a status beat does. Best-effort."""
+    device = _devices().get(device_id)
+    if device is None:
+        return
+    try:
+        from app.transport_wiring import _record_advertised_gamuts
+
+        _record_advertised_gamuts(current_app, device, body)
+    except Exception:
+        current_app.logger.exception("rest: gamuts record failed for device=%s", device_id)
+
+
 def _maybe_heal_kind(device_id: str, body: dict[str, Any]) -> None:
     """Move an already-registered device to the kind its firmware now
     declares, when that differs from the stored one.
@@ -3457,6 +3471,7 @@ def _register() -> Response:
         # Last, so a gamut with a dedicated renderer wins over a declared
         # wire format here exactly as it does on a first registration.
         _maybe_heal_gamut(device_id, body)
+        _maybe_record_gamuts(device_id, body)
         # A re-pair means the firmware's NVS (and its wake-event
         # counter) may have been wiped; forget the dedup high-water
         # mark or every future button/touch reads as a duplicate.
@@ -3539,12 +3554,14 @@ def _register() -> Response:
         _pairings()._codes[pairing.code] = pairing
         return _error(400, result.error or "create_instance failed")
 
-    token = result.device.manifest.get("access_token")
+    _maybe_record_gamuts(result.device.id, body)
+    result_device = devices_registry.get(result.device.id) or result.device
+    token = result_device.manifest.get("access_token")
     if not isinstance(token, str) or not token:
         # Belt and braces: ensure a token exists even if
         # create_instance changed shape later.
         token = generate_access_token(devices_registry)
-        _persist_token(result.device, token)
+        _persist_token(result_device, token)
 
     if limiter is not None:
         limiter.record_success(client_id)
@@ -3552,9 +3569,9 @@ def _register() -> Response:
         {
             "status": 201,
             "device_token": token,
-            "device_id": result.device.id,
+            "device_id": result_device.id,
             "server_time": int(time.time()),
-            "config": _current_config(result.device),
+            "config": _current_config(result_device),
             "reused_existing": False,
         }
     )

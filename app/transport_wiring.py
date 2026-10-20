@@ -285,6 +285,38 @@ def merge_status_parsed(prev: dict[str, Any], new: dict[str, Any]) -> dict[str, 
 # -- subscriptions ------------------------------------------------------
 
 
+def _record_advertised_gamuts(app: Flask, device: Any, payload: Any) -> None:
+    """Store a register / status body's ``gamuts`` array on the device's
+    instance and, when that moves the renderer in use, drop and repaint the
+    cached frame so its digest and ETag change with it. A body without the
+    key keeps the last known value. Best-effort: never breaks a beat."""
+    from app import device_service
+
+    gamuts = device_service.parse_advertised_gamuts(payload)
+    if gamuts is None or getattr(device, "kind_of", None) is None:
+        return
+    if device.manifest.get("advertised_gamuts") == gamuts:
+        return
+    try:
+        _result, render_changed = device_service.update_advertised_gamuts(
+            devices=app.config["DEVICE_REGISTRY"],
+            renderers=app.config["RENDERER_REGISTRY"],
+            data_root=app.config["DEVICE_DATA_ROOT"],
+            instance_id=device.id,
+            gamuts=gamuts,
+        )
+    except Exception:
+        logger.exception("advertised gamuts: update failed for %s", device.id)
+        return
+    if render_changed:
+        push_mgr = app.config.get("PUSH_MANAGER")
+        if push_mgr is not None:
+            try:
+                push_mgr.invalidate_and_repaint(device.id)
+            except Exception:
+                logger.exception("advertised gamuts: repaint failed for %s", device.id)
+
+
 def record_status_heartbeat(
     *,
     app: Flask,
@@ -413,6 +445,11 @@ def record_status_heartbeat(
         entry["can_stay_awake"] = can_stay_awake
     elif prev_entry.get("can_stay_awake") is not None:
         entry["can_stay_awake"] = prev_entry["can_stay_awake"]
+    # Colour depths the firmware can paint (``gamuts``: ["mono", "gray_4"]):
+    # sticky, a firmware property. Persisted on the instance file because
+    # the renderer in use depends on it (mono / grey boards render grey only
+    # once the device has advertised gray_4); a move drops the cached frame.
+    _record_advertised_gamuts(app, device, payload)
     # Log upload capability: sticky like ota_schema (a firmware property).
     logs_schema = device_logs.advertised_logs_schema(payload)
     if logs_schema is not None:

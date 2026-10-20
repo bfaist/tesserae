@@ -80,7 +80,7 @@ The reTerminal E-Series and XIAO ePaper family run the [Tesserae-native firmware
 | [Seeed XIAO ePaper EE02 (13.3")](https://www.seeedstudio.com/XIAO-ePaper-DIY-Kit-EE02-for-13-3-Spectratm-6-E-Ink.html?sensecap_affiliate=YcT0R1h&referring_service=link) | 1200×1600 portrait | `spectra_6` | `esp32_client` (inherit) | `seeed_ee02` |
 | [Seeed XIAO ePaper EE03 (10.3" mono)](https://www.seeedstudio.com/XIAO-ePaper-DIY-Kit-EE03-for-10-3-Monochrome-ePaper-Display.html?sensecap_affiliate=YcT0R1h&referring_service=link) | 1872×1404 | `gray_16` | `esp32_client` <br> `esp32_gray_bin` | `seeed_ee03` |
 | [Seeed XIAO ePaper EE04 (7.3" Spectra 6)](https://www.seeedstudio.com/XIAO-ePaper-Display-Board-EE04-p-6560.html) | 800×480 | `spectra_6` | `esp32_client` (inherit) | `seeed_ee04_73e6` |
-| [Seeed XIAO ePaper EE04 (7.5" mono)](https://www.seeedstudio.com/XIAO-ePaper-Display-Board-EE04-p-6560.html) | 800×480 | `mono` | `esp32_bw_client` (inherit) | `seeed_ee04_75` |
+| [Seeed XIAO ePaper EE04 (7.5" mono)](https://www.seeedstudio.com/XIAO-ePaper-Display-Board-EE04-p-6560.html) | 800×480 | `mono` / `gray_4` | `esp32_bw_client` <br> `esp32_bw_bin`, `esp32_gray2_bin` | `seeed_ee04_75` |
 | [Seeed XIAO ePaper EE05 (2.13" BWRY)](https://www.seeedstudio.com/2-13-Quadruple-Color-ePaper-Display-with-122x250-Pixels-p-5779.html) | 250×122 | `bwry_4` | `esp32_client` (inherit) | `seeed_ee05_213_bwry` |
 | [Seeed reTerminal E1001](https://www.seeedstudio.com/reTerminal-E1001-p-6534.html?sensecap_affiliate=YcT0R1h&referring_service=link) | 800×480 | `mono` | `esp32_bw_client` (inherit) | `seeed_reterminal_e1001` |
 | [Seeed reTerminal E1001 (4-level grayscale)](https://www.seeedstudio.com/reTerminal-E1001-p-6534.html?sensecap_affiliate=YcT0R1h&referring_service=link) | 800×480 | `gray_4` | `esp32_bw_client` <br> `esp32_gray2_bin` | `seeed_reterminal_e1001_gray` |
@@ -90,9 +90,9 @@ The reTerminal E-Series and XIAO ePaper family run the [Tesserae-native firmware
 | [Seeed reTerminal E1004](https://www.seeedstudio.com/reTerminal-E1004-p-6692.html?sensecap_affiliate=YcT0R1h&referring_service=link) | 1200×1600 portrait | `spectra_6` | `esp32_client` (inherit) | `seeed_reterminal_e1004` |
 | [Seeed reTerminal Sticky](https://www.seeedstudio.com/reTerminal-Sticky-p-6861.html?sensecap_affiliate=YcT0R1h&referring_service=link) | 480×800 portrait | `gray_4` | `esp32_bw_client` <br> `esp32_gray2_bin` | `seeed_reterminal_sticky` |
 | [Seeed XIAO 7.5" ePaper Panel (C3, TRMNL BYOS)](https://www.seeedstudio.com/XIAO-7-5-ePaper-Panel-p-6416.html) | 800×480 | `mono` | `trmnl_client` <br> `trmnl_png`, `trmnl_png_gray4` | `seeed_xiao_75` |
-| [Seeed XIAO ePaper 7.5" (S3, mono)](https://www.seeedstudio.com/TRMNL-7-5-Inch-OG-DIY-Kit-p-6481.html?sensecap_affiliate=YcT0R1h&referring_service=link) | 800×480 | `mono` | `esp32_bw_client` (inherit) | `xiao_epaper_75` |
+| [Seeed XIAO ePaper 7.5" (S3, mono)](https://www.seeedstudio.com/TRMNL-7-5-Inch-OG-DIY-Kit-p-6481.html?sensecap_affiliate=YcT0R1h&referring_service=link) | 800×480 | `mono` / `gray_4` | `esp32_bw_client` <br> `esp32_bw_bin`, `esp32_gray2_bin` | `xiao_epaper_75` |
 | [Seeed XIAO ePaper 7.5" (black/white/red)](https://www.seeedstudio.com/XIAO-7-5-ePaper-Panel-p-6416.html) | 800×480 | `bwr_3` | `esp32_bw_client` <br> `esp32_bin` | `xiao_epaper_75_bwr` |
-| [Seeed XIAO 7.5" ePaper Panel (C3)](https://www.seeedstudio.com/XIAO-7-5-ePaper-Panel-p-6416.html) | 800×480 | `mono` | `esp32_bw_client` (inherit) | `xiao_epaper_panel_75_c3` |
+| [Seeed XIAO 7.5" ePaper Panel (C3)](https://www.seeedstudio.com/XIAO-7-5-ePaper-Panel-p-6416.html) | 800×480 | `mono` / `gray_4` | `esp32_bw_client` <br> `esp32_bw_bin`, `esp32_gray2_bin` | `xiao_epaper_panel_75_c3` |
 
 ### [M5Stack](https://m5stack.com/)
 
@@ -147,7 +147,7 @@ E-ink writing tablets running the [tesserae.remarkable](https://github.com/partr
 | [Waveshare 10.85" e-Paper HAT+ (G) (ESP32-S3 Zero)](https://www.waveshare.com/10.85inch-e-paper-hat-plus-g.htm) | 1360×480 | `bwry_4` | `esp32_client` (inherit) | `waveshare_1085g` |
 | [Waveshare 13.3" Spectra E6 (ESP32-S3)](https://www.waveshare.com/esp32-s3-epaper-13.3e6.htm) | 1200×1600 portrait | `waveshare_e6` | `esp32_client` (inherit) | `waveshare_133e6` |
 | [Waveshare 7.3" e-Paper (F) on an ESP32-S3](https://www.waveshare.com/7.3inch-e-paper-hat-f.htm) | 800×480 | `inky_7colour` | `esp32_client` (inherit) | `waveshare_epaper_73f` |
-| [Waveshare E-Paper ESP32 Driver Board + 7.5" B/W](https://www.waveshare.com/e-paper-esp32-driver-board.htm) | 800×480 | `mono` | `esp32_bw_client` (inherit) | `waveshare_esp32_driver_75` |
+| [Waveshare E-Paper ESP32 Driver Board + 7.5" B/W](https://www.waveshare.com/e-paper-esp32-driver-board.htm) | 800×480 | `mono` / `gray_4` | `esp32_bw_client` <br> `esp32_bw_bin`, `esp32_gray2_bin` | `waveshare_esp32_driver_75` |
 
 ### [Xteink](https://www.xteink.com/)
 
@@ -157,7 +157,7 @@ E-readers rather than dedicated dashboard panels. These run [CrossInk](https://g
 |---|---|---|---|---|
 | [Xteink X3](https://www.xteink.com/) | 528×792 portrait_flipped | `mono` | `esp32_bw_client` (inherit) | `xteink_x3` |
 | [Xteink X3 (4-level grayscale)](https://www.xteink.com/) | 528×792 portrait_flipped | `gray_4` | `esp32_bw_client` <br> `esp32_gray2_bin` | `xteink_x3_gray` |
-| [Xteink X4](https://www.xteink.com/) | 480×800 portrait_flipped | `mono` | `esp32_bw_client` (inherit) | `xteink_x4` |
+| [Xteink X4](https://www.xteink.com/) | 480×800 portrait_flipped | `mono` / `gray_4` | `esp32_bw_client` <br> `esp32_bw_bin`, `esp32_gray2_bin` | `xteink_x4` |
 | [Xteink X4 (4-level grayscale)](https://www.xteink.com/) | 480×800 portrait_flipped | `gray_4` | `esp32_bw_client` <br> `esp32_gray2_bin` | `xteink_x4_gray` |
 | [Xteink X4 Pro](https://www.xteink.com/) | 480×800 portrait_flipped | `mono` | `esp32_bw_client` (inherit) | `xteink_x4_pro` |
 | [Xteink X4 Pro (4-level grayscale)](https://www.xteink.com/) | 480×800 portrait_flipped | `gray_4` | `esp32_bw_client` <br> `esp32_gray2_bin` | `xteink_x4_pro_gray` |
@@ -198,7 +198,7 @@ Kobo readers run KOReader without a jailbreak. The same [Tesserae KOReader plugi
 
 | SKU | Panel | Gamut | Protocol / Renderer | Kind id |
 |---|---|---|---|---|
-| [Elecrow CrowPanel 5.79" E-Paper](https://www.elecrow.com/crowpanel-esp32-5-79-e-paper-hmi-display-with-272-792-resolution-black-white-color-driven-by-spi-interface.html) | 792×272 | `mono` | `esp32_bw_client` (inherit) | `elecrow_crowpanel_579` |
+| [Elecrow CrowPanel 5.79" E-Paper](https://www.elecrow.com/crowpanel-esp32-5-79-e-paper-hmi-display-with-272-792-resolution-black-white-color-driven-by-spi-interface.html) | 792×272 | `mono` / `gray_4` | `esp32_bw_client` <br> `esp32_bw_bin`, `esp32_gray2_bin` | `elecrow_crowpanel_579` |
 
 ### [epdiy](https://github.com/vroland/epdiy)
 

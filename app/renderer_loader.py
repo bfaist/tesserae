@@ -198,7 +198,7 @@ def clone_for_instances(renderers: RendererRegistry, devices: Any) -> None:
             # renderer, so a multi-renderer kind doesn't clobber its own
             # latest-render slot.
             renderer_ids = kind_renderer_ids[:1]
-        _sync_renderer_gamut(renderers, dev, renderer_ids[0] if renderer_ids else None)
+        _sync_renderer_gamut(renderers, dev, renderer_ids[0] if renderer_ids else None, kind)
         overrides = _render_overrides_for(dev)
         for renderer_id in renderer_ids:
             base = renderers.get(renderer_id)
@@ -221,7 +221,9 @@ def clone_for_instances(renderers: RendererRegistry, devices: Any) -> None:
             )
 
 
-def _sync_renderer_gamut(renderers: RendererRegistry, dev: Any, renderer_id: str | None) -> None:
+def _sync_renderer_gamut(
+    renderers: RendererRegistry, dev: Any, renderer_id: str | None, kind: Any = None
+) -> None:
     """Record the gamut a device's renderer is dedicated to as its effective
     panel gamut (``_renderer_gamut`` on the manifest, read by
     :attr:`app.device_loader.Device.panel`), or clear it.
@@ -235,16 +237,28 @@ def _sync_renderer_gamut(renderers: RendererRegistry, dev: Any, renderer_id: str
     block is left alone: unpinning drops the override on the next reload,
     so the device falls back to its kind's (or its own saved) gamut.
 
+    A kind with ``colour_depths`` (mono / 4-level grey boards) names the
+    gamut of each of its renderers itself, so the effective gamut follows
+    the renderer actually in use there too, including the fall back to mono
+    when the device has not advertised grey.
+
     No override when the stored gamut is already one the renderer serves,
     or when the renderer is an ordinary one that follows the panel."""
     manifest = getattr(dev, "manifest", None)
     if not isinstance(manifest, dict):
         return
+    from app.device_loader import colour_depths
     from app.quantizer import canonicalise_gamut
 
     base = renderers.get(str(renderer_id or ""))
     raw = base.manifest.get("gamuts") if base is not None else None
     gamuts = [str(g) for g in raw if isinstance(g, str)] if isinstance(raw, list) else []
+    kind_manifest = getattr(kind, "manifest", None)
+    if isinstance(kind_manifest, dict):
+        for gamut, rid in colour_depths(kind_manifest).items():
+            if rid == renderer_id:
+                gamuts = [gamut]
+                break
     stored = str((manifest.get("panel") or {}).get("gamut") or "")
     if not gamuts or (stored and canonicalise_gamut(stored) in gamuts):
         manifest.pop("_renderer_gamut", None)

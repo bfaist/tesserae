@@ -127,9 +127,11 @@ def test_xiao_75_c3_panel_is_its_own_kind_sharing_the_mono_wire_contract(
     assert c3.id != s3.id
     assert c3.kind_of is None and s3.kind_of is None
 
-    # Same wire contract: same protocol, same renderer, same 48000-byte frame.
+    # Same wire contract: same protocol, same renderers (mono default, grey
+    # selectable once the firmware advertises it), same 48000-byte mono frame.
     assert c3.manifest["_catalog_entry"]["protocol"] == "esp32_bw_client"
-    assert c3.manifest["renderers"] == s3.manifest["renderers"] == ["esp32_bw_bin"]
+    assert c3.manifest["renderers"] == s3.manifest["renderers"]
+    assert c3.manifest["renderers"] == ["esp32_bw_bin", "esp32_gray2_bin"]
     assert c3.panel is not None
     assert (c3.panel["w"], c3.panel["h"]) == (800, 480)
     assert c3.panel["gamut"] == "mono"

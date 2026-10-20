@@ -529,6 +529,53 @@ def _orphan_state_counts_for(device: Device) -> dict[str, Any]:
     }
 
 
+_DEPTH_LABELS: dict[str, str] = {"mono": "Mono", "gray_4": "4-level grey"}
+
+
+def _colour_depth_for(device: Device) -> dict[str, Any] | None:
+    """The Colour depth control for a device whose kind declares
+    ``colour_depths`` (mono or 4-level grey on the same board), else None.
+
+    ``options`` map each depth to its renderer id, so the control posts the
+    same ``renderer_id`` field the renderer picker does. ``enabled`` is
+    False until the firmware has advertised ``gray_4``; ``value`` is the
+    stored pick (so a grey pick waiting on firmware still shows) and
+    ``in_use`` the depth actually rendered. ``prompt`` is True when the
+    device is on mono, can paint grey, and nobody chose "Keep mono"."""
+    from app.device_loader import colour_depths
+
+    if device.kind_of is None:
+        return None
+    kind = devices().get(device.kind_of)
+    depths = colour_depths(kind.manifest) if kind is not None else {}
+    if not depths:
+        return None
+    primary = kind.renderer_ids[0] if kind is not None and kind.renderer_ids else ""
+    options = [
+        {"value": rid, "label": _DEPTH_LABELS.get(gamut, gamut)} for gamut, rid in depths.items()
+    ]
+    picked = device.manifest.get("renderer_pick") or device.manifest.get("renderer_id") or primary
+    in_use = device.manifest.get("renderer_id") or primary
+    capable = device_service.advertises_gamut(device, "gray_4")
+    in_use_gamut = next((g for g, r in depths.items() if r == in_use), "mono")
+    picked_gamut = next((g for g, r in depths.items() if r == picked), "mono")
+    return {
+        "options": options,
+        "value": picked,
+        "enabled": capable,
+        "in_use": in_use_gamut,
+        "in_use_label": _DEPTH_LABELS.get(in_use_gamut, in_use_gamut),
+        "waiting": picked_gamut != in_use_gamut,
+        "grey_renderer": depths.get("gray_4", ""),
+        "prompt": (
+            capable
+            and in_use_gamut == "mono"
+            and "gray_4" in depths
+            and not device.manifest.get("grey_prompt_dismissed")
+        ),
+    }
+
+
 def _renderer_choice_for(device: Device) -> dict[str, Any] | None:
     """The renderer picker for a device whose kind offers more than one.
 
@@ -544,6 +591,10 @@ def _renderer_choice_for(device: Device) -> dict[str, Any] | None:
     rids = list(getattr(kind, "renderer_ids", []))
     if len(rids) < 2:
         return None
+    from app.device_loader import colour_depths
+
+    if kind is not None and colour_depths(kind.manifest):
+        return None  # shown as the Colour depth control instead
     reg = renderers()
     options: list[dict[str, str]] = []
     for rid in rids:
@@ -1016,6 +1067,10 @@ def _build_device_section(store: Any, device: Device) -> dict[str, Any] | None:
         # offers more than one renderer (trmnl_client: 1-bit vs
         # 16-grey PNG). None hides the control via a Jinja check.
         "renderer_choice": (_renderer_choice_for(device) if is_instance else None),
+        # Mono / 4-level grey boards (``colour_depths`` kinds) get a
+        # Colour depth control in place of the renderer picker, and a
+        # one-time upgrade prompt once their firmware advertises grey.
+        "colour_depth": (_colour_depth_for(device) if is_instance else None),
         "state": (store.get_for_runtime("devices", device.id, fields) if fields else {}),
         "endpoint": (url_for("auth.settings_update", section_kind=sid) if fields else None),
         # Single Save for the whole device card, the template
