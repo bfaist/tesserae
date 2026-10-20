@@ -746,6 +746,14 @@ docker compose up -d</code></pre>
       <p class="field-help">Re-enable the gate. If a password was previously set it still works; otherwise you'll land on <code>/setup</code> to pick one.</p>
       <div class="actions">{{ button('Enable password', icon='lock', variant='primary') }}</div>
     </form>
+    {% if system_password_set %}
+    <form method="post" action="{{ url_for('auth.forget_password_view') }}" class="form"
+          onsubmit="return confirm('Forget the saved password?\n\nEnabling the password later will ask you to pick a new one.');">
+      <input type="hidden" name="confirmed" value="1">
+      <p class="field-help">Don't remember the old password? Forget it, and enabling the gate will ask you to pick a new one.</p>
+      <div class="actions">{{ button('Forget saved password', icon='trash', variant='ghost') }}</div>
+    </form>
+    {% endif %}
     {% endif %}
 
     <p class="device-subhead">Trusted networks</p>

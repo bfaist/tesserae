@@ -235,6 +235,19 @@ def clear_password(settings: SettingsStore) -> None:
     settings.update_section("auth", {})
 
 
+_PASSWORD_KEYS = ("password_salt", "password_hash_secret", "password_hash", "password_iterations")
+
+
+def forget_password(settings: SettingsStore) -> None:
+    """Drop the stored hash and nothing else (the disabled flag and the
+    trusted networks stay), so enabling the gate again asks for a new
+    password instead of restoring the old one (#373)."""
+    section = dict(settings.get_section("auth"))
+    for key in _PASSWORD_KEYS:
+        section.pop(key, None)
+    settings.update_section("auth", section)
+
+
 def password_required(settings: SettingsStore) -> bool:
     """True iff the gate should enforce a session. The Settings UI exposes
     a switch that writes ``auth.disabled: true`` here; default is enforce."""

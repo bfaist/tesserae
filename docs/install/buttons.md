@@ -40,16 +40,19 @@ To override, drop a JSON object into the textarea:
 
 ```json
 {
-  "a": "page:3f9a1c2b7d4e",
+  "a": "page:Morning briefing",
   "b": "page:b2f1e07a9c55",
   "c": "rotate_next",
   "d": "refresh"
 }
 ```
 
-`page:` takes the dashboard's **id**, not its name. The id is the
-12-character code shown on the dashboard's details page, and the
-**Dashboard ids** fold-out under the map lists them all.
+`page:` takes a dashboard's **name** (matched ignoring case) or its
+**id**, the 12-character code shown on the dashboard's details page.
+The **Dashboard ids** fold-out under the map lists both. A name is
+easier to read, but the binding breaks if you rename the dashboard, and
+saving is refused when two dashboards share the name. An id keeps
+working through a rename.
 
 An empty field clears the override and the device falls back to the
 built-in default above. Save is wired into the
@@ -60,7 +63,7 @@ writing.
 ## Actions
 
 The value on each button is an **action spec**: either a bare action
-name (`rotate_next`) or `<action>:<arg>` (`page:3f9a1c2b7d4e`,
+name (`rotate_next`) or `<action>:<arg>` (`page:Kitchen`,
 `webhook:https://…`).
 
 | Action | Argument | What it does |
@@ -70,7 +73,7 @@ name (`rotate_next`) or `<action>:<arg>` (`page:3f9a1c2b7d4e`,
 | `fetch_latest` | none | Download and repaint the latest frame already rendered for this device. Does not re-render, push, move the rotation, or set a manual override. |
 | `refresh` | none | Force a fresh render + push of the current step. Useful when a widget's upstream data changed but the composition hash is stable. |
 | `step:<index>` | rotation step index (0-based) | Jump straight to that step in the rotation. |
-| `page:<page_id>` | dashboard id (the 12-character code, not the name) | Push a specific dashboard to this device. Doesn't touch rotation state, so a later timer wake resumes the scheduled step. |
+| `page:<page>` | dashboard name or id | Push a specific dashboard to this device. Doesn't touch rotation state, so a later timer wake resumes the scheduled step. |
 | `webhook:<url>` | absolute `http(s)://` URL | Fire a POST to that URL with `{device_id, button, button_event_id, action_spec, timestamp, rotation_id, step_index, step_page_id}` in the body. Fire-and-forget, 3s timeout. |
 | `webhook_refresh:<url>` | absolute `http(s)://` URL | Same POST as `webhook:`, then re-render and repaint the panel a few seconds later. For buttons whose webhook changes the state the dashboard reads. |
 
@@ -136,7 +139,7 @@ gesture than a button, and touch panels tend to run short-dwell
 lineups where a day-long hold reads as a frozen display. If you'd
 rather set a different hold window for both,
 `settings.app.button_hold_seconds` overrides the expiry with a fixed
-number of seconds. `page:<page_id>` shortcuts don't set an override;
+number of seconds. `page:` shortcuts don't set an override;
 they're one-shot pushes that let the scheduler resume normally on the
 next timer wake.
 

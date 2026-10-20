@@ -73,28 +73,28 @@ def test_saving_a_button_map_persists_and_renders_back(app: Flask) -> None:
     assert "webhook:http://example.test/hook" in body
 
 
-def test_page_action_by_name_is_rejected_with_the_id_to_use(app: Flask) -> None:
-    """``page:`` takes the dashboard id. A name saved silently and did
-    nothing on the press (#379); now the save names the id instead."""
-    app.config["PAGE_STORE"].save(Page(id="3f9a1c2b7d4e", name="Morning Briefing"))
+def test_page_action_takes_a_dashboard_name_or_id(app: Flask) -> None:
+    """``page:`` takes the dashboard name people see, or its id (#379).
+    Anything else is refused at save instead of doing nothing on the press."""
+    store = app.config["PAGE_STORE"]
+    store.save(Page(id="3f9a1c2b7d4e", name="Morning Briefing"))
     client = app.test_client()
     _sign_in(client)
     _add_device(client)
 
-    client.post(
-        "/settings/devices/kitchen/save",
-        data={"button_map_json": '{"a": "page:morning briefing"}'},
-    )
-    stored = app.config["SETTINGS_STORE"].get_section("devices").get("kitchen", {})
-    assert "button_map" not in stored
-    body = client.get("/settings/devices/kitchen").get_data(as_text=True)
-    assert "is a dashboard name; use its id instead: page:3f9a1c2b7d4e" in body.replace(
-        "&#39;", "'"
-    )
+    def save(spec: str) -> dict:
+        client.post(
+            "/settings/devices/kitchen/save", data={"button_map_json": f'{{"a": "{spec}"}}'}
+        )
+        return app.config["SETTINGS_STORE"].get_section("devices").get("kitchen", {})
 
-    client.post(
-        "/settings/devices/kitchen/save",
-        data={"button_map_json": '{"a": "page:3f9a1c2b7d4e"}'},
-    )
-    stored = app.config["SETTINGS_STORE"].get_section("devices").get("kitchen", {})
+    assert save("page:morning briefing").get("button_map") == {"a": "page:morning briefing"}
+    assert save("page:3f9a1c2b7d4e").get("button_map") == {"a": "page:3f9a1c2b7d4e"}
+
+    stored = save("page:Evening")
     assert stored.get("button_map") == {"a": "page:3f9a1c2b7d4e"}
+    body = client.get("/settings/devices/kitchen").get_data(as_text=True).replace("&#39;", "'")
+    assert "no dashboard has the id or name 'Evening'" in body
+
+    store.save(Page(id="aaaaaaaaaaaa", name="morning briefing"))
+    assert save("page:Morning Briefing").get("button_map") == {"a": "page:3f9a1c2b7d4e"}

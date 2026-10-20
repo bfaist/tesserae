@@ -38,8 +38,9 @@ mypy --strict applies to this module.
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from dataclasses import dataclass
+from collections.abc import Callable, Iterable, Mapping
+from dataclasses import dataclass, field
+from typing import Any
 
 
 class ButtonActionError(ValueError):
@@ -64,6 +65,9 @@ class ActionContext:
     # Set of known page ids so ``page:<id>`` can validate before
     # returning a target_page_id the caller can't render.
     known_page_ids: frozenset[str]
+    # Lower-cased dashboard name -> id, so ``page:`` also takes the name
+    # people see (#379). See ``page_name_index``.
+    page_ids_by_name: Mapping[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -217,22 +221,54 @@ def _step(ctx: ActionContext, arg: str | None) -> ActionResult:
     )
 
 
+def page_name_index(pages: Iterable[Any]) -> dict[str, str]:
+    """Map each dashboard's lower-cased name to its id. A name two
+    dashboards share maps to "", so ``page:<that name>`` is refused
+    rather than picking one of them."""
+    out: dict[str, str] = {}
+    for p in pages:
+        key = (getattr(p, "name", "") or "").strip().lower()
+        if key:
+            out[key] = "" if key in out else p.id
+    return out
+
+
+def resolve_page_ref(
+    ref: str, known_page_ids: Iterable[str], page_ids_by_name: Mapping[str, str]
+) -> str:
+    """The page id ``page:<ref>`` points at. ``ref`` is an id, or a
+    dashboard name matched ignoring case. An id always wins, so a name
+    can never shadow one. Renaming the dashboard breaks a name binding;
+    an id binding survives it."""
+    if ref in known_page_ids:
+        return ref
+    key = ref.strip().lower()
+    if key in page_ids_by_name:
+        pid = page_ids_by_name[key]
+        if not pid:
+            raise ButtonActionError(
+                f"more than one dashboard is called {ref!r}; use its id instead"
+            )
+        return pid
+    raise ButtonActionError(f"no dashboard has the id or name {ref!r}")
+
+
 def _page(ctx: ActionContext, arg: str | None) -> ActionResult:
     """Push a specific page to this device on this wake.
 
     Doesn't touch rotation state: this is a shortcut, not a rotation
     manipulation. A later timer wake resumes whatever the scheduler
-    would otherwise choose. If the page id isn't known, treat as
-    malformed and let the caller no-op with a warning."""
+    would otherwise choose. ``arg`` is a page id or a dashboard name;
+    if neither matches, treat as malformed and let the caller no-op
+    with a warning."""
     if arg is None or not arg:
-        raise ButtonActionError("page action requires a dashboard id, e.g. 'page:3f9a1c2b7d4e'")
-    if arg not in ctx.known_page_ids:
-        raise ButtonActionError(f"unknown page id: {arg!r} (use the dashboard's id, not its name)")
+        raise ButtonActionError("page action requires a dashboard id or name, e.g. 'page:Kitchen'")
+    page_id = resolve_page_ref(arg, ctx.known_page_ids, ctx.page_ids_by_name)
     return ActionResult(
         new_step_index=ctx.current_step_index,
-        target_page_id=arg,
+        target_page_id=page_id,
         force_refresh=True,
-        description=f"page -> {arg}",
+        description=f"page -> {page_id}",
     )
 
 

@@ -26,8 +26,10 @@ from werkzeug.wrappers import Response
 from app import calibration, device_cleanup, device_service, renderer_loader, test_patterns
 from app.button_actions import (
     ButtonActionError,
+    page_name_index,
     parse_action_spec,
     registered_actions,
+    resolve_page_ref,
 )
 from app.calibration import build_calibration_card, target_orientation
 from app.panel import panel_overrides_from_form
@@ -1146,26 +1148,19 @@ def devices_update_battery_offset(instance_id: str) -> Response:
 # -- combined save ------------------------------------------------------
 
 
-def _unknown_page_error(button_name: str, page_id: str) -> str | None:
-    """Reject ``page:<x>`` when ``x`` isn't a dashboard id, at save time
-    rather than as a silent no-op on the press. A dashboard name is the
-    usual slip (#379), so name the id it should have been."""
+def _unknown_page_error(button_name: str, page_ref: str) -> str | None:
+    """Reject ``page:<x>`` at save time when ``x`` is neither a dashboard
+    id nor a dashboard name, rather than as a silent no-op on the press
+    (#379)."""
     page_store = current_app.config.get("PAGE_STORE")
     if page_store is None:
         return None
     pages = page_store.list()
-    if any(p.id == page_id for p in pages):
-        return None
-    by_name = [p for p in pages if (p.name or "").strip().lower() == page_id.strip().lower()]
-    if len(by_name) == 1:
-        return (
-            f"button {button_name!r}: {page_id!r} is a dashboard name; "
-            f"use its id instead: page:{by_name[0].id}"
-        )
-    return (
-        f"button {button_name!r}: no dashboard has the id {page_id!r}. "
-        "Use the dashboard's id, not its name (listed under Dashboard ids)."
-    )
+    try:
+        resolve_page_ref(page_ref, {p.id for p in pages}, page_name_index(pages))
+    except ButtonActionError as exc:
+        return f"button {button_name!r}: {exc}"
+    return None
 
 
 @bp.post("/settings/devices/<instance_id>/save")

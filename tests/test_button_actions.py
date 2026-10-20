@@ -10,6 +10,7 @@ from app.button_actions import (
     ActionResult,
     ButtonActionError,
     dispatch,
+    page_name_index,
     parse_action_spec,
     register,
     registered_actions,
@@ -165,6 +166,56 @@ def test_page_unknown_id_raises() -> None:
     don't push a phantom render request."""
     with pytest.raises(ButtonActionError):
         dispatch("page:nope", _ctx())
+
+
+class _P:
+    def __init__(self, id: str, name: str) -> None:
+        self.id = id
+        self.name = name
+
+
+def test_page_takes_a_dashboard_name_ignoring_case() -> None:
+    names = page_name_index([_P("morning", "Morning Briefing"), _P("afternoon", "Afternoon")])
+    result = dispatch(
+        "page:morning briefing",
+        ActionContext(
+            device_id="dev",
+            current_step_index=0,
+            rotation_step_count=3,
+            rotation_id="rot",
+            known_page_ids=frozenset({"morning", "afternoon"}),
+            page_ids_by_name=names,
+        ),
+    )
+    assert result.target_page_id == "morning"
+
+
+def test_page_id_wins_over_a_name() -> None:
+    """A dashboard named like another's id can't hijack the id binding."""
+    names = page_name_index([_P("morning", "Morning"), _P("afternoon", "morning")])
+    ctx = ActionContext(
+        device_id="dev",
+        current_step_index=0,
+        rotation_step_count=3,
+        rotation_id="rot",
+        known_page_ids=frozenset({"morning", "afternoon"}),
+        page_ids_by_name=names,
+    )
+    assert dispatch("page:morning", ctx).target_page_id == "morning"
+
+
+def test_page_shared_name_is_refused() -> None:
+    names = page_name_index([_P("a1", "Kitchen"), _P("b2", "kitchen")])
+    ctx = ActionContext(
+        device_id="dev",
+        current_step_index=0,
+        rotation_step_count=3,
+        rotation_id="rot",
+        known_page_ids=frozenset({"a1", "b2"}),
+        page_ids_by_name=names,
+    )
+    with pytest.raises(ButtonActionError, match="more than one dashboard"):
+        dispatch("page:Kitchen", ctx)
 
 
 def test_page_missing_arg_raises() -> None:

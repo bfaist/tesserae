@@ -122,6 +122,26 @@ def disable_password_view() -> Response:
     return redirect(url_for("auth.settings_area", area="system"))
 
 
+@bp.post("/settings/system/auth/forget")
+def forget_password_view() -> Response:
+    """Forget the saved password while the gate is off (#373). Only
+    offered then: with the gate off anyone on the LAN already has the
+    admin UI, so dropping the hash opens nothing new, and it spares a
+    Home Assistant App user (who reaches the UI through ingress and may
+    never have known the password) a trip to ``tesserae --reset-password``."""
+    settings = settings_store()
+    if auth.password_required(settings):
+        flash("Disable the password first, then forget it.", "error")
+        return redirect(url_for("auth.settings_area", area="system"))
+    if request.form.get("confirmed") != "1":
+        flash("Forgetting the password requires confirmation.", "error")
+        return redirect(url_for("auth.settings_area", area="system"))
+    auth.forget_password(settings)
+    log_auth("forget_password", "ok")
+    flash("Saved password forgotten. Enabling the password will ask you to pick a new one.", "ok")
+    return redirect(url_for("auth.settings_area", area="system"))
+
+
 @bp.post("/settings/system/auth/enable")
 def enable_password_view() -> Response:
     settings = settings_store()

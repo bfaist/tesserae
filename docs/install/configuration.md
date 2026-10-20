@@ -88,3 +88,7 @@ Two supported non-UI touchpoints:
   root including `settings.json`.
 - `tesserae --reset-password` clears the auth section when you've
   locked yourself out.
+  If you can still reach the admin UI (through Home Assistant ingress,
+  say) but don't know the password, you don't need the command: turn the
+  password off under Settings → System → Authentication, press **Forget
+  saved password**, and enabling it again asks for a new one.

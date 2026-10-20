@@ -411,8 +411,8 @@
               Map each button name to an action. Actions with arguments use the <code>action:arg</code> form.
               Available actions:
               {% for name in section.button_actions_available %}<code>{{ name }}</code>{% if not loop.last %}, {% endif %}{% endfor %}.
-              Examples: <code>rotate_next</code>, <code>step:2</code>, <code>webhook:https://…</code>.
-              <code>page:</code> takes a dashboard's id, not its name.
+              Examples: <code>rotate_next</code>, <code>page:Kitchen</code>, <code>step:2</code>, <code>webhook:https://…</code>.
+              <code>page:</code> takes a dashboard's name or its id. A name binding breaks if the dashboard is renamed; an id binding doesn't.
             </p>
             {% if section.button_page_ids %}
             <details class="dx-button-map-effective">

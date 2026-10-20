@@ -168,6 +168,41 @@ def test_enable_password_with_no_hash_redirects_to_setup(app: Flask) -> None:
     assert resp.headers["Location"].endswith("/setup")
 
 
+def test_forget_password_while_disabled_asks_for_a_new_one(app: Flask) -> None:
+    """#373: with the gate off, Forget drops the hash (and only the hash),
+    so enabling again goes to /setup instead of restoring the old one."""
+    client = app.test_client()
+    _sign_in(client)
+    store = _settings_store(app)
+    auth.set_trusted_networks(store, "100.64.0.0/10")
+    client.post("/settings/system/auth/disable", data={"confirmed": "1"})
+    assert "Forget saved password" in client.get("/settings/system").get_data(as_text=True)
+
+    resp = client.post("/settings/system/auth/forget", data={"confirmed": "1"})
+    assert resp.status_code == 302
+    assert not auth.password_is_set(store)
+    assert auth.password_required(store) is False
+    assert auth.trusted_networks(store) == ["100.64.0.0/10"]
+
+    resp = client.post("/settings/system/auth/enable")
+    assert resp.headers["Location"].endswith("/setup")
+
+
+def test_forget_password_refused_while_the_gate_is_on(app: Flask) -> None:
+    client = app.test_client()
+    _sign_in(client)
+    client.post("/settings/system/auth/forget", data={"confirmed": "1"})
+    assert auth.verify_password(_settings_store(app), "initialpass")
+
+
+def test_forget_password_requires_confirmation(app: Flask) -> None:
+    client = app.test_client()
+    _sign_in(client)
+    client.post("/settings/system/auth/disable", data={"confirmed": "1"})
+    client.post("/settings/system/auth/forget")
+    assert auth.verify_password(_settings_store(app), "initialpass")
+
+
 def test_setup_short_password_shows_inline_error(app: Flask) -> None:
     """A too-short password re-renders /setup with the error inline in
     the card (not only as an auto-dismissing flash toast, #265)."""

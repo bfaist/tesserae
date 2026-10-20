@@ -44,6 +44,7 @@ from app.button_actions import (
     ActionResult,
     ButtonActionError,
     dispatch,
+    page_name_index,
     parse_action_spec,
 )
 from app.device_loader import DeviceRegistry
@@ -477,7 +478,7 @@ class ButtonService:
             current_step_index=current_step_index,
             rotation_step_count=len(rotation.steps) if rotation is not None else 0,
             rotation_id=rotation.id if rotation is not None else None,
-            known_page_ids=frozenset(p.id for p in self._pages.list()),
+            **self._page_refs(),
         )
 
         # Unmapped button -> log + no-op, but still record the event
@@ -933,7 +934,7 @@ class ButtonService:
             current_step_index=current_step_index,
             rotation_step_count=len(rotation.steps) if rotation is not None else 0,
             rotation_id=rotation.id if rotation is not None else None,
-            known_page_ids=frozenset(p.id for p in self._pages.list()),
+            **self._page_refs(),
         )
         base = self._dispatch_spec(
             device_id=device_id,
@@ -1051,7 +1052,7 @@ class ButtonService:
             current_step_index=current_step_index,
             rotation_step_count=len(rotation.steps) if rotation is not None else 0,
             rotation_id=rotation.id if rotation is not None else None,
-            known_page_ids=frozenset(p.id for p in self._pages.list()),
+            **self._page_refs(),
         )
         base = self._dispatch_spec(
             device_id=device_id,
@@ -1351,7 +1352,7 @@ class ButtonService:
             current_step_index=current_step_index,
             rotation_step_count=len(rotation.steps) if rotation is not None else 0,
             rotation_id=rotation.id if rotation is not None else None,
-            known_page_ids=frozenset(p.id for p in self._pages.list()),
+            **self._page_refs(),
         )
         base = self._dispatch_spec(
             device_id=device_id,
@@ -2318,6 +2319,14 @@ class ButtonService:
         if isinstance(value, (int, float)) and value >= 0:
             return float(value)
         return DEFAULT_DEBOUNCE_SECONDS
+
+    def _page_refs(self) -> dict[str, Any]:
+        """The ``ActionContext`` fields ``page:`` resolves against."""
+        pages = self._pages.list()
+        return {
+            "known_page_ids": frozenset(p.id for p in pages),
+            "page_ids_by_name": page_name_index(pages),
+        }
 
     def _resolve_action_spec(self, device_id: str, button: str) -> str | None:
         """Per-device button_map, then app-global, then hardcoded
