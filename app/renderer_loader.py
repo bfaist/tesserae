@@ -102,7 +102,14 @@ class Renderer:
 
     def transform(self, png_bytes: bytes, *, panel: Panel, settings: dict[str, Any]) -> bytes:
         """Run the renderer's transform. Composition-orientation PNG in,
-        artifact bytes (PNG, .bin, ...) out."""
+        artifact bytes (PNG, .bin, ...) out.
+
+        A device clone may carry ``render_overrides``: fixed settings its
+        kind supplies (see :func:`clone_for_instances`), laid over the
+        caller's so every render path sees them."""
+        overrides = self.manifest.get("render_overrides")
+        if isinstance(overrides, dict) and overrides:
+            settings = {**settings, **overrides}
         result = self.module.transform(png_bytes, panel=panel, settings=settings)
         if not isinstance(result, bytes):
             raise TypeError(
@@ -191,6 +198,8 @@ def clone_for_instances(renderers: RendererRegistry, devices: Any) -> None:
             # renderer, so a multi-renderer kind doesn't clobber its own
             # latest-render slot.
             renderer_ids = kind_renderer_ids[:1]
+        _sync_renderer_gamut(renderers, dev, renderer_ids[0] if renderer_ids else None)
+        overrides = _render_overrides_for(dev)
         for renderer_id in renderer_ids:
             base = renderers.get(renderer_id)
             if base is None:
@@ -201,6 +210,8 @@ def clone_for_instances(renderers: RendererRegistry, devices: Any) -> None:
             cloned_manifest = dict(base.manifest)
             cloned_manifest["device"] = dev.id
             cloned_manifest["name"] = f"{base.name} ({dev.id})"
+            if overrides:
+                cloned_manifest["render_overrides"] = dict(overrides)
             renderers.renderers[clone_id] = Renderer(
                 id=clone_id,
                 path=base.path,
@@ -208,6 +219,52 @@ def clone_for_instances(renderers: RendererRegistry, devices: Any) -> None:
                 module=base.module,
                 data_dir=base.data_dir,
             )
+
+
+def _sync_renderer_gamut(renderers: RendererRegistry, dev: Any, renderer_id: str | None) -> None:
+    """Record the gamut a device's renderer is dedicated to as its effective
+    panel gamut (``_renderer_gamut`` on the manifest, read by
+    :attr:`app.device_loader.Device.panel`), or clear it.
+
+    A renderer that declares ``gamuts`` only produces output for those
+    (``trmnl_png`` is 1-bit, ``trmnl_png_gray16`` 16 greys, ``kaleido_png``
+    Kaleido 3 colour), so a device pinned to one paints that gamut whatever
+    its panel block says. Previews, the MCP device list and the colour
+    surfaces read the panel gamut, so without this a TRMNL X pinned to the
+    1-bit renderer still previewed and reported 16 greys. The stored panel
+    block is left alone: unpinning drops the override on the next reload,
+    so the device falls back to its kind's (or its own saved) gamut.
+
+    No override when the stored gamut is already one the renderer serves,
+    or when the renderer is an ordinary one that follows the panel."""
+    manifest = getattr(dev, "manifest", None)
+    if not isinstance(manifest, dict):
+        return
+    from app.quantizer import canonicalise_gamut
+
+    base = renderers.get(str(renderer_id or ""))
+    raw = base.manifest.get("gamuts") if base is not None else None
+    gamuts = [str(g) for g in raw if isinstance(g, str)] if isinstance(raw, list) else []
+    stored = str((manifest.get("panel") or {}).get("gamut") or "")
+    if not gamuts or (stored and canonicalise_gamut(stored) in gamuts):
+        manifest.pop("_renderer_gamut", None)
+        return
+    manifest["_renderer_gamut"] = gamuts[0]
+
+
+def _render_overrides_for(dev: Any) -> dict[str, Any]:
+    """Fixed renderer settings a device's kind supplies through its catalog
+    ``protocol_config``. Only ``png_bit_depth`` today: the TRMNL X asks the
+    16-grey TRMNL renderer for a true 4-bit PNG (``_png_bit_depth``)."""
+    manifest = getattr(dev, "manifest", None)
+    config = manifest.get("protocol_config") if isinstance(manifest, dict) else None
+    if not isinstance(config, dict):
+        return {}
+    out: dict[str, Any] = {}
+    depth = config.get("png_bit_depth")
+    if isinstance(depth, int) and not isinstance(depth, bool) and depth in (1, 2, 4, 8):
+        out["_png_bit_depth"] = depth
+    return out
 
 
 def seed_device_settings_from_base(renderers: RendererRegistry, settings_store: Any) -> None:

@@ -69,6 +69,45 @@ def _device_status() -> dict[str, dict[str, Any]]:
     return current_app.config["DEVICE_STATUS"]  # type: ignore[no-any-return]
 
 
+def _is_trmnl_instance(dev: Device) -> bool:
+    """True for a device instance on the TRMNL BYOS protocol: the bare
+    ``trmnl_client`` kind or a hardware-catalog SKU on it (``trmnl_x``,
+    ``seeed_xiao_75``). Matching on the kind id alone left every catalog
+    SKU's instances unable to poll."""
+    if dev.kind_of is None:
+        return False
+    if dev.kind_of == TRMNL_KIND_ID:
+        return True
+    from app.device_service import kind_protocol
+
+    kind = _devices().devices.get(dev.kind_of)
+    return kind is not None and kind_protocol(kind) == TRMNL_KIND_ID
+
+
+def _kind_for_model(model: str | None) -> str:
+    """The kind a freshly seen native TRMNL device is provisioned on: the
+    hardware-catalog SKU on the TRMNL protocol whose ``protocol_config``
+    ``model_header`` equals the ``Model`` header (case-insensitive), else
+    the bare ``trmnl_client`` kind. A TRMNL X (``Model: x``) lands on
+    ``trmnl_x`` and so starts on its 16-grey renderer."""
+    wanted = (model or "").strip().lower()
+    if not wanted:
+        return TRMNL_KIND_ID
+    from app.device_service import kind_protocol
+
+    matches = []
+    for dev in _devices().devices.values():
+        if dev.kind_of is not None or dev.id == TRMNL_KIND_ID:
+            continue
+        if kind_protocol(dev) != TRMNL_KIND_ID:
+            continue
+        config = dev.manifest.get("protocol_config")
+        header = config.get("model_header") if isinstance(config, dict) else None
+        if isinstance(header, str) and header.strip().lower() == wanted:
+            matches.append(dev.id)
+    return min(matches) if matches else TRMNL_KIND_ID
+
+
 def _device_by_token(token: str) -> Device | None:
     """Find a TRMNL device instance by its ``access_token``.
 
@@ -83,7 +122,7 @@ def _device_by_token(token: str) -> Device | None:
         return None
     matched: Device | None = None
     for dev in _devices().all():
-        if dev.kind_of != TRMNL_KIND_ID:
+        if not _is_trmnl_instance(dev):
             continue
         stored = dev.manifest.get("access_token")
         if not isinstance(stored, str) or not stored:
@@ -106,7 +145,7 @@ def _device_by_mac(mac: str) -> Device | None:
         return None
     target = mac.upper()
     for dev in _devices().all():
-        if dev.kind_of != TRMNL_KIND_ID:
+        if not _is_trmnl_instance(dev):
             continue
         stored = dev.manifest.get("mac")
         if not isinstance(stored, str) or not stored:
@@ -210,7 +249,7 @@ def _auto_provision_by_mac(mac: str) -> Device | None:
         renderers=renderers,
         data_root=data_root,
         instance_id=instance_id,
-        kind_id=TRMNL_KIND_ID,
+        kind_id=_kind_for_model(model),
         name=model,
         panel_overrides={"w": panel_w, "h": panel_h},
         mac=mac,
@@ -458,6 +497,46 @@ def _update_status_from_headers(device: Device) -> dict[str, Any]:
     return merged
 
 
+def _follow_firmware_renderer(device: Device) -> Device:
+    """Move the device onto the renderer its firmware can paint, when its
+    kind ties renderers to firmware versions (``renderer_min_firmware``):
+    the XIAO 7.5" TRMNL kind takes the 2-bit grey PNG from TRMNL firmware
+    1.6.0 and the 1-bit PNG below it.
+
+    Reads the raw ``FW-Version`` header that native TRMNL firmware sends on
+    every poll, never the ``User-Agent`` fallback ``parse_status`` uses for
+    KOReader, so a plugin version can't be mistaken for TRMNL firmware. On
+    a move the cached frame (old format) is dropped and repainted, so the
+    next poll collects the new one (the caller has already picked this
+    poll's frame). Best-effort: any failure leaves the
+    device as it was."""
+    fw = request.headers.get("FW-Version")
+    if not fw:
+        return device
+    try:
+        from app import device_service
+
+        result, changed = device_service.sync_renderer_for_firmware(
+            devices=_devices(),
+            renderers=current_app.config["RENDERER_REGISTRY"],
+            data_root=current_app.config["DEVICE_DATA_ROOT"],
+            instance_id=device.id,
+            fw_version=fw,
+        )
+    except Exception:
+        logger.exception("trmnl: firmware renderer sync failed for device=%s", device.id)
+        return device
+    if not changed or result.device is None:
+        return device
+    push_mgr = current_app.config.get("PUSH_MANAGER")
+    if push_mgr is not None:
+        try:
+            push_mgr.invalidate_and_repaint(device.id)
+        except Exception:
+            logger.exception("trmnl: repaint after renderer move failed for device=%s", device.id)
+    return result.device
+
+
 # -- routes -------------------------------------------------------------
 
 
@@ -566,6 +645,11 @@ def display() -> Response | tuple[Response, int]:
             _external=True,
         )
         filename = f"placeholder-{device.id}-{w}x{h}.png"
+
+    # After the frame for this poll is chosen, so a renderer move serves the
+    # current frame once more and the repaint in the new format is waiting
+    # for the next poll, rather than this one getting the placeholder.
+    device = _follow_firmware_renderer(device)
 
     # One line per successful poll, so a poll can be matched to the render
     # it collected and the cadence it was told to come back on. Rejected

@@ -178,6 +178,13 @@ class Device:
             out["name"] = block["name"]
         if isinstance(block.get("gamut"), str):
             out["gamut"] = block["gamut"]
+        # A renderer dedicated to one gamut (a TRMNL device pinned to the
+        # 1-bit or a grey PNG renderer) decides what the panel paints, so
+        # its gamut wins over the stored one. Set per load by
+        # ``app.renderer_loader.clone_for_instances``; absent otherwise.
+        renderer_gamut = self.manifest.get("_renderer_gamut")
+        if isinstance(renderer_gamut, str) and renderer_gamut:
+            out["gamut"] = renderer_gamut
         # v0.69.18 (regression from v0.69.16): the manifest ``vflip`` opt-in
         # (PicPak BWRY 4.2\" and any successor with the same hardware
         # bottom-to-top scan quirk) has to survive this manifest -> device

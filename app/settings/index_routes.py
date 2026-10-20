@@ -449,6 +449,7 @@ _TEST_PATTERN_GAMUT_LABELS: dict[str, tuple[str, ...]] = {
     # falls back to the E6 row and offers a grey panel six colours it
     # cannot paint.
     "gray_4": ("black", "dark grey", "light grey", "white"),
+    "gray_8": tuple(f"level {i}" for i in range(8)),
     "gray_16": tuple(f"level {i}" for i in range(16)),
     "inky_7colour": (
         "black",
@@ -481,6 +482,7 @@ _TEST_PATTERN_GAMUT_HEXES: dict[str, tuple[str, ...]] = {
     # ramp is derived from. Feeding it the calibrated values would beg
     # the question.
     "gray_4": ("#000000", "#555555", "#aaaaaa", "#ffffff"),
+    "gray_8": tuple(f"#{v:02x}{v:02x}{v:02x}" for v in (round(i * 255 / 7) for i in range(8))),
     "gray_16": tuple(f"#{i * 17:02x}{i * 17:02x}{i * 17:02x}" for i in range(16)),
     "inky_7colour": (
         "#000000",
@@ -643,7 +645,7 @@ def _palette_family_for(device: Device) -> str:
     # Grayscale ramps. These profiles carry no ``palette`` at all, only
     # a ``gray`` ramp of what the panel's levels actually print, which
     # is what the grey packers quantise against.
-    if gamut in ("gray_4", "gray_16"):
+    if gamut in ("gray_4", "gray_8", "gray_16"):
         return gamut
     # mono, rgb24, rgb16, unknown: no bundled profile family applies,
     # hide the picker rather than showing incompatible Spectra 6
@@ -672,8 +674,8 @@ def _palette_profile_colors_for(device: Device) -> list[dict[str, str]] | None:
     # Without this a grey panel was offered Spectra 6 ink pickers that
     # its profile has no slots for and its packer would never read.
     family = _palette_family_for(device)
-    if family in ("gray_4", "gray_16"):
-        levels = 4 if family == "gray_4" else 16
+    if family in ("gray_4", "gray_8", "gray_16"):
+        levels = {"gray_4": 4, "gray_8": 8}.get(family, 16)
         ramp = profile.gray.as_tuples(levels) or _test_pattern_gray_ramp(levels)
         return [
             {

@@ -42,6 +42,7 @@ A renderer turns the composition PNG into the exact bytes a client wants. Each s
 | `trmnl_png` | `.png` | [tesserae-trmnl-client](https://github.com/dmellok/tesserae-trmnl-client) | Composition PNG fitted to the device's panel size, then quantised to 1-bit black/white with the selected dither. |
 | `trmnl_png_color` | `.png` | - | Composition PNG quantised to an indexed PNG matched to a Spectra 6 / Waveshare E6 / ACeP colour panel, delivered over the same TRMNL BYOS /api/display path as the 1-bit trmnl_png renderer. |
 | `trmnl_png_gray16` | `.png` | - | Composition PNG fitted to the device's panel size, then quantised to a 16-level greyscale PNG with the selected dither. |
+| `trmnl_png_gray4` | `.png` | - | Composition PNG fitted to the device's panel size, then quantised to 4 grey levels with the selected dither and written as a true 2-bit greyscale PNG (bit depth 2, colour type 0). |
 
 ## Device kinds
 
@@ -61,7 +62,7 @@ The bundled client kinds Tesserae knows how to talk to. A flashed client announc
 | `pi_png_client` | 1424×1200 | `pi_png` | Raspberry-Pi-side client that consumes the PNG frame. |
 | `pico_bin_client` | 1600×1200 | `pico_bin` | Battery-powered Pico Plus 2 firmware (RP2350) driving a Pimoroni Inky-style Spectra 6 panel over SPI. |
 | `picpak_client` | 400×300 | `esp32_bin` | Battery-powered PicPak 4.2" 4-colour BWRY e-paper frame. |
-| `trmnl_client` | 800×480 | `trmnl_png`, `trmnl_png_gray16` | HTTP-polled e-paper client compatible with the TRMNL BYOS protocol. |
+| `trmnl_client` | 800×480 | `trmnl_png`, `trmnl_png_gray16`, `trmnl_png_gray4` | HTTP-polled e-paper client compatible with the TRMNL BYOS protocol. |
 
 ## Hardware SKUs
 
@@ -88,7 +89,7 @@ The reTerminal E-Series and XIAO ePaper family run the [Tesserae-native firmware
 | [Seeed reTerminal E1003](https://www.seeedstudio.com/reTerminal-E1003-p-6731.html?sensecap_affiliate=YcT0R1h&referring_service=link) | 1872×1404 | `gray_16` | `esp32_client` <br> `esp32_gray_bin` | `seeed_reterminal_e1003` |
 | [Seeed reTerminal E1004](https://www.seeedstudio.com/reTerminal-E1004-p-6692.html?sensecap_affiliate=YcT0R1h&referring_service=link) | 1200×1600 portrait | `spectra_6` | `esp32_client` (inherit) | `seeed_reterminal_e1004` |
 | [Seeed reTerminal Sticky](https://www.seeedstudio.com/reTerminal-Sticky-p-6861.html?sensecap_affiliate=YcT0R1h&referring_service=link) | 480×800 portrait | `gray_4` | `esp32_bw_client` <br> `esp32_gray2_bin` | `seeed_reterminal_sticky` |
-| [Seeed XIAO 7.5" ePaper Panel (C3, TRMNL BYOS)](https://www.seeedstudio.com/XIAO-7-5-ePaper-Panel-p-6416.html) | 800×480 | `mono` | `trmnl_client` (inherit) | `seeed_xiao_75` |
+| [Seeed XIAO 7.5" ePaper Panel (C3, TRMNL BYOS)](https://www.seeedstudio.com/XIAO-7-5-ePaper-Panel-p-6416.html) | 800×480 | `mono` | `trmnl_client` <br> `trmnl_png`, `trmnl_png_gray4` | `seeed_xiao_75` |
 | [Seeed XIAO ePaper 7.5" (S3, mono)](https://www.seeedstudio.com/TRMNL-7-5-Inch-OG-DIY-Kit-p-6481.html?sensecap_affiliate=YcT0R1h&referring_service=link) | 800×480 | `mono` | `esp32_bw_client` (inherit) | `xiao_epaper_75` |
 | [Seeed XIAO ePaper 7.5" (black/white/red)](https://www.seeedstudio.com/XIAO-7-5-ePaper-Panel-p-6416.html) | 800×480 | `bwr_3` | `esp32_bw_client` <br> `esp32_bin` | `xiao_epaper_75_bwr` |
 | [Seeed XIAO 7.5" ePaper Panel (C3)](https://www.seeedstudio.com/XIAO-7-5-ePaper-Panel-p-6416.html) | 800×480 | `mono` | `esp32_bw_client` (inherit) | `xiao_epaper_panel_75_c3` |
@@ -135,7 +136,7 @@ E-ink writing tablets running the [tesserae.remarkable](https://github.com/partr
 
 | SKU | Panel | Gamut | Protocol / Renderer | Kind id |
 |---|---|---|---|---|
-| [TRMNL X](https://shop.trmnl.com/products/trmnl-x) | 1872×1404 | `mono` | `trmnl_client` (inherit) | `trmnl_x` |
+| [TRMNL X](https://shop.trmnl.com/products/trmnl-x) | 1872×1404 | `gray_16` | `trmnl_client` <br> `trmnl_png_gray16`, `trmnl_png` | `trmnl_x` |
 
 ### [Waveshare](https://www.waveshare.com/)
 
@@ -223,7 +224,7 @@ Hardware supported by community-authored firmware. Each SKU below links to the f
 
 | SKU | Panel | Gamut | Protocol / Renderer | Kind id |
 |---|---|---|---|---|
-| [Soldered Inkplate 10](https://soldered.com/products/inkplate-10) | 1200×825 | `gray_16` | `esp32_bw_client` <br> `esp32_gray_bin` | `soldered_inkplate_10` |
+| [Soldered Inkplate 10](https://soldered.com/products/inkplate-10) | 1200×825 | `gray_8` | `esp32_bw_client` <br> `esp32_gray_bin` | `soldered_inkplate_10` |
 | [Soldered Inkplate 13SPECTRA](https://soldered.com/products/inkplate-13spectra) | 1600×1200 | `spectra_6` | `esp32_client` (inherit) | `soldered_inkplate_13spectra` |
 | [Soldered Inkplate 6COLOR](https://soldered.com/products/inkplate-6color-e-paper-display) | 600×448 | `inky_7colour` | `esp32_client` (inherit) | `soldered_inkplate_6color` |
 
@@ -246,3 +247,4 @@ Honest status from the maintainer's own bench. Untested doesn't mean broken, it 
 | `trmnl_png` | Amazon Kindle Paperwhite 2 (jailbroken) via KOReader trmnl-display plugin + Seeed TRMNL 7.5" OG DIY Kit (XIAO 7.5" panel running the TRMNL firmware) + TRMNL X (stock firmware, 1872x1404) | :material-check-circle: Tested | 1-bit greyscale PNG fitted to the panel + dithered server-side. |
 | `trmnl_png_color` | - | :material-circle-outline: Not yet tested | - |
 | `trmnl_png_gray16` | - | :material-circle-outline: Not yet tested | - |
+| `trmnl_png_gray4` | - | :material-circle-outline: Not yet tested | - |

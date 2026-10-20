@@ -118,3 +118,61 @@ def test_esp32_gray_bin_output_is_raw_not_png(esp32_gray_bin, composition_png) -
         composition_png, panel=panel, settings=esp32_gray_bin.settings_defaults()
     )
     assert artifact[:4] != b"\x89PNG"
+
+
+def test_gray_8_levels_pack_to_nibbles_that_halve_to_0_through_7() -> None:
+    """The Inkplate 10 contract: its firmware halves every nibble to the
+    Inkplate library's 8 levels. Each gray_8 level must land on the nibble
+    0, 2, 4, 6, 9, 11, 13, 15, which ``n >> 1`` turns back into 0..7."""
+    from app.quantizer import GRAY_8_NIBBLES, GRAY_8_PALETTE, pack_to_panel_bin_4bpp_gray
+
+    assert GRAY_8_NIBBLES == (0, 2, 4, 6, 9, 11, 13, 15)
+    assert [n >> 1 for n in GRAY_8_NIBBLES] == list(range(8))
+    img = Image.new("RGB", (8, 1))
+    for x, rgb in enumerate(GRAY_8_PALETTE):
+        img.putpixel((x, 0), rgb)
+    out = pack_to_panel_bin_4bpp_gray(img, width=8, height=1, dither="none", levels=8)
+    nibbles = [n for b in out for n in (b >> 4, b & 0x0F)]
+    assert nibbles == [0, 2, 4, 6, 9, 11, 13, 15]
+    assert [n >> 1 for n in nibbles] == list(range(8))
+
+
+def test_gray_8_panel_never_emits_an_odd_level_between_pairs(esp32_gray_bin) -> None:
+    """A gray_8 panel's frame only carries the 8 level nibbles, so no
+    pixel is aimed at a grey the firmware would merge with its neighbour.
+    Same byte count as a 16-level frame (the Inkplate's 495000)."""
+    import numpy as np
+
+    from app.quantizer import GRAY_8_NIBBLES
+
+    ramp = (np.arange(1200) * 255 // 1199).astype(np.uint8)
+    img = Image.fromarray(np.tile(ramp, (825, 1)), mode="L").convert("RGB")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    panel = Panel(w=1200, h=825, gamut="gray_8", native_w=1200, native_h=825)
+    artifact = esp32_gray_bin.transform(
+        buf.getvalue(), panel=panel, settings=esp32_gray_bin.settings_defaults()
+    )
+    assert len(artifact) == 1200 * 825 // 2 == 495000
+    seen = {n for b in artifact for n in (b >> 4, b & 0x0F)}
+    assert seen <= set(GRAY_8_NIBBLES)
+    assert len(seen) == 8
+
+
+def test_gray_16_panel_keeps_sixteen_levels(esp32_gray_bin) -> None:
+    """The 16-level path is untouched: a gradient on a gray_16 panel uses
+    nibbles outside the gray_8 set."""
+    from app.quantizer import GRAY_8_NIBBLES
+
+    img = Image.new("RGB", (64, 2))
+    for x in range(64):
+        g = (x * 255) // 63
+        img.putpixel((x, 0), (g, g, g))
+        img.putpixel((x, 1), (g, g, g))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    panel = Panel(w=64, h=2, gamut="gray_16", native_w=64, native_h=2)
+    settings = {**esp32_gray_bin.settings_defaults(), "dither": "none"}
+    artifact = esp32_gray_bin.transform(buf.getvalue(), panel=panel, settings=settings)
+    seen = {n for b in artifact for n in (b >> 4, b & 0x0F)}
+    assert seen - set(GRAY_8_NIBBLES)

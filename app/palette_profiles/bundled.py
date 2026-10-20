@@ -326,6 +326,29 @@ BUNDLED_PROFILES: tuple[PaletteProfile, ...] = (
         ),
     ),
     _profile(
+        slug="nominal-gray8",
+        name="Nominal 8-level grey",
+        family="gray_8",
+        palette=PaletteColors(),
+        gray=GrayRamp(levels=("#000000", "#FFFFFF")),
+        notes=(
+            "Evenly-spaced levels for panels driven at 8 greys (the Inkplate 10). "
+            "Two anchors interpolated across all 8 steps, which is exactly the linear "
+            "ramp. The default, so existing screens don't change."
+        ),
+    ),
+    _profile(
+        slug="soft-mid-gray8",
+        name="8-level grey, lifted mid-tones",
+        family="gray_8",
+        palette=PaletteColors(),
+        gray=GrayRamp(levels=("#1E1E1E", "#6E6E6E", "#B4B4B4", "#E8E8E8")),
+        notes=(
+            "The same four anchors as the 4-level ramp, interpolated across 8 steps. "
+            "A starting point for a panel that renders washed out, NOT a measurement."
+        ),
+    ),
+    _profile(
         slug="nominal-gray16",
         name="Nominal 16-level grey",
         family="gray_16",
@@ -401,6 +424,8 @@ def default_slug_for(family: str) -> str:
     # the corrective ramp is a deliberate choice.
     if family == "gray_4":
         return "nominal-gray4"
+    if family == "gray_8":
+        return "nominal-gray8"
     if family == "gray_16":
         return "nominal-gray16"
     return "paperlesspaper-spectra6"

@@ -9,6 +9,7 @@
   "topic_pattern": "tesserae/{device}/frame/trmnl",
   "device": "trmnl",
   "retain": false,
+  "gamuts": ["mono"],
   "settings": [
     {
       "name": "dither",

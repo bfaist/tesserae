@@ -152,3 +152,55 @@ def test_payload_is_selfcontained_url(trmnl_png_gray16) -> None:
 
 
 _NOMINAL = tuple((v, v, v) for v in range(0, 256, 17))
+
+
+def test_default_output_stays_8bit_for_koreader(trmnl_png_gray16, composition_png) -> None:
+    """KOReader clients are confirmed on the 8-bit encode; without the
+    kind-supplied ``_png_bit_depth`` the IHDR must still say 8-bit grey."""
+    from app.png_gray import png_bit_depth, png_colour_type
+
+    panel = Panel(w=200, h=100, gamut="gray_16")
+    artifact = trmnl_png_gray16.transform(
+        composition_png, panel=panel, settings=trmnl_png_gray16.settings_defaults()
+    )
+    assert png_bit_depth(artifact) == 8
+    assert png_colour_type(artifact) == 0
+
+
+def test_png_bit_depth_4_writes_a_true_4bit_greyscale_png(
+    trmnl_png_gray16, composition_png
+) -> None:
+    """The TRMNL X kind asks for a 4-bit greyscale PNG (colour type 0):
+    IHDR bit depth 4, samples are level indices that decode to the
+    nominal 16-step ramp."""
+    from app.png_gray import png_bit_depth, png_colour_type
+
+    panel = Panel(w=200, h=100, gamut="gray_16")
+    settings = {**trmnl_png_gray16.settings_defaults(), "_png_bit_depth": 4}
+    artifact = trmnl_png_gray16.transform(composition_png, panel=panel, settings=settings)
+    assert png_bit_depth(artifact) == 4
+    assert png_colour_type(artifact) == 0
+    out = Image.open(io.BytesIO(artifact))
+    out.load()
+    assert out.size == (200, 100)
+    levels = _levels(out)
+    assert levels <= {v for v, _, _ in _NOMINAL}
+    assert len(levels) >= 8
+
+
+def test_png_bit_depth_4_matches_the_8bit_levels(trmnl_png_gray16, composition_png) -> None:
+    """Same pixels either way: the 4-bit encode is a container change,
+    not a different quantise."""
+    panel = Panel(w=200, h=100, gamut="gray_16")
+    base = trmnl_png_gray16.settings_defaults()
+    eight = Image.open(
+        io.BytesIO(trmnl_png_gray16.transform(composition_png, panel=panel, settings=base))
+    )
+    four = Image.open(
+        io.BytesIO(
+            trmnl_png_gray16.transform(
+                composition_png, panel=panel, settings={**base, "_png_bit_depth": 4}
+            )
+        )
+    )
+    assert list(eight.convert("L").tobytes()) == list(four.convert("L").tobytes())

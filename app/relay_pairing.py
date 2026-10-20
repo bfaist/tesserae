@@ -317,13 +317,12 @@ class RelayPairingPoller:
         cannot refresh until it is re-flashed over USB. Excluding them
         makes the non-legacy sibling the deterministic answer without
         relying on where the id happens to sort."""
-        from app.quantizer import canonicalise_gamut
+        from app.quantizer import gamut_matches_report
 
         base = self._devices.get(protocol)
         if base is None or base.kind_of is not None:
             return None
         base_renderers = list(base.manifest.get("renderers") or [])
-        wanted = canonicalise_gamut(gamut)
         candidates = []
         for dev in self._devices.devices.values():
             if dev.kind_of is not None:
@@ -338,7 +337,10 @@ class RelayPairingPoller:
             if catalog.get("auto_select") is False:
                 continue
             declared = str((manifest.get("panel") or {}).get("gamut") or "")
-            if not declared or canonicalise_gamut(declared) != wanted:
+            # A kind may declare a gamut that refines the report (an
+            # Inkplate 10 reports gray_16 for its 4-bpp frame while its kind
+            # says gray_8), so match through the refinement table.
+            if not declared or not gamut_matches_report(declared, gamut):
                 continue
             if list(manifest.get("renderers") or base_renderers) == base_renderers:
                 continue

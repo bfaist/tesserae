@@ -5,21 +5,26 @@
   "vendor": "TRMNL",
   "url": "https://shop.trmnl.com/products/trmnl-x",
   "icon": "device-tablet-speaker",
-  "description": "TRMNL X, 10.3 inch monochrome ePaper at 1872x1404. Stock firmware speaks TRMNL BYOS; reports its model as `x` on the /api/setup handshake.",
+  "description": "TRMNL X, 10.3 inch ePaper at 1872x1404 with 16 grey levels. Stock firmware speaks TRMNL BYOS and reports its model as `x`; Tesserae sends it a 4-bit greyscale PNG (trmnl_png_gray16), with the 1-bit trmnl_png still selectable on the device card.",
   "protocol": "trmnl_client",
+  "renderers": [
+    "trmnl_png_gray16",
+    "trmnl_png"
+  ],
   "panel": {
     "w": 1872,
     "h": 1404,
     "orientation": "landscape",
-    "name": "10.3 inch monochrome ePaper",
-    "gamut": "mono",
+    "name": "10.3 inch ePaper, 16-level greyscale",
+    "gamut": "gray_16",
     "native_w": 1872,
     "native_h": 1404
   },
   "protocol_config": {
-    "model_header": "x"
+    "model_header": "x",
+    "png_bit_depth": 4
   },
   "refresh_floor_s": 60,
   "image_format": "png",
-  "notes_md": "Confirmed on real hardware running the stock TRMNL firmware. It auto-provisions on first poll; Tesserae picks the native 1872x1404 panel from the Model header. Point the device's API URL at your Tesserae base URL and pair via the access token shown in Settings -> Devices."
+  "notes_md": "Confirmed on real hardware running the stock TRMNL firmware. It auto-provisions on first poll; Tesserae provisions it on this kind and picks the native 1872x1404 panel from the Model header. Point the device's API URL at your Tesserae base URL and pair via the access token shown in Settings -> Devices.\n\nThe X paints 16 grey shades, and TRMNL documents a 4-bit greyscale PNG (colour type 0) for it, so this kind defaults to `trmnl_png_gray16` and sets `png_bit_depth: 4` in its `protocol_config`; the renderer then writes a true 4-bit PNG (other clients of that renderer, such as KOReader, keep the 8-bit encode). The 1-bit `trmnl_png` stays selectable on the device card, and the panel reports `mono` while it is picked. A TRMNL X provisioned before 0.469.0 sits on the bare `trmnl_client` kind with the 1-bit renderer; pick `trmnl_png_gray16` on its card, or re-provision it, to get the greys. The 4-bit PNG path is UNVERIFIED ON HARDWARE."
 }

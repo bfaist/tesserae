@@ -1,6 +1,6 @@
 # Quickstart: TRMNL OG / TRMNL X
 
-The flagship TRMNL devices: TRMNL OG (800×480 mono, 7.5") and TRMNL X (1872×1404 mono, 10.3"). Both ship with stock firmware that speaks the TRMNL BYOS protocol, so no flashing is required.
+The flagship TRMNL devices: TRMNL OG (800×480 mono, 7.5") and TRMNL X (1872×1404, 16 grey levels, 10.3"). Both ship with stock firmware that speaks the TRMNL BYOS protocol, so no flashing is required.
 
 !!! tip "Want to use Tesserae as your sender for TRMNL devices?"
     This is what TRMNL's own [Private API documentation](https://docs.trmnl.com/go/private-api/introduction) explicitly endorses: *"With a device's API key you can request content without a TRMNL device or TRMNL firmware."* Tesserae acts as your BYOS server.
@@ -20,7 +20,7 @@ On its next poll, the device calls Tesserae's `/api/setup` with its MAC and auto
 Tesserae detects the device model from the `Model` HTTP header the firmware sends:
 
 - `Model: TRMNL` → 800×480 OG.
-- `Model: x` → 1872×1404 X.
+- `Model: x` → 1872×1404 X, provisioned on the `trmnl_x` kind and sent a 4-bit greyscale PNG (16 greys). The 1-bit renderer stays selectable on the device card.
 - Unknown models default to 800×480 OG dimensions.
 
 ## 03 — Compose a dashboard
@@ -28,7 +28,7 @@ Tesserae detects the device model from the `Model` HTTP header the firmware send
 In the editor:
 
 1. **Dashboards → New**.
-2. The TRMNL OG is 800×480 landscape mono; the X is 1872×1404 landscape mono with 16-level greyscale. Reach for high-contrast type and 1-bit illustration on the OG; the X has enough resolution for serif text and finer rules.
+2. The TRMNL OG is 800×480 landscape mono (4 greys on TRMNL firmware 1.6.0 and later if you pick the `trmnl_png_gray4` renderer on its device card); the X is 1872×1404 landscape with 16-level greyscale. Reach for high-contrast type and 1-bit illustration on the OG; the X has enough resolution for serif text and finer rules.
 3. Bind the page to the device in the device picker.
 4. Hit **Push**.
 

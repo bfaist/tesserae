@@ -244,6 +244,8 @@ def _gray_level_count_for(family: str) -> int:
     """Levels in a grayscale profile family, or 0 when it's a colour one."""
     if family == "gray_4":
         return 4
+    if family == "gray_8":
+        return 8
     if family == "gray_16":
         return 16
     return 0

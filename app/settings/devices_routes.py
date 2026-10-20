@@ -745,10 +745,14 @@ def devices_register_discovered(discovered_id: str) -> Response:
     # it would lock the new instance to a publicly-known string.
     # Force a fresh mint there, and the reveal modal will surface it
     # for the user to paste back into the client.
-    discovered_needs_pairing = (
-        bool(entry.parsed.get("needs_pairing")) if kind_id == "trmnl_client" else False
+    # Matched on protocol so picking a TRMNL catalog SKU (``trmnl_x``) for
+    # the discovered client keeps the token it is already polling with.
+    _chosen_kind = devices().get(kind_id)
+    is_trmnl = _chosen_kind is not None and (
+        device_service.kind_protocol(_chosen_kind) == "trmnl_client"
     )
-    discovered_token = entry.parsed.get("access_token") if kind_id == "trmnl_client" else None
+    discovered_needs_pairing = bool(entry.parsed.get("needs_pairing")) if is_trmnl else False
+    discovered_token = entry.parsed.get("access_token") if is_trmnl else None
     if discovered_needs_pairing:
         discovered_token = None
     # The synthetic discovery id for TRMNL entries (``trmnl_<token>``
@@ -756,7 +760,7 @@ def devices_register_discovered(discovered_id: str) -> Response:
     # as-is; default the instance id to a friendlier one and let the
     # user override if they want.
     default_id = discovered_id
-    if kind_id == "trmnl_client" and default_id.startswith("trmnl_"):
+    if is_trmnl and default_id.startswith("trmnl_"):
         if isinstance(discovered_token, str):
             default_id = "trmnl_" + discovered_token[:5]
         else:
@@ -1905,6 +1909,8 @@ def _gray_level_count(gamut: str) -> int:
     colour-slot names."""
     if gamut == "gray_4":
         return 4
+    if gamut == "gray_8":
+        return 8
     if gamut == "gray_16":
         return 16
     return 0

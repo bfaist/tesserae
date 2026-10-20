@@ -6,6 +6,59 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ## [Unreleased]
 
+## [0.469.0], 2026-10-20
+
+### Added
+
+- **4-grey PNG for TRMNL firmware.** New `trmnl_png_gray4` renderer writes a
+  true 2-bit greyscale PNG (bit depth 2, colour type 0), which TRMNL firmware
+  1.6.0 and later decodes and paints as 4 shades on the 7.5" (OG) class of
+  panels. It is a device-card pick on `trmnl_client`. The XIAO 7.5" running
+  TRMNL firmware (`seeed_xiao_75`) switches to it by itself: the firmware
+  sends its version in the `FW-Version` header on every `/api/display` poll,
+  so a unit reporting 1.6.0 or later moves onto the grey renderer and one
+  reporting an older build moves back to 1-bit. Following the header was
+  picked over a manual-only switch because an older build cannot decode a
+  2-bit PNG at all, so an automatic downgrade path keeps a reflashed unit
+  painting. A renderer chosen on the device card is never overridden, and a
+  version string that does not parse leaves the device as it is. The rule
+  lives in the kind's `protocol_config.renderer_min_firmware`.
+- **`gray_8` gamut.** Eight evenly spaced levels (k * 255 / 7), wired through
+  previews, the MCP device list, calibration ramps and test patterns. The
+  `esp32_gray_bin` renderer dithers a `gray_8` panel to those 8 levels and
+  writes them as the nibbles 0, 2, 4, 6, 9, 11, 13, 15, so a firmware that
+  halves each nibble paints levels 0 to 7 from the same 4-bpp frame.
+
+### Changed
+
+- **TRMNL X paints 16 greys.** The `trmnl_x` kind is now `gray_16` and
+  defaults to `trmnl_png_gray16`, which writes the 4-bit greyscale PNG
+  (colour type 0) TRMNL documents for the X; the kind asks for it with
+  `png_bit_depth: 4` in its `protocol_config`. KOReader clients on that
+  renderer keep the 8-bit PNG they are confirmed on. The 1-bit `trmnl_png`
+  stays selectable. A new TRMNL X is provisioned on this kind from its
+  `Model: x` header; one provisioned earlier stays on `trmnl_client` until
+  its renderer is changed on the card or it is provisioned again.
+- **Soldered Inkplate 10 is `gray_8`.** Its firmware halves every nibble to
+  the Inkplate library's 8 levels, so dithering against 16 aimed at greys the
+  panel merges in pairs. The firmware still reports `gray_16` at pairing; the
+  server keeps the kind's `gray_8` for it on register, discover and relay
+  pairing, and existing Inkplate instances move to `gray_8` at startup.
+- **Gamut follows the renderer pick.** A renderer dedicated to a gamut now
+  sets the panel's effective gamut, so a TRMNL X switched to the 1-bit
+  renderer previews and reports mono, and a TRMNL client on a grey renderer
+  reports its greys. Going back to the kind default restores the panel's own
+  gamut. The bare `trmnl_client` kind now reports `mono` for its 1-bit
+  default instead of falling back to the colour preview.
+
+### Fixed
+
+- **TRMNL catalog kinds can poll.** Instances of `trmnl_x` and
+  `seeed_xiao_75` were never matched by `/api/display` (only the bare
+  `trmnl_client` kind was) and were created without an access token. They
+  now get a token and friendly id and authenticate by MAC or token like any
+  TRMNL client.
+
 ## [0.468.0], 2026-10-20
 
 ### Added

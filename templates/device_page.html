@@ -451,7 +451,7 @@
           {% if section.renderer_choice %}
           {{ select_field(section.id ~ '-renderer', 'renderer_id', 'Renderer',
               value=section.renderer_choice.value, options=section.renderer_choice.options,
-              help='Which wire format this panel is sent. Switch to a 16-grey renderer only for a panel that paints real greys (KOReader e-readers, the 16-level TRMNL waveform); a 1-bit-only client should stay on the mono renderer.',
+              help='Which wire format this panel is sent. Switch to a grey renderer only for a panel that paints real greys (KOReader e-readers and the TRMNL X take 16 greys; TRMNL firmware 1.6.0 and later takes the 4-grey PNG); a 1-bit-only client should stay on the mono renderer. The colour gamut shown for this panel follows the renderer picked here.',
               form=_combined_form_id) }}
           {% endif %}
           {% if section.locale_editable %}

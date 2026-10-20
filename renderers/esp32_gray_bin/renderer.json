@@ -2,7 +2,7 @@
   "tesserae_compat": "1.x",
   "name": "ESP32 client (4-bpp grayscale .bin)",
   "version": "0.1.0",
-  "description": "Composition PNG dithered to 16-level grayscale and packed into a 4-bpp raw buffer the ESP32 firmware streams straight to the IT8951 controller's image buffer. Targets the Seeed reTerminal E1003 (10.3\" 1872x1404 monochrome ePaper with 16-level greyscale) and any other IT8951-driven greyscale panel. Published retained to tesserae/<device_id>/frame/bin so a freshly-woken client sees the current frame on first wake.",
+  "description": "Composition PNG dithered to 16-level grayscale and packed into a 4-bpp raw buffer the ESP32 firmware streams straight to the IT8951 controller's image buffer. Targets the Seeed reTerminal E1003 (10.3\" 1872x1404 monochrome ePaper with 16-level greyscale) and any other IT8951-driven greyscale panel. A gray_8 panel (Soldered Inkplate 10) is dithered to 8 levels instead and written as the nibbles 0, 2, 4, 6, 9, 11, 13, 15, which its firmware halves to 0..7; the frame size is the same. Published retained to tesserae/<device_id>/frame/bin so a freshly-woken client sees the current frame on first wake.",
   "orientation": "composition",
   "mime": "application/octet-stream",
   "extension": "bin",

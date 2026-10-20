@@ -22,11 +22,19 @@ Why a separate renderer from ``trmnl_png``:
   smoothest gradient it can show; the device just paints what arrives,
   no on-device quantise.
 
-Output is an 8-bit greyscale PNG, not 4-bit: Pillow's 4-bit PNG support
-is patchy and several e-reader decoders (KOReader's MuPDF / lodepng
-path included) handle 8-bit ``L`` cleanly while 4-bit is a coin toss.
-The pixel data only spans 16 values so PNG's filter + deflate keep the
-file close to a true 4-bit encode anyway.
+Output is an 8-bit greyscale PNG by default, not 4-bit: Pillow's 4-bit
+PNG support is patchy and several e-reader decoders (KOReader's MuPDF /
+lodepng path included) handle 8-bit ``L`` cleanly while 4-bit is a coin
+toss. The pixel data only spans 16 values so PNG's filter + deflate keep
+the file close to a true 4-bit encode anyway.
+
+A kind can ask for the true 4-bit encode instead with ``png_bit_depth: 4``
+in its catalog ``protocol_config`` (the TRMNL X, whose firmware documents a
+4-bit greyscale PNG). ``app.renderer_loader.clone_for_instances`` carries
+that onto the device's renderer clone as the ``_png_bit_depth`` setting,
+and the frame is written by :func:`app.png_gray.encode_gray_png` with
+colour type 0 and the level index (0..15) as each sample. KOReader clients
+never set it, so their 8-bit output is unchanged.
 
 Grey ramp: the nominal even 0..255/17 ramp (``GRAY_16_PALETTE``) by
 default. When the device has a greyscale calibration profile applied,
@@ -86,6 +94,16 @@ def _grey_ramp(settings: dict[str, Any]) -> tuple[tuple[int, int, int], ...]:
     return GRAY_16_PALETTE
 
 
+def _png_bit_depth(settings: dict[str, Any]) -> int:
+    """8 (the default) or 4, from the kind-supplied ``_png_bit_depth``.
+    Anything else reads as the default rather than failing a render."""
+    try:
+        depth = int(settings.get("_png_bit_depth") or 8)
+    except (TypeError, ValueError):
+        return 8
+    return 4 if depth == 4 else 8
+
+
 def transform(png_bytes: bytes, *, panel: Panel, settings: dict[str, Any]) -> bytes:
     """Fit + dither the composition PNG onto the device's buffer, as a
     16-level greyscale PNG.
@@ -133,7 +151,15 @@ def transform(png_bytes: bytes, *, panel: Panel, settings: dict[str, Any]) -> by
         img = ImageEnhance.Contrast(img.convert("L")).enhance(contrast).convert("RGB")
 
     dither = str(_setting(settings, "dither"))
-    grey_rgb = quantize(img, dither=dither, palette=_grey_ramp(settings))
+    ramp = _grey_ramp(settings)
+    grey_rgb = quantize(img, dither=dither, palette=ramp)
+
+    if _png_bit_depth(settings) == 4:
+        # True 4-bit greyscale PNG (colour type 0): each sample is the level
+        # index, which the decoder scales to index * 17.
+        from app.png_gray import encode_gray_png, level_indices
+
+        return encode_gray_png(level_indices(grey_rgb, ramp), bit_depth=4)
 
     # ``quantize`` returns mode-RGB with every pixel on a grey (r == g == b)
     # ramp entry; collapse to 8-bit ``L`` for the greyscale PNG. The level

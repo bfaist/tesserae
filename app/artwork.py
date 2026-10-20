@@ -75,7 +75,7 @@ HELD_MAX = 200
 WANTED_S = 30 * 86400
 ON_FRAME_S = 2 * 86400
 LIVE_S = 6
-LEVELS = ("colour", "gray16", "gray4", "mono")
+LEVELS = ("colour", "gray16", "gray8", "gray4", "mono")
 
 
 class ArtworkError(Exception):
@@ -1522,7 +1522,7 @@ def _derive(raw: bytes, px: int, levels: str, cut: bool) -> bytes:
     im = im.convert("RGBA" if cut else "RGB")
     im.thumbnail((px, px), Image.Resampling.LANCZOS)
     if levels != "colour":
-        cutoff = {"gray16": 0.5}.get(levels, 1.0)
+        cutoff = {"gray16": 0.5, "gray8": 0.5}.get(levels, 1.0)
         alpha = im.getchannel("A") if cut else None
         grey = ImageOps.autocontrast(im.convert("RGB").convert("L"), cutoff=cutoff)
         if levels == "mono":

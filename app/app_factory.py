@@ -605,6 +605,7 @@ def create_app(
     from app.device_service import (
         backfill_native_panel_dims,
         migrate_retired_sticky_kinds,
+        refine_inherited_gamuts,
         relocate_orphan_instance_files,
         restore_rest_only_transports,
     )
@@ -657,6 +658,17 @@ def create_app(
         logger.info(
             "device migration: restored REST transport on %s (the client speaks REST only)",
             ", ".join(_restored_ids),
+        )
+
+    # Instances that carry a gamut their kind now describes more precisely
+    # (an Inkplate 10 created as gray_16 before the kind became gray_8) move
+    # onto the kind's value, or the packer keeps dithering against levels
+    # the panel cannot show.
+    _refined_ids = refine_inherited_gamuts(devices)
+    if _refined_ids:
+        logger.info(
+            "device migration: moved %s onto their kind's gamut",
+            ", ".join(_refined_ids),
         )
 
     # Multi-head: for each user-created device instance, clone the

@@ -18,6 +18,8 @@ Wire contract (must match the firmware byte-for-byte, see
 * **HIGH nibble = LEFT pixel** of each byte pair (even column), **LOW
   nibble = RIGHT pixel** (odd column).
 * Gray value per nibble: **0x0 = black, 0xF = white**, linear.
+* A ``gray_8`` panel gets 8 levels written as the nibbles 0, 2, 4, 6, 9,
+  11, 13, 15, which a firmware that halves each nibble reads as 0..7.
 
 Pipeline mirrors ``esp32_bin`` (firmware-native orientation + flip +
 underscan + pack), differing only in the palette (16-level gray vs
@@ -38,6 +40,7 @@ from PIL import Image
 
 from app.dither_regions import rasterize_region_mask, transform_mask
 from app.quantizer import (
+    canonicalise_gamut,
     fit_to_panel,
     pack_to_panel_bin_4bpp_gray,
     underscan_image,
@@ -131,14 +134,19 @@ def transform(png_bytes: bytes, *, panel: Panel, settings: dict[str, Any]) -> by
             flip=bool(panel.flip),
             underscan=int(panel.underscan or 0),
         )
+    # A ``gray_8`` panel (Inkplate 10) paints 8 greys from this 4-bpp frame,
+    # so dither against those 8 and write them as evenly spaced nibbles; the
+    # byte count and layout are the same either way.
+    levels = 8 if canonicalise_gamut(str(panel.gamut or "")) == "gray_8" else 16
     return pack_to_panel_bin_4bpp_gray(
         img,
         width=native_w,
         height=native_h,
         dither=_setting(settings, "dither"),
         contrast=float(_setting(settings, "contrast")),
-        palette_override=_gray_ramp(settings, 16),
+        palette_override=_gray_ramp(settings, levels),
         region_nearest_mask=mask_img,
+        levels=levels,
     )
 
 

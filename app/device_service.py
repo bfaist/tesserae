@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any
 
 from app.device_loader import Device, DeviceRegistry, load_instance_file
-from app.quantizer import canonicalise_gamut
+from app.quantizer import canonicalise_gamut, refine_reported_gamut
 from app.renderer_loader import RendererRegistry, clone_for_instances
 
 logger = logging.getLogger(__name__)
@@ -158,8 +158,13 @@ def _kind_uses_access_token(kind: Device) -> bool:
     of (or in addition to) an MQTT status/config topic. Currently just
     TRMNL clients and the Bloomin8 Canvas; extracted as a helper so a
     new HTTP-polled kind can opt in by appearing in this list rather than
-    threading a new manifest field through the loader."""
-    return kind.id in ("trmnl_client", "bloomin8_canvas")
+    threading a new manifest field through the loader.
+
+    Matched on the kind's wire protocol, so a hardware-catalog SKU on the
+    TRMNL protocol (``trmnl_x``, ``seeed_xiao_75``) mints a token the same
+    way the bare ``trmnl_client`` kind does; without one, ``app.trmnl_api``
+    has nothing to authenticate the device by."""
+    return kind_protocol(kind) in ("trmnl_client", "bloomin8_canvas")
 
 
 # Alphabet for short access tokens. Lowercase letters plus 2–9, with
@@ -621,9 +626,18 @@ def create_instance(
         manifest["config_topic"] = derive_topic(kind.config_topic, instance_id, suffix="config")
 
     panel = dict(kind.panel or {})
+    kind_gamut = panel.get("gamut")
     if panel_overrides:
         _drop_foreign_native_stride(panel, panel_overrides)
         panel.update(panel_overrides)
+        reported_gamut = panel_overrides.get("gamut")
+        if isinstance(reported_gamut, str) and reported_gamut:
+            # A firmware reporting its frame's depth (the Inkplate 10 says
+            # gray_16 for a 4-bpp frame) must not widen a kind that knows
+            # the glass paints fewer levels (gray_8).
+            panel["gamut"] = refine_reported_gamut(
+                kind_gamut if isinstance(kind_gamut, str) else None, reported_gamut
+            )
     _apply_orientation(panel, orientation)
     if panel:
         manifest["panel"] = panel
@@ -664,7 +678,7 @@ def create_instance(
         # show on the setup screen as a stable, human-readable id.
         # Skip for non-TRMNL REST devices, the field has no protocol
         # meaning for them.
-        if kind.id == "trmnl_client":
+        if kind_protocol(kind) == "trmnl_client":
             manifest["friendly_id"] = generate_friendly_id(devices)
         # MAC address (when auto-provisioning from /api/setup) becomes
         # the device's primary identity for /api/display auth, matching
@@ -1096,9 +1110,14 @@ def set_instance_renderer_id(
         raw = json.loads(inst_file.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as err:
         return InstanceResult(None, f"Couldn't read {inst_file.name}: {err}"), False
-    if target == primary:
+    # An operator pick always replaces an automatic one.
+    raw.pop("renderer_auto", None)
+    if target == primary and not renderer_min_firmware(kind):
         raw.pop("renderer_id", None)  # back to the kind default; don't pin
     else:
+        # A kind whose renderer follows the firmware version keeps even a
+        # pick of its primary as an explicit pin, so the next poll's
+        # firmware check does not move the device off it again.
         raw["renderer_id"] = target
     inst_file.write_text(json.dumps(raw, indent=2) + "\n", encoding="utf-8")
 
@@ -1109,6 +1128,150 @@ def set_instance_renderer_id(
         last_err = devices.errors[-1] if devices.errors else None
         return InstanceResult(None, last_err.message if last_err else "unknown error"), False
     clone_for_instances(renderers, devices)
+    return InstanceResult(reloaded), True
+
+
+def parse_firmware_version(value: Any) -> tuple[int, ...] | None:
+    """``"1.6.0"`` -> ``(1, 6, 0)``; a leading ``v`` and any suffix after
+    the numeric part (``1.6.0-rc1``, ``1.6.0+abc``) are ignored. ``None``
+    for anything with no leading number, so an odd version string never
+    reads as new enough."""
+    if not isinstance(value, str):
+        return None
+    text = value.strip().lstrip("vV")
+    parts: list[int] = []
+    for chunk in text.split("."):
+        digits = ""
+        for ch in chunk:
+            if not ch.isdigit():
+                break
+            digits += ch
+        if not digits:
+            break
+        parts.append(int(digits))
+        if len(digits) != len(chunk):
+            break  # suffix reached ("0-rc1")
+    return tuple(parts) if parts else None
+
+
+def renderer_min_firmware(kind: Any) -> dict[str, tuple[int, ...]]:
+    """The kind's ``protocol_config.renderer_min_firmware``: renderer id ->
+    the lowest firmware version that can paint its output, parsed. Only
+    renderers the kind actually offers are kept. Empty for every kind that
+    does not declare one."""
+    manifest = getattr(kind, "manifest", None)
+    config = manifest.get("protocol_config") if isinstance(manifest, dict) else None
+    rules = config.get("renderer_min_firmware") if isinstance(config, dict) else None
+    if not isinstance(rules, dict):
+        return {}
+    offered = set(getattr(kind, "renderer_ids", []))
+    out: dict[str, tuple[int, ...]] = {}
+    for rid, version in rules.items():
+        parsed = parse_firmware_version(version)
+        if isinstance(rid, str) and rid in offered and parsed is not None:
+            out[rid] = parsed
+    return out
+
+
+def _pad_version(v: tuple[int, ...], n: int) -> tuple[int, ...]:
+    return v + (0,) * (n - len(v))
+
+
+def renderer_for_firmware(kind: Any, fw_version: Any) -> str | None:
+    """The renderer a kind's firmware rules pick for ``fw_version``: the
+    first of the kind's renderers (in listed order, after the primary)
+    whose minimum the firmware meets, else the primary. ``None`` when the
+    kind has no rules or the version can't be read, meaning "leave the
+    device as it is"."""
+    rules = renderer_min_firmware(kind)
+    if not rules:
+        return None
+    fw = parse_firmware_version(fw_version)
+    if fw is None:
+        return None
+    kind_renderer_ids = list(getattr(kind, "renderer_ids", []))
+    if not kind_renderer_ids:
+        return None
+    for rid in kind_renderer_ids[1:]:
+        minimum = rules.get(rid)
+        if minimum is None:
+            continue
+        width = max(len(fw), len(minimum))
+        if _pad_version(fw, width) >= _pad_version(minimum, width):
+            return str(rid)
+    return str(kind_renderer_ids[0])
+
+
+def sync_renderer_for_firmware(
+    *,
+    devices: DeviceRegistry,
+    renderers: RendererRegistry,
+    data_root: Path,
+    instance_id: str,
+    fw_version: Any,
+) -> tuple[InstanceResult, bool]:
+    """Move a device onto the renderer its reported firmware can paint, for
+    kinds that list ``renderer_min_firmware`` in their catalog
+    ``protocol_config``.
+
+    The XIAO 7.5" running TRMNL firmware is the case: firmware 1.6.0 and
+    later decodes a 2-bit greyscale PNG and paints 4 shades, while earlier
+    builds cannot decode one at all. The TRMNL firmware sends its version
+    in the ``FW-Version`` header on every poll, so the device follows its
+    own firmware up (and back down after a downgrade) without the operator
+    choosing.
+
+    Only an automatic choice moves: an instance with no renderer pin, or
+    one pinned by this function (``renderer_auto`` on the instance file).
+    A renderer the operator picked on the device card stays. An unreadable
+    version is a no-op. Returns ``(result, changed)``; on ``changed`` the
+    caller drops the device's cached render, which is in the old format."""
+    device = devices.get(instance_id)
+    if device is None or device.kind_of is None:
+        return InstanceResult(None, f"Unknown device {instance_id!r}."), False
+    kind = devices.get(device.kind_of)
+    target = renderer_for_firmware(kind, fw_version)
+    if target is None or kind is None:
+        return InstanceResult(device), False
+    if (device.manifest.get("renderer_id") or kind.renderer_ids[0]) == target:
+        return InstanceResult(device), False  # already there; skip the file read
+    inst_file = device.path
+    try:
+        raw = json.loads(inst_file.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return InstanceResult(device), False
+    if not isinstance(raw, dict):
+        return InstanceResult(device), False
+    pinned = raw.get("renderer_id")
+    automatic = pinned is None or raw.get("renderer_auto") is True
+    if not automatic:
+        return InstanceResult(device), False
+    primary = kind.renderer_ids[0]
+    current = pinned or primary
+    if current == target:
+        return InstanceResult(device), False
+    if target == primary:
+        raw.pop("renderer_id", None)
+        raw.pop("renderer_auto", None)
+    else:
+        raw["renderer_id"] = target
+        raw["renderer_auto"] = True
+    inst_file.write_text(json.dumps(raw, indent=2) + "\n", encoding="utf-8")
+
+    devices.devices.pop(instance_id, None)
+    _drop_clones(renderers, instance_id)
+    reloaded = load_instance_file(devices, inst_file=inst_file, data_root=data_root)
+    if reloaded is None:
+        last_err = devices.errors[-1] if devices.errors else None
+        return InstanceResult(None, last_err.message if last_err else "unknown error"), False
+    clone_for_instances(renderers, devices)
+    logger.info(
+        "Device %s renderer follows firmware %s: %s -> %s",
+        instance_id,
+        fw_version,
+        current,
+        target,
+    )
     return InstanceResult(reloaded), True
 
 
@@ -1195,6 +1358,50 @@ def restore_rest_only_transports(registry: DeviceRegistry) -> list[str]:
         device.manifest["transport"] = "rest"
         healed.append(device.id)
     return healed
+
+
+def refine_inherited_gamuts(registry: DeviceRegistry) -> list[str]:
+    """Move instances onto their kind's coarser gamut where the stored one
+    is a report that gamut refines (see
+    :func:`app.quantizer.refine_reported_gamut`).
+
+    The Inkplate 10 kind declared ``gray_16`` until 0.469.0 and now says
+    ``gray_8``, the 8 levels its firmware actually drives; its firmware
+    also reports ``gray_16`` at pairing. Every instance created before the
+    change carries ``gray_16`` in its own panel block, which overrides the
+    kind's, so without this the packer would keep dithering against 16
+    levels that the panel merges in pairs. Idempotent; returns the ids
+    moved."""
+    moved: list[str] = []
+    for device in list(registry.devices.values()):
+        if device.kind_of is None:
+            continue
+        kind = registry.get(str(device.kind_of))
+        kind_gamut = (kind.panel or {}).get("gamut") if kind is not None else None
+        if not isinstance(kind_gamut, str) or not kind_gamut:
+            continue
+        stored = (device.manifest.get("panel") or {}).get("gamut")
+        if not isinstance(stored, str) or not stored:
+            continue
+        refined = refine_reported_gamut(kind_gamut, stored)
+        if refined == canonicalise_gamut(stored):
+            continue
+        try:
+            raw = json.loads(device.path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(raw, dict) or not isinstance(raw.get("panel"), dict):
+            continue
+        raw["panel"]["gamut"] = refined
+        try:
+            device.path.write_text(json.dumps(raw, indent=2) + "\n", encoding="utf-8")
+        except OSError:
+            continue
+        panel = device.manifest.get("panel")
+        if isinstance(panel, dict):
+            panel["gamut"] = refined
+        moved.append(device.id)
+    return moved
 
 
 def _refresh_inherited_panel(

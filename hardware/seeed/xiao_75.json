@@ -5,8 +5,12 @@
   "vendor": "Seeed Studio",
   "url": "https://www.seeedstudio.com/XIAO-7-5-ePaper-Panel-p-6416.html",
   "icon": "device-tablet",
-  "description": "Seeed's integrated XIAO 7.5 inch ePaper Panel (ESP32-C3 on board) running the XIAO TRMNL firmware variant, so it speaks Tesserae's TRMNL BYOS endpoints. Same hardware as xiao_epaper_panel_75_c3; pick that kind instead when the unit runs the Tesserae-native firmware.",
+  "description": "Seeed's integrated XIAO 7.5 inch ePaper Panel (ESP32-C3) running the XIAO TRMNL firmware, so it speaks Tesserae's TRMNL BYOS endpoints; 4 greys on TRMNL firmware 1.6.0 and later, 1-bit below. Same hardware as xiao_epaper_panel_75_c3, the kind for the Tesserae-native firmware.",
   "protocol": "trmnl_client",
+  "renderers": [
+    "trmnl_png",
+    "trmnl_png_gray4"
+  ],
   "panel": {
     "w": 800,
     "h": 480,
@@ -16,7 +20,12 @@
     "native_w": 800,
     "native_h": 480
   },
+  "protocol_config": {
+    "renderer_min_firmware": {
+      "trmnl_png_gray4": "1.6.0"
+    }
+  },
   "refresh_floor_s": 60,
   "image_format": "png",
-  "notes_md": "Confirmed on real hardware running the XIAO TRMNL firmware. The XIAO TRMNL firmware sends its MAC in the Id header (uppercase, colon-separated); Tesserae's BYOS layer matches case-insensitively, no extra configuration needed."
+  "notes_md": "Confirmed on real hardware running the XIAO TRMNL firmware. The XIAO TRMNL firmware sends its MAC in the Id header (uppercase, colon-separated); Tesserae's BYOS layer matches case-insensitively, no extra configuration needed.\n\nTRMNL firmware 1.6.0 and later decodes a 2-bit greyscale PNG and paints 4 shades on this panel; earlier builds cannot decode one. The firmware sends its version in the `FW-Version` header on every poll, so a device on this kind moves to `trmnl_png_gray4` by itself once it reports 1.6.0 or later, and back to the 1-bit `trmnl_png` if it reports an older build. A renderer picked on the device card stays put. The panel reports `gray_4` while on the grey renderer and `mono` on the 1-bit one. A unit that provisioned itself by MAC lands on the bare `trmnl_client` kind, which offers `trmnl_png_gray4` as a device-card pick but does not follow the firmware version, so the switch is automatic only for an instance created on this kind. The 2-bit path is UNVERIFIED ON HARDWARE on this unit."
 }

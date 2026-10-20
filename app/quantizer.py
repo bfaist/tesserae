@@ -175,6 +175,22 @@ GRAY_4_PALETTE: tuple[tuple[int, int, int], ...] = (
 # emits the level index directly). Same rationale as GRAY_4 for the drift.
 GRAY_16_PALETTE: tuple[tuple[int, int, int], ...] = tuple((v, v, v) for v in range(0, 256, 17))
 
+# 8-level (3-bit) grayscale ramp for panels whose driver paints 8 greys
+# from a 4-bpp frame (the Soldered Inkplate 10: the Inkplate library's
+# 3-bit mode, the firmware halving each nibble). Evenly spaced,
+# ``round(k * 255 / 7)``. Dithering against these eight levels rather
+# than the sixteen the frame could carry keeps error diffusion from
+# aiming at greys the panel merges in pairs. On the wire each level is
+# the nibble ``round(k * 15 / 7)`` (see :data:`GRAY_8_NIBBLES`).
+GRAY_8_PALETTE: tuple[tuple[int, int, int], ...] = tuple(
+    (v, v, v) for v in (round(k * 255 / 7) for k in range(8))
+)
+
+# 4-bpp nibble per gray_8 level: 0, 2, 4, 6, 9, 11, 13, 15. A firmware
+# that halves the nibble (``n >> 1``) gets 0..7 back exactly, and one that
+# paints the nibble as a 16-level value gets the evenly spaced grey.
+GRAY_8_NIBBLES: tuple[int, ...] = tuple(round(k * 15 / 7) for k in range(8))
+
 # E Ink Kaleido 3 (``kaleido3``): a colour filter array over a 16-level
 # greyscale panel (Kobo Libra Colour / Clara Colour, and other colour
 # e-readers KOReader drives). Not a palette: each of R, G and B carries
@@ -291,6 +307,7 @@ ACCEPTED_GAMUTS: frozenset[str] = frozenset(
         "bwry_4",
         "bwr_3",
         "gray_4",
+        "gray_8",
         "gray_16",
         "kaleido3",
     }
@@ -405,11 +422,48 @@ def palette_for_gamut(gamut: str) -> tuple[tuple[int, int, int], ...]:
         # only want a swatch list. Previews go through
         # ``quantize_for_gamut_to_png`` instead.
         return GRAY_16_PALETTE
+    if g == "gray_8":
+        return GRAY_8_PALETTE
     if g == "gray_4":
         return GRAY_4_PALETTE
     if g == "mono":
         return _MONO_PALETTE
     return WAVESHARE_E6_PALETTE
+
+
+# Gamuts a panel may report for a kind that declares a coarser one on the
+# same wire format. A firmware that packs 4-bpp frames says ``gray_16``
+# because that is what its frame carries, while the catalog entry knows the
+# glass is driven at 8 levels (the Inkplate 10 firmware reports ``gray_16``
+# and halves every nibble). The kind's value is the better description, so
+# a report of the key is read as the kind's own gamut, never the reverse.
+_REPORTED_GAMUT_REFINEMENTS: dict[str, frozenset[str]] = {
+    "gray_8": frozenset({"gray_16"}),
+}
+
+
+def gamut_matches_report(declared: str, reported: str) -> bool:
+    """True when a kind declaring ``declared`` accepts a panel reporting
+    ``reported``: the same canonical gamut, or a report the kind's gamut
+    refines (a ``gray_8`` kind answers a ``gray_16`` report)."""
+    d = canonicalise_gamut(declared)
+    r = canonicalise_gamut(reported)
+    return d == r or r in _REPORTED_GAMUT_REFINEMENTS.get(d, frozenset())
+
+
+def refine_reported_gamut(kind_gamut: str | None, reported: str) -> str:
+    """The gamut to store for a panel reporting ``reported`` on a kind whose
+    panel declares ``kind_gamut``: the kind's gamut when it refines the
+    report (see :func:`gamut_matches_report`), else the report, canonical.
+
+    Keeps a firmware that reports the wire depth (``gray_16``) from widening
+    a catalog kind that knows its glass paints fewer levels (``gray_8``)."""
+    r = canonicalise_gamut(reported)
+    if isinstance(kind_gamut, str) and kind_gamut:
+        k = canonicalise_gamut(kind_gamut)
+        if r in _REPORTED_GAMUT_REFINEMENTS.get(k, frozenset()):
+            return k
+    return r
 
 
 def _apply_exposure(img: Image.Image, exposure: int) -> Image.Image:
@@ -2156,6 +2210,7 @@ def pack_to_panel_bin_4bpp_gray(
     contrast: float = 1.0,
     palette_override: tuple[tuple[int, int, int], ...] | None = None,
     region_nearest_mask: Image.Image | None = None,
+    levels: int = 16,
 ) -> bytes:
     """Quantise to 16-level grayscale and pack to the panel's native 4-bpp
     grayscale wire format.
@@ -2188,13 +2243,21 @@ def pack_to_panel_bin_4bpp_gray(
     against a 16-entry linear grayscale palette. Floyd-Steinberg on
     grayscale is the smoothest for photos; ordered dither modes are
     the fastest opt-ins for text-heavy dashboards.
+
+    ``levels=8`` (the ``gray_8`` gamut) dithers against the 8-entry ramp
+    :data:`GRAY_8_PALETTE` instead and writes each level as its nibble from
+    :data:`GRAY_8_NIBBLES` (0, 2, 4, 6, 9, 11, 13, 15), so a firmware that
+    halves the nibble paints levels 0..7 and the frame size is unchanged.
     """
     if width % 2:
         raise ValueError(f"panel width must be even (two pixels per byte), got {width}")
     if img.size != (width, height):
         raise ValueError(f"image must be {width}x{height}, got {img.size}")
+    if levels not in (8, 16):
+        raise ValueError(f"4-bpp gray packer supports 8 or 16 levels, got {levels}")
 
-    palette = _resolve_gray_palette(_GRAY_16_PALETTE, palette_override)
+    nominal = GRAY_8_PALETTE if levels == 8 else _GRAY_16_PALETTE
+    palette = _resolve_gray_palette(nominal, palette_override)
     pal_arr = np.array(palette, dtype=np.float32)
 
     # Grayscale-first, then back to RGB so the dither routines that
@@ -2244,9 +2307,12 @@ def pack_to_panel_bin_4bpp_gray(
     # nibble), pack, done. All-numpy so it stays fast on 2.6M-pixel
     # panels.
     indices = np.frombuffer(raw, dtype=np.uint8).reshape(height, width)
-    # Clamp any stray > 15 down to 15 so a buggy dither output can't
+    # Clamp any stray past the top level so a buggy dither output can't
     # corrupt neighbouring nibbles when we shift it.
-    indices = np.clip(indices, 0, 15).astype(np.uint8)
+    indices = np.clip(indices, 0, levels - 1).astype(np.uint8)
+    if levels == 8:
+        # Level index -> wire nibble (evenly spaced across 0..15).
+        indices = np.array(GRAY_8_NIBBLES, dtype=np.uint8)[indices]
     left = indices[:, 0::2]  # even columns -> high nibble
     right = indices[:, 1::2]  # odd columns  -> low nibble
     packed = (left << 4) | right

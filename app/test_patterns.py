@@ -59,13 +59,16 @@ _COLOUR_LABELS_INKY7: tuple[str, ...] = (
 
 
 _GRAY_4_LABELS: tuple[str, ...] = ("black", "dark grey", "light grey", "white")
+_GRAY_8_LABELS: tuple[str, ...] = tuple(f"level {i}" for i in range(8))
 _GRAY_16_LABELS: tuple[str, ...] = tuple(f"level {i}" for i in range(16))
 
 
 def gray_ramp_palette(levels: int) -> tuple[RGB, ...]:
-    """The evenly-spaced ramp a grayscale panel nominally paints."""
-    step = 255 // (levels - 1)
-    return tuple((i * step, i * step, i * step) for i in range(levels))
+    """The evenly-spaced ramp a grayscale panel nominally paints. Rounded
+    rather than stepped by ``255 // (levels - 1)``, which is exact for 4 and
+    16 levels but would stop 8 levels short of white."""
+    values = [round(i * 255 / (levels - 1)) for i in range(levels)]
+    return tuple((v, v, v) for v in values)
 
 
 def _palette_for(gamut: str, calibrated: bool) -> tuple[tuple[RGB, ...], tuple[str, ...]]:
@@ -84,6 +87,8 @@ def _palette_for(gamut: str, calibrated: bool) -> tuple[tuple[RGB, ...], tuple[s
     # ``palette_override``, and there is no second bundled ramp to pick.
     if gamut == "gray_4":
         return gray_ramp_palette(4), _GRAY_4_LABELS
+    if gamut == "gray_8":
+        return gray_ramp_palette(8), _GRAY_8_LABELS
     if gamut == "gray_16":
         return gray_ramp_palette(16), _GRAY_16_LABELS
     if gamut == "inky_7colour":

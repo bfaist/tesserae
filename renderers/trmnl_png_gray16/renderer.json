@@ -2,13 +2,14 @@
   "tesserae_compat": "1.x",
   "name": "TRMNL client (16-grey PNG)",
   "version": "0.1.0",
-  "description": "Composition PNG fitted to the device's panel size, then quantised to a 16-level greyscale PNG with the selected dither. For TRMNL BYOS panels that paint real greys rather than 1-bit black/white: jailbroken e-readers running KOReader (confirmed on a Kobo Clara HD; Kindle Paperwhite expected to behave the same), and the Seeed reTerminal E1003 / TRMNL X 16-level waveform under TRMNL firmware, which is untested. Output is an 8-bit greyscale PNG using 16 distinct levels; a client that can only paint 1-bit should stay on trmnl_png. Per-device picture quality (dither / contrast) lives on the device card.",
+  "description": "Composition PNG fitted to the device's panel size, then quantised to a 16-level greyscale PNG with the selected dither. For TRMNL BYOS panels that paint real greys rather than 1-bit black/white: jailbroken e-readers running KOReader (confirmed on a Kobo Clara HD; Kindle Paperwhite expected to behave the same), and the Seeed reTerminal E1003 / TRMNL X 16-level waveform under TRMNL firmware, which is untested. Output is an 8-bit greyscale PNG using 16 distinct levels, or a true 4-bit greyscale PNG (colour type 0) for a kind that sets png_bit_depth 4 in its protocol_config, as the TRMNL X does; a client that can only paint 1-bit should stay on trmnl_png. Per-device picture quality (dither / contrast) lives on the device card.",
   "orientation": "composition",
   "mime": "image/png",
   "extension": "png",
   "topic_pattern": "tesserae/{device}/frame/trmnl",
   "device": "trmnl",
   "retain": false,
+  "gamuts": ["gray_16"],
   "settings": [
     {
       "name": "dither",

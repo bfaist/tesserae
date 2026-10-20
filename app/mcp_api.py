@@ -1116,15 +1116,16 @@ def _gamut_info(gamut: str) -> dict[str, Any]:
         "bwry_4": ("4-colour · black/white/red/yellow", q.BWRY_4_PALETTE),
         "bwr_3": ("3-colour · black/white/red", q.BWR_3_PALETTE),
         "gray_4": ("4-level grayscale", q.GRAY_4_PALETTE),
+        "gray_8": ("8-level grayscale", q.GRAY_8_PALETTE),
         "gray_16": ("16-level grayscale", q.GRAY_16_PALETTE),
         "mono": ("black & white", ()),
     }
     label, palette = table.get(resolved, (resolved or "unknown", ()))
     colors = [_hex(c) for c in palette]
-    # ``gray_4`` / ``gray_16`` carry multiple ink levels but are chromatically
-    # grayscale, so they should still force a grayscale layout; ``mono`` is
-    # grayscale by definition.
-    grayscale = resolved in ("mono", "gray_4", "gray_16")
+    # ``gray_4`` / ``gray_8`` / ``gray_16`` carry multiple ink levels but are
+    # chromatically grayscale, so they should still force a grayscale layout;
+    # ``mono`` is grayscale by definition.
+    grayscale = resolved in ("mono", "gray_4", "gray_8", "gray_16")
     # The inks are what the panel prints flat; the blends are what it prints by dithering two of
     # them together, which is most of its real vocabulary. Reported as named colours rather than
     # left to the instruction to "design in full colour", because an agent given six hexes and a

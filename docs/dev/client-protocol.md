@@ -205,6 +205,8 @@ server URL.
    | `mono` | 1-bit B/W | `mono` |
    | `bwr_3` | 3-colour B/W/Red tri-colour e-ink | `bwr_3` |
    | `gray_4` | 4-level greyscale ramp (2-bit, no highlight) | `gray_4` |
+   | `gray_8` | 8-level greyscale ramp, sent as a 4-bpp frame using the nibbles 0, 2, 4, 6, 9, 11, 13, 15 | `gray_8` |
+   | `gray_16` | 16-level greyscale ramp (4-bpp) | `gray_16`, or the kind's `gray_8` when the kind declares it |
    | `bwry_4` | 4-colour B/W/Red/Yellow (PicPak-class 4.2" panels) | `bwry_4` |
    | `rgb24` | Full 24-bit colour (LCD-hybrid) | `rgb24` |
    | `rgb16` | 16-bit colour (RGB565) | `rgb16` |
@@ -1551,25 +1553,38 @@ library your platform provides (`adafruit_imageload`, Pillow,
 fields are hints for client-side fit; if your display library handles
 that natively, ignore them.
 
-The TRMNL variant comes in two flavours, both on the same `/api/display`
+The TRMNL variant comes in three flavours, all on the same `/api/display`
 path with the same `{"url": "..."}` payload; the dither algorithm +
 contrast curve are device settings (Settings → Devices → General)
 rather than envelope fields:
 
-- **`trmnl_png`** — dithered to 1-bit B/W (every pixel either 0 or 255).
-  The default; right for TRMNL OG / X mono panels and any client that
-  can only blit 1bpp.
-- **`trmnl_png_gray16`** — dithered to 16 grey levels, saved as an 8-bit
+- **`trmnl_png`**: dithered to 1-bit B/W (every pixel either 0 or 255).
+  The default on `trmnl_client`; right for TRMNL OG panels on firmware
+  before 1.6.0 and any client that can only blit 1bpp.
+- **`trmnl_png_gray4`**: dithered to 4 grey levels, saved as a true 2-bit
+  greyscale PNG (IHDR bit depth 2, colour type 0; samples 0..3). TRMNL
+  firmware 1.6.0 and later decodes it and paints 4 shades on the 7.5"
+  (OG) class of panels; older firmware cannot decode it. The XIAO 7.5"
+  TRMNL kind (`seeed_xiao_75`) moves onto it and off it by the
+  `FW-Version` header; elsewhere it is a device-card pick.
+- **`trmnl_png_gray16`**: dithered to 16 grey levels, saved as an 8-bit
   greyscale PNG (mode `L`) carrying at most 16 distinct values. For
   panels that paint real greys: a KOReader e-reader whose framebuffer is
-  8-bit grey (confirmed on a Kobo Clara HD), or the E1003 / TRMNL X
-  16-level waveform under TRMNL firmware (untested). Decode is the
-  same `RenderImage` / lodepng / `stb_image` path; a 1-bit-only client
-  should stay on `trmnl_png`. Pick it per device with the Renderer
-  dropdown on the device card.
+  8-bit grey (confirmed on a Kobo Clara HD). The `trmnl_x` kind asks for
+  a true 4-bit greyscale PNG instead (`png_bit_depth: 4` in its
+  `protocol_config`; samples 0..15), the format TRMNL documents for the X,
+  and uses this renderer by default. Decode is the same `RenderImage` /
+  lodepng / `stb_image` path; a 1-bit-only client should stay on
+  `trmnl_png`. Pick it per device with the Renderer dropdown on the
+  device card.
+
+Each of the three is dedicated to one gamut (`mono`, `gray_4`, `gray_16`),
+so the panel's reported gamut, its preview and the MCP device list follow
+the renderer picked.
 
 Reference: [`renderers/pi_png/renderer.py`](https://github.com/dmellok/tesserae/blob/main/renderers/pi_png/renderer.py),
 [`renderers/trmnl_png/renderer.py`](https://github.com/dmellok/tesserae/blob/main/renderers/trmnl_png/renderer.py),
+[`renderers/trmnl_png_gray4/renderer.py`](https://github.com/dmellok/tesserae/blob/main/renderers/trmnl_png_gray4/renderer.py),
 [`renderers/trmnl_png_gray16/renderer.py`](https://github.com/dmellok/tesserae/blob/main/renderers/trmnl_png_gray16/renderer.py).
 
 ### CircuitPython indexed `.png` / `.bmp`

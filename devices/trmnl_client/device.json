@@ -4,7 +4,7 @@
   "icon": "device-tablet-speaker",
   "version": "0.1.0",
   "description": "HTTP-polled e-paper client compatible with the TRMNL BYOS protocol. Devices (jailbroken Kindles running the KOReader trmnl-display plugin, TRMNL devices, anything that speaks the protocol) poll GET /api/display on a fixed cadence and paint the latest frame. Identity is the access_token the user generates in Tesserae and pastes into the client config, no MAC, no MQTT, no pairing flow.",
-  "renderers": ["trmnl_png", "trmnl_png_gray16"],
+  "renderers": ["trmnl_png", "trmnl_png_gray16", "trmnl_png_gray4"],
   "panel": { "w": 800, "h": 480, "orientation": "landscape", "name": "TRMNL panel" },
   "config_schema": {
     "refresh_rate_s": {
