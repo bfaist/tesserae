@@ -11,6 +11,7 @@ import pytest
 from flask import Flask
 
 from app.main import REPO_ROOT, create_app
+from app.state.page_store import Page
 
 
 @pytest.fixture
@@ -70,3 +71,30 @@ def test_saving_a_button_map_persists_and_renders_back(app: Flask) -> None:
 
     body = client.get("/settings/devices/kitchen").get_data(as_text=True)
     assert "webhook:http://example.test/hook" in body
+
+
+def test_page_action_by_name_is_rejected_with_the_id_to_use(app: Flask) -> None:
+    """``page:`` takes the dashboard id. A name saved silently and did
+    nothing on the press (#379); now the save names the id instead."""
+    app.config["PAGE_STORE"].save(Page(id="3f9a1c2b7d4e", name="Morning Briefing"))
+    client = app.test_client()
+    _sign_in(client)
+    _add_device(client)
+
+    client.post(
+        "/settings/devices/kitchen/save",
+        data={"button_map_json": '{"a": "page:morning briefing"}'},
+    )
+    stored = app.config["SETTINGS_STORE"].get_section("devices").get("kitchen", {})
+    assert "button_map" not in stored
+    body = client.get("/settings/devices/kitchen").get_data(as_text=True)
+    assert "is a dashboard name; use its id instead: page:3f9a1c2b7d4e" in body.replace(
+        "&#39;", "'"
+    )
+
+    client.post(
+        "/settings/devices/kitchen/save",
+        data={"button_map_json": '{"a": "page:3f9a1c2b7d4e"}'},
+    )
+    stored = app.config["SETTINGS_STORE"].get_section("devices").get("kitchen", {})
+    assert stored.get("button_map") == {"a": "page:3f9a1c2b7d4e"}

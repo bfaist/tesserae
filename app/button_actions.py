@@ -225,9 +225,9 @@ def _page(ctx: ActionContext, arg: str | None) -> ActionResult:
     would otherwise choose. If the page id isn't known, treat as
     malformed and let the caller no-op with a warning."""
     if arg is None or not arg:
-        raise ButtonActionError("page action requires a page id, e.g. 'page:morning'")
+        raise ButtonActionError("page action requires a dashboard id, e.g. 'page:3f9a1c2b7d4e'")
     if arg not in ctx.known_page_ids:
-        raise ButtonActionError(f"unknown page id: {arg!r}")
+        raise ButtonActionError(f"unknown page id: {arg!r} (use the dashboard's id, not its name)")
     return ActionResult(
         new_step_index=ctx.current_step_index,
         target_page_id=arg,

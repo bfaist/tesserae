@@ -403,7 +403,7 @@
         {% if section.button_map_capable %}
         <div class="dx-button-map">
           <div class="field">
-            <label for="{{ section.id }}-button-map">Button map (JSON){{ info_pop("Per-device button map. Overrides the global map (Settings › Server) and the built-in defaults for this device only. Empty saves nothing and the device falls back to the global / default map.") }}</label>
+            <label for="{{ section.id }}-button-map">Button map (JSON){{ info_pop("Button map for this device. Overrides the built-in defaults shown under Effective map. Leave it empty to use the defaults.") }}</label>
             <textarea id="{{ section.id }}-button-map" name="button_map_json" form="{{ _combined_form_id }}"
                       class="input dx-button-map-input" rows="6" spellcheck="false" autocomplete="off"
                       placeholder='{&#10;  "left": "rotate_prev",&#10;  "right": "rotate_next",&#10;  "refresh": "refresh"&#10;}'>{{ section.button_map_json or '' }}</textarea>
@@ -411,8 +411,16 @@
               Map each button name to an action. Actions with arguments use the <code>action:arg</code> form.
               Available actions:
               {% for name in section.button_actions_available %}<code>{{ name }}</code>{% if not loop.last %}, {% endif %}{% endfor %}.
-              Examples: <code>rotate_next</code>, <code>page:morning_dashboard</code>, <code>step:2</code>, <code>webhook:https://…</code>.
+              Examples: <code>rotate_next</code>, <code>step:2</code>, <code>webhook:https://…</code>.
+              <code>page:</code> takes a dashboard's id, not its name.
             </p>
+            {% if section.button_page_ids %}
+            <details class="dx-button-map-effective">
+              <summary class="u-muted">Dashboard ids for <code>page:</code></summary>
+              <pre class="dx-button-map-preview"><code>{% for name, pid in section.button_page_ids %}page:{{ pid }}  {{ name }}
+{% endfor %}</code></pre>
+            </details>
+            {% endif %}
             {% if section.button_map_effective %}
             <details class="dx-button-map-effective">
               <summary class="u-muted">Effective map (this device)</summary>

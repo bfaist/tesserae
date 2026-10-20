@@ -1146,6 +1146,28 @@ def devices_update_battery_offset(instance_id: str) -> Response:
 # -- combined save ------------------------------------------------------
 
 
+def _unknown_page_error(button_name: str, page_id: str) -> str | None:
+    """Reject ``page:<x>`` when ``x`` isn't a dashboard id, at save time
+    rather than as a silent no-op on the press. A dashboard name is the
+    usual slip (#379), so name the id it should have been."""
+    page_store = current_app.config.get("PAGE_STORE")
+    if page_store is None:
+        return None
+    pages = page_store.list()
+    if any(p.id == page_id for p in pages):
+        return None
+    by_name = [p for p in pages if (p.name or "").strip().lower() == page_id.strip().lower()]
+    if len(by_name) == 1:
+        return (
+            f"button {button_name!r}: {page_id!r} is a dashboard name; "
+            f"use its id instead: page:{by_name[0].id}"
+        )
+    return (
+        f"button {button_name!r}: no dashboard has the id {page_id!r}. "
+        "Use the dashboard's id, not its name (listed under Dashboard ids)."
+    )
+
+
 @bp.post("/settings/devices/<instance_id>/save")
 def devices_update_combined(instance_id: str) -> Response:
     """One-shot save for the whole device card.
@@ -1455,7 +1477,7 @@ def devices_update_combined(instance_id: str) -> Response:
                     known_actions = set(registered_actions())
                     for button_name, spec in candidate.items():
                         try:
-                            action_name, _arg = parse_action_spec(spec)
+                            action_name, arg = parse_action_spec(spec)
                         except ButtonActionError as exc:
                             bm_error = f"button {button_name!r}: {exc}"
                             break
@@ -1465,6 +1487,10 @@ def devices_update_combined(instance_id: str) -> Response:
                                 f"Available: {', '.join(sorted(known_actions))}."
                             )
                             break
+                        if action_name == "page" and arg:
+                            bm_error = _unknown_page_error(button_name, arg)
+                            if bm_error is not None:
+                                break
                     else:
                         parsed_map = {k: v for k, v in candidate.items()}
         if bm_error is not None:

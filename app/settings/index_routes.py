@@ -1320,6 +1320,9 @@ def _build_device_section(store: Any, device: Device) -> dict[str, Any] | None:
             _button_map_effective_json(store, device.id) if is_instance else ""
         ),
         "button_actions_available": (registered_actions() if is_instance else ()),
+        # ``page:<id>`` takes the page id, not its name (#379), so list
+        # the ids next to the names they belong to.
+        "button_page_ids": (_button_page_ids() if is_instance else []),
         # Per-device rotation view: every Schedule whose target
         # page binds to this device, sorted by window start.
         # Pure read view, each row deep-links to the Schedules
@@ -1665,6 +1668,18 @@ def _button_map_stored_json(store: Any, device_id: str) -> str:
     if not isinstance(raw, dict) or not raw:
         return ""
     return json.dumps(raw, indent=2, sort_keys=True)
+
+
+def _button_page_ids() -> list[tuple[str, str]]:
+    """(name, id) for every dashboard, name-sorted, for the button map help."""
+    page_store = current_app.config.get("PAGE_STORE")
+    if page_store is None:
+        return []
+    try:
+        pages = page_store.list()
+    except Exception:
+        return []
+    return sorted(((p.name or p.id, p.id) for p in pages), key=lambda t: t[0].lower())
 
 
 def _button_map_effective_json(store: Any, device_id: str) -> str:

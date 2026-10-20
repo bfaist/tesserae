@@ -6,7 +6,7 @@ Impression, etc.) can be bound to server-side **actions**: rotate
 through the dashboards on this device, jump straight to a specific
 dashboard, download the latest rendered frame, force a fresh render,
 or fire a webhook. The mapping is
-per-device and edited from **Settings → Devices**.
+per-device and edited on the device's **Controls** panel.
 
 Introduced in v0.65.0. Server-side works for any device kind whose
 firmware speaks the button contract; ESP32 firmwares (Seeed reTerminal
@@ -29,26 +29,30 @@ say) or more than three, you configure them under the device.
 
 ## Configuring buttons per device
 
-**Settings → Devices** → open the card for your device → **General**
-tab. Near the bottom of the tab you'll find a **Buttons** section
-with a small JSON editor and a live "effective map" fold-out showing
-what each button *actually resolves to right now* after the default,
-global, and per-device layers are merged.
+Open the device from **Devices** and go to its **Controls** panel.
+The **Button map** field there is a small JSON editor, with an
+**Effective map** fold-out showing what each button *actually resolves
+to right now* once your map is merged over the built-in default, and a
+**Dashboard ids** fold-out listing the `page:` value for each of your
+dashboards.
 
 To override, drop a JSON object into the textarea:
 
 ```json
 {
-  "a": "page:morning_briefing",
-  "b": "page:weather_forecast",
-  "c": "page:home_status",
-  "d": "page:family_calendar"
+  "a": "page:3f9a1c2b7d4e",
+  "b": "page:b2f1e07a9c55",
+  "c": "rotate_next",
+  "d": "refresh"
 }
 ```
 
-An empty textarea clears the override and the device falls back to
-the app-global map (**Settings → Server → Buttons**, if configured)
-and finally to the built-in default above. Save is wired into the
+`page:` takes the dashboard's **id**, not its name. The id is the
+12-character code shown on the dashboard's details page, and the
+**Dashboard ids** fold-out under the map lists them all.
+
+An empty field clears the override and the device falls back to the
+built-in default above. Save is wired into the
 device card's normal **Save changes** button; validation rejects
 malformed JSON, unknown actions, and bad action arguments before
 writing.
@@ -56,7 +60,7 @@ writing.
 ## Actions
 
 The value on each button is an **action spec**: either a bare action
-name (`rotate_next`) or `<action>:<arg>` (`page:morning_briefing`,
+name (`rotate_next`) or `<action>:<arg>` (`page:3f9a1c2b7d4e`,
 `webhook:https://…`).
 
 | Action | Argument | What it does |
@@ -66,7 +70,7 @@ name (`rotate_next`) or `<action>:<arg>` (`page:morning_briefing`,
 | `fetch_latest` | none | Download and repaint the latest frame already rendered for this device. Does not re-render, push, move the rotation, or set a manual override. |
 | `refresh` | none | Force a fresh render + push of the current step. Useful when a widget's upstream data changed but the composition hash is stable. |
 | `step:<index>` | rotation step index (0-based) | Jump straight to that step in the rotation. |
-| `page:<page_id>` | dashboard page id | Push a specific dashboard to this device. Doesn't touch rotation state, so a later timer wake resumes the scheduled step. |
+| `page:<page_id>` | dashboard id (the 12-character code, not the name) | Push a specific dashboard to this device. Doesn't touch rotation state, so a later timer wake resumes the scheduled step. |
 | `webhook:<url>` | absolute `http(s)://` URL | Fire a POST to that URL with `{device_id, button, button_event_id, action_spec, timestamp, rotation_id, step_index, step_page_id}` in the body. Fire-and-forget, 3s timeout. |
 | `webhook_refresh:<url>` | absolute `http(s)://` URL | Same POST as `webhook:`, then re-render and repaint the panel a few seconds later. For buttons whose webhook changes the state the dashboard reads. |
 
