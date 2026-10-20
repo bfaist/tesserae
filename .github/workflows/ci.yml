@@ -80,7 +80,10 @@ jobs:
 
   coverage:
     name: coverage
-    runs-on: ubuntu-latest
+    # Pinned to 24.04: on the ubuntu-26.04 image ubuntu-latest moved to on
+    # 2026-10-19 this job's runner is lost near the end of the run (no test
+    # failures; "starves it for CPU/Memory"). Unpin once that is understood.
+    runs-on: ubuntu-24.04
     # Split out from `pytest` and pinned to 3.13 for one reason: speed.
     # coverage.py's default C tracer costs ~2.5x on this suite, which is what
     # made the blocking check a ~50 minute job. COVERAGE_CORE=sysmon puts it on
