@@ -18,9 +18,14 @@ All notable changes to Tesserae are recorded here. Format loosely follows
   apart by length and says it can paint grey by sending
   `"gamuts": ["mono", "gray_4"]` when it registers and on every status
   beat. The server stores that on the device and only ever renders grey for
-  a device that has sent it, so a unit on older firmware, or one rolled
-  back, gets mono even when grey is picked; the frame is repainted whenever
-  the depth in use changes. Mono stays the default. The grey path is
+  a device that has sent it, so a unit on older firmware gets mono even when
+  grey is picked. Because capable firmware sends the key on every register
+  and every status beat, a register or status body without it is read as
+  mono only: a panel rolled back or reflashed to older firmware drops back
+  to mono straight away instead of being sent grey frames it rejects. The
+  grey pick is kept, so grey resumes once capable firmware reports it again.
+  Discover, MQTT and relay paths never change the stored value. The frame is
+  repainted whenever the depth in use changes. Mono stays the default. The grey path is
   unverified on hardware and needs the firmware build that sends `gamuts`.
 - **Colour depth on the device card.** These boards show a Mono / 4-level
   grey control in Rendering. It stays disabled, with a note that a firmware

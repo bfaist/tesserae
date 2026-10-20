@@ -387,15 +387,124 @@ def test_status_beats_update_the_capability_and_repaint(app: Flask, monkeypatch)
     assert registry.get("xiao_b2").renderer_ids == ["esp32_gray2_bin__xiao_b2"]
     assert repaints == ["xiao_b2"]
 
-    # A beat without the key keeps it; no repaint.
-    _status(client, "xiao_b2", token, {})
-    assert registry.get("xiao_b2").renderer_ids == ["esp32_gray2_bin__xiao_b2"]
+    # A repeat of the same advertisement changes nothing.
+    _status(client, "xiao_b2", token, {"gamuts": ["mono", "gray_4"]})
     assert repaints == ["xiao_b2"]
 
-    # Rolled back firmware advertises mono only: back to mono, repaint again.
+    # Firmware that says mono only: back to mono, repaint again.
     _status(client, "xiao_b2", token, {"gamuts": ["mono"]})
     assert registry.get("xiao_b2").renderer_ids == ["esp32_bw_bin__xiao_b2"]
     assert repaints == ["xiao_b2", "xiao_b2"]
+
+
+def test_status_without_the_key_after_grey_falls_back_to_mono(app: Flask, monkeypatch) -> None:
+    """The rollback hole: dual-depth firmware sends ``gamuts`` on every
+    beat, so a beat without it is firmware from before the key (an OTA
+    rollback or reflash), which rejects a grey frame on length. It must get
+    mono, with the cached frame repainted, and the grey pick kept so a
+    capable firmware later resumes grey without asking."""
+    client, token = _register(app, "xiao_r1", "xiao_epaper_75", gamuts=["mono", "gray_4"])
+    registry = app.config["DEVICE_REGISTRY"]
+    device_service.set_instance_renderer_id(
+        devices=registry,
+        renderers=app.config["RENDERER_REGISTRY"],
+        data_root=app.config["DEVICE_DATA_ROOT"],
+        instance_id="xiao_r1",
+        renderer_id="esp32_gray2_bin",
+    )
+    assert registry.get("xiao_r1").renderer_ids == ["esp32_gray2_bin__xiao_r1"]
+
+    repaints: list[str] = []
+    monkeypatch.setattr(
+        app.config["PUSH_MANAGER"],
+        "invalidate_and_repaint",
+        lambda device_id, **kw: repaints.append(device_id),
+    )
+    _status(client, "xiao_r1", token, {})
+    dev = registry.get("xiao_r1")
+    assert dev.manifest["advertised_gamuts"] == ["mono"]
+    assert dev.renderer_ids == ["esp32_bw_bin__xiao_r1"]
+    assert dev.panel["gamut"] == "mono"
+    assert repaints == ["xiao_r1"]
+    assert json.loads(dev.path.read_text(encoding="utf-8"))["renderer_id"] == "esp32_gray2_bin"
+
+    # Further keyless beats are steady: no writes, no repaints.
+    _status(client, "xiao_r1", token, {})
+    assert repaints == ["xiao_r1"]
+
+    # Capable firmware comes back: grey resumes from the kept pick.
+    _status(client, "xiao_r1", token, {"gamuts": ["mono", "gray_4"]})
+    assert registry.get("xiao_r1").renderer_ids == ["esp32_gray2_bin__xiao_r1"]
+    assert repaints == ["xiao_r1", "xiao_r1"]
+
+
+def test_reregister_without_the_key_falls_back_to_mono(app: Flask) -> None:
+    _register(app, "xiao_r2", "xiao_epaper_75", gamuts=["mono", "gray_4"])
+    registry = app.config["DEVICE_REGISTRY"]
+    device_service.set_instance_renderer_id(
+        devices=registry,
+        renderers=app.config["RENDERER_REGISTRY"],
+        data_root=app.config["DEVICE_DATA_ROOT"],
+        instance_id="xiao_r2",
+        renderer_id="esp32_gray2_bin",
+    )
+    # The same unit registers again on older firmware: no ``gamuts`` key.
+    client = app.test_client()
+    code = app.config["PAIRING_STORE"].issue(note="test").code
+    resp = client.post(
+        "/api/v1/device/register",
+        headers={"X-Pairing-Code": code},
+        json={"device_id": "xiao_r2", "kind": "xiao_epaper_75", "panel_w": 800, "panel_h": 480},
+    )
+    assert resp.status_code == 200
+    assert resp.get_json()["reused_existing"] is True
+    dev = registry.get("xiao_r2")
+    assert dev.manifest["advertised_gamuts"] == ["mono"]
+    assert dev.renderer_ids == ["esp32_bw_bin__xiao_r2"]
+
+
+def test_keyless_beats_never_write_a_device_that_never_advertised(app: Flask) -> None:
+    client, token = _register(app, "xiao_r3", "xiao_epaper_75")
+    _status(client, "xiao_r3", token, {})
+    dev = app.config["DEVICE_REGISTRY"].get("xiao_r3")
+    assert "advertised_gamuts" not in dev.manifest
+    assert "advertised_gamuts" not in json.loads(dev.path.read_text(encoding="utf-8"))
+
+
+def test_discover_without_the_key_leaves_the_capability_alone(app: Flask) -> None:
+    _register(app, "xiao_r4", "xiao_epaper_75", gamuts=["mono", "gray_4"], mac="AA:BB:CC:00:11:22")
+    client = app.test_client()
+    resp = client.post(
+        "/api/v1/device/discover",
+        json={
+            "device_id": "xiao_r4",
+            "kind": "xiao_epaper_75",
+            "mac": "AA:BB:CC:00:11:22",
+            "panel_w": 800,
+            "panel_h": 480,
+        },
+    )
+    assert resp.status_code < 500
+    dev = app.config["DEVICE_REGISTRY"].get("xiao_r4")
+    assert dev.manifest["advertised_gamuts"] == ["mono", "gray_4"]
+
+
+def test_heartbeats_off_the_rest_status_path_never_touch_it(app: Flask) -> None:
+    """MQTT and relay beats go through ``record_status_heartbeat`` and never
+    carry the key; their absence must not read as "mono only"."""
+    from app.transport_wiring import record_status_heartbeat
+
+    _register(app, "xiao_r5", "xiao_epaper_75", gamuts=["mono", "gray_4"])
+    registry = app.config["DEVICE_REGISTRY"]
+    record_status_heartbeat(
+        app=app,
+        device=registry.get("xiao_r5"),
+        payload=b'{"battery_pct": 70}',
+        status_cache=app.config["DEVICE_STATUS"],
+        event_log=app.config["EVENT_LOG"],
+        event_target="relay://xiao_r5/status",
+    )
+    assert registry.get("xiao_r5").manifest["advertised_gamuts"] == ["mono", "gray_4"]
 
 
 def test_device_card_hides_grey_until_advertised(app: Flask) -> None:

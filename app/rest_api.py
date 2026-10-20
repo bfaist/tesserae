@@ -670,15 +670,16 @@ def _maybe_heal_gamut(device_id: str, body: dict[str, Any]) -> None:
 
 
 def _maybe_record_gamuts(device_id: str, body: dict[str, Any]) -> None:
-    """Store the ``gamuts`` array a registering firmware advertises (the
-    colour depths it can paint), same as a status beat does. Best-effort."""
+    """Store the ``gamuts`` array a registering or beating firmware
+    advertises (the colour depths it can paint). A body without the key
+    means mono only; see ``record_advertised_gamuts``. Best-effort."""
     device = _devices().get(device_id)
     if device is None:
         return
     try:
-        from app.transport_wiring import _record_advertised_gamuts
+        from app.transport_wiring import record_advertised_gamuts
 
-        _record_advertised_gamuts(current_app, device, body)
+        record_advertised_gamuts(current_app, device, body)
     except Exception:
         current_app.logger.exception("rest: gamuts record failed for device=%s", device_id)
 
@@ -1749,6 +1750,13 @@ def post_status(device_id: str) -> Response:
             # apart from the MQTT version at a glance.
             event_target=f"rest://{device.id}/status",
         )
+    # Colour depths the firmware can paint. Dual-depth firmware sends
+    # ``gamuts`` on every beat, so a beat without it means mono only (a
+    # rolled-back panel); see ``record_advertised_gamuts``.
+    # An unparseable body says nothing either way, so it is skipped.
+    _status_body = request.get_json(silent=True, force=True)
+    if isinstance(_status_body, dict):
+        _maybe_record_gamuts(device.id, _status_body)
 
     # Optional ``tz`` field in the heartbeat body lets a client tell
     # the server its IANA timezone so the response can carry resolved

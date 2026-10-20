@@ -285,16 +285,35 @@ def merge_status_parsed(prev: dict[str, Any], new: dict[str, Any]) -> dict[str, 
 # -- subscriptions ------------------------------------------------------
 
 
-def _record_advertised_gamuts(app: Flask, device: Any, payload: Any) -> None:
-    """Store a register / status body's ``gamuts`` array on the device's
-    instance and, when that moves the renderer in use, drop and repaint the
-    cached frame so its digest and ETag change with it. A body without the
-    key keeps the last known value. Best-effort: never breaks a beat."""
+def record_advertised_gamuts(app: Flask, device: Any, payload: Any) -> None:
+    """Store a REST register / status body's ``gamuts`` array on the
+    device's instance and, when that moves the renderer in use, drop and
+    repaint the cached frame so its digest and ETag change with it.
+
+    Firmware that paints more than mono sends ``gamuts`` in every register
+    body and every status beat. So on these two paths a body WITHOUT the key
+    (or with an unreadable one) is firmware that paints mono only: typically
+    a panel that rolled back or was reflashed to a build from before the
+    key existed. A device that had advertised more is moved to ``["mono"]``,
+    which drops it back to the mono renderer; left on its old value, it
+    would keep receiving grey frames its firmware rejects on length, with
+    no way out. The operator's grey pick is kept, so a later capable
+    firmware resumes grey without asking again. A device that never
+    advertised anything is left without the field (no write).
+
+    Only the REST register and status handlers call this. ``/discover``,
+    MQTT and relay beats never touch the stored value. Best-effort: never
+    breaks a beat."""
     from app import device_service
 
-    gamuts = device_service.parse_advertised_gamuts(payload)
-    if gamuts is None or getattr(device, "kind_of", None) is None:
+    if getattr(device, "kind_of", None) is None:
         return
+    gamuts = device_service.parse_advertised_gamuts(payload)
+    if gamuts is None:
+        stored = device.manifest.get("advertised_gamuts")
+        if not isinstance(stored, list) or stored == ["mono"]:
+            return
+        gamuts = ["mono"]
     if device.manifest.get("advertised_gamuts") == gamuts:
         return
     try:
@@ -445,11 +464,10 @@ def record_status_heartbeat(
         entry["can_stay_awake"] = can_stay_awake
     elif prev_entry.get("can_stay_awake") is not None:
         entry["can_stay_awake"] = prev_entry["can_stay_awake"]
-    # Colour depths the firmware can paint (``gamuts``: ["mono", "gray_4"]):
-    # sticky, a firmware property. Persisted on the instance file because
-    # the renderer in use depends on it (mono / grey boards render grey only
-    # once the device has advertised gray_4); a move drops the cached frame.
-    _record_advertised_gamuts(app, device, payload)
+    # Colour depths the firmware can paint (``gamuts``) are recorded by the
+    # REST status handler itself (``record_advertised_gamuts``), not here:
+    # this helper also serves MQTT and relay beats, which never carry the
+    # key and must not read its absence as "mono only".
     # Log upload capability: sticky like ota_schema (a firmware property).
     logs_schema = device_logs.advertised_logs_schema(payload)
     if logs_schema is not None:
