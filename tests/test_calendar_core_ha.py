@@ -158,6 +158,20 @@ def test_load_events_ha_feed_tags_and_caches(cc: Any, tmp_path: Path) -> None:
     assert health["family"]["error"] is None
 
 
+def test_load_events_feed_filter_ignores_case(cc: Any, tmp_path: Path) -> None:
+    # A phone keyboard capitalises the first letter of the Feed IDs option.
+    _write_ha_feed(tmp_path)
+    stub = _StubCore(
+        payload=[
+            {"summary": "Dentist", "start": {"date": "2026-08-29"}, "end": {"date": "2026-08-30"}}
+        ]
+    )
+    cc._ha_core = lambda: stub
+    start = datetime(2026, 8, 28, tzinfo=UTC)
+    events = cc.load_events(["Family"], start, start + timedelta(days=7), data_dir=tmp_path)
+    assert [e["feed_id"] for e in events] == ["family"]
+
+
 def test_load_events_ha_feed_filters_and_disabled(cc: Any, tmp_path: Path) -> None:
     _write_ha_feed(tmp_path, enabled=False)
     stub = _StubCore(payload=[{"summary": "X", "start": {"date": "2026-08-29"}}])

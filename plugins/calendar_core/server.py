@@ -671,13 +671,13 @@ def load_events(
     every enabled feed."""
     dd = data_dir if data_dir is not None else _data_dir()
     feeds = _load_feeds(dd).get("feeds") or []
-    wanted = set(feed_ids) if feed_ids else None
+    wanted = {x.lower() for x in feed_ids} if feed_ids else None
     out: list[dict[str, Any]] = []
     for feed in feeds:
         if not feed.get("enabled", True):
             continue
         fid = feed.get("id")
-        if wanted is not None and fid not in wanted:
+        if wanted is not None and str(fid).lower() not in wanted:
             continue
         if feed_source(feed) == "ha":
             for ev in _fetch_ha_events(feed, start, end, dd):
@@ -806,13 +806,13 @@ def load_todos(
     component maps to one item."""
     dd = data_dir if data_dir is not None else _data_dir()
     feeds = _load_feeds(dd).get("feeds") or []
-    wanted = set(feed_ids) if feed_ids else None
+    wanted = {x.lower() for x in feed_ids} if feed_ids else None
     out: list[dict[str, Any]] = []
     for feed in feeds:
         if not feed.get("enabled", True):
             continue
         fid = feed.get("id")
-        if wanted is not None and fid not in wanted:
+        if wanted is not None and str(fid).lower() not in wanted:
             continue
         url = feed.get("url")
         if not url:
