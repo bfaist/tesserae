@@ -76,14 +76,11 @@ jobs:
         # worker occasionally goes silent for 70-100 min on the runner. A
         # test that passes 15 min now fails with its stack, and the slowest
         # tests are listed either way, so a stall names itself.
-        run: pytest -n auto -q --timeout=900 --durations=15
+        run: nice -n 10 pytest -n auto -q --timeout=900 --durations=15
 
   coverage:
     name: coverage
-    # Pinned to 24.04: on the ubuntu-26.04 image ubuntu-latest moved to on
-    # 2026-10-19 this job's runner is lost near the end of the run (no test
-    # failures; "starves it for CPU/Memory"). Unpin once that is understood.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     # Split out from `pytest` and pinned to 3.13 for one reason: speed.
     # coverage.py's default C tracer costs ~2.5x on this suite, which is what
     # made the blocking check a ~50 minute job. COVERAGE_CORE=sysmon puts it on
@@ -107,9 +104,29 @@ jobs:
         # The floor sits just under the current ~82% so a genuine regression
         # fails the build while normal churn doesn't. Raise it as coverage
         # climbs.
+        #
+        # From 2026-10-20 the runner was lost at 95-99% of this step on both
+        # ubuntu-24.04 and 26.04 with no test failing ("lost communication
+        # with the server ... starves it for CPU/Memory"); locally the same
+        # run peaks near 3 GB over four workers. pytest runs under nice so the
+        # runner agent keeps its CPU share, and a sampler prints memory, disk,
+        # load and the largest processes once a minute into this log, which
+        # streams up to the moment a runner dies, so a repeat names its cause.
         env:
           COVERAGE_CORE: sysmon
-        run: pytest -n auto -q --timeout=900 --durations=15 --cov=app --cov-report=term-missing --cov-fail-under=80
+        run: |
+          (while sleep 60; do
+            echo
+            echo "::group::resources $(date -u +%T)"
+            free -m | sed -n 2p; df -h / | tail -1; cat /proc/loadavg
+            ps -eo rss,pcpu,comm --sort=-rss | head -6
+            echo "::endgroup::"
+          done) &
+          sampler=$!
+          status=0
+          nice -n 10 pytest -n auto -q --timeout=900 --durations=15 --cov=app --cov-report=term-missing --cov-fail-under=80 || status=$?
+          kill "$sampler" 2>/dev/null || true
+          exit "$status"
 
   pytest-forward:
     name: pytest (forward-compat)
@@ -139,7 +156,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
       - name: pytest
-        run: pytest -n auto -q --timeout=900 --durations=15
+        run: nice -n 10 pytest -n auto -q --timeout=900 --durations=15
 
   security:
     name: security scan
