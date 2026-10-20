@@ -33,7 +33,15 @@ from types import ModuleType
 from typing import Any
 
 import jsonschema
-from flask import Blueprint, Flask, abort, current_app, render_template, send_from_directory
+from flask import (
+    Blueprint,
+    Flask,
+    abort,
+    current_app,
+    has_app_context,
+    render_template,
+    send_from_directory,
+)
 from werkzeug.wrappers import Response
 
 from app.capabilities import Capabilities, set_delegate_resolver
@@ -238,14 +246,26 @@ class Plugin:
         return defaults
 
     @property
-    def has_admin(self) -> bool:
-        """True when the plugin's server.py exports a Flask ``blueprint()``
-        , register_routes mounts it at /plugins/<id>/ as the plugin's
-         admin page. The top-nav Plugins dropdown uses this to enumerate
-         which plugins have a UI."""
+    def has_blueprint(self) -> bool:
+        """True when the plugin's server.py exports a Flask ``blueprint()``,
+        which register_routes mounts under /plugins/<id>/."""
         if self.server_module is None:
             return False
         return callable(getattr(self.server_module, "blueprint", None))
+
+    @property
+    def has_admin(self) -> bool:
+        """True when the plugin serves a page at /plugins/<id>/. The top-nav
+        Admin pages menu and the Installed widgets list link there. A
+        blueprint alone isn't enough: trmnl_proxy mounts only ``/image``, so
+        linking it gave a 404 (tesserae-widget-trmnl-proxy#1)."""
+        if not self.has_blueprint:
+            return False
+        if not has_app_context():
+            return True
+        served = current_app.config.get("PLUGIN_ADMIN_IDS")
+        # Unset only before register_routes has run; keep the old answer.
+        return True if served is None else self.id in served
 
 
 @dataclass
@@ -653,3 +673,8 @@ def register_routes(app: Flask, registry: PluginRegistry) -> None:
             render_safe.update(str(name) for name in declared)
 
     app.config["RENDER_SAFE_ENDPOINTS"] = frozenset(render_safe)
+    # Plugins whose blueprint serves its index, for Plugin.has_admin.
+    rules = {rule.rule for rule in app.url_map.iter_rules()}
+    app.config["PLUGIN_ADMIN_IDS"] = frozenset(
+        pid for pid in registry.plugins if f"/plugins/{pid}/" in rules
+    )

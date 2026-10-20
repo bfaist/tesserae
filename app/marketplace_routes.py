@@ -677,7 +677,7 @@ def remove_uploaded_widget() -> Response:
     data_root = Path(current_app.config["DATA_ROOT"])
     registry = current_app.config.get("PLUGIN_REGISTRY")
     plugin = registry.get(plugin_id) if registry is not None else None
-    had_admin = bool(plugin is not None and plugin.has_admin)
+    had_admin = bool(plugin is not None and plugin.has_blueprint)
     if not authored_widgets.uninstall(plugin_id, data_root=data_root):
         flash(f"{plugin_id!r} isn't an uploaded widget; nothing removed.", "error")
         return redirect(url_for("plugins.plugins_index"))

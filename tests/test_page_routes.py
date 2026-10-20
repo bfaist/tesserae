@@ -1270,6 +1270,29 @@ def test_multiselect_tolerates_bare_string_and_missing_value(app: Flask) -> None
     assert _multiselect_checkbox_order(app, None, options) == ["light.a", "light.b"]
 
 
+def test_multiselect_keeps_saved_values_the_choices_no_longer_list(app: Flask) -> None:
+    """Regression for #323: with Home Assistant unreachable, choices()
+    is only a guidance hint, so the saved entities had no checkbox and
+    the save-every-form before a cell swap cleared them. They now render
+    checked (and still submit), with the hint kept above the list."""
+    hint = [{"value": "", "label": "Home Assistant unreachable, check URL + token"}]
+    html = _render_multiselect(app, ["sensor.a", "light.b"], hint)
+    import re
+
+    checked = re.findall(r'type="checkbox"[^>]*value="([^"]*)"\s*checked', html)
+    assert checked == ["sensor.a", "light.b"]
+    assert "Home Assistant unreachable" in html
+    assert "sensor.a (not in the current list)" in html
+
+    # A saved entity HA no longer lists stays, in place, next to live ones.
+    options = [{"value": "light.b", "label": "B"}, {"value": "light.c", "label": "C"}]
+    assert _multiselect_checkbox_order(app, ["sensor.gone", "light.b"], options) == [
+        "sensor.gone",
+        "light.b",
+        "light.c",
+    ]
+
+
 def test_multiselect_renders_accessible_reorder_handles(app: Flask) -> None:
     html = _render_multiselect(
         app,
