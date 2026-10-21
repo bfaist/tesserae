@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tesserae"
-version = "0.471.3"
+version = "0.471.4"
 description = "E-ink dashboard companion. Compose tile-based dashboards, render headless, push frames over MQTT."
 requires-python = ">=3.11"
 license = { text = "AGPL-3.0-or-later" }
@@ -13,7 +13,7 @@ dependencies = [
     "flask>=3.0,<4",
     "pydantic>=2.6,<3",
     "jsonschema>=4.21,<5",
-    "pillow>=10.2,<13",
+    "pillow>=10.2,<14",
     # HEIF / HEIC decoder, registered with Pillow at import time. iPhone
     # photos arrive HEIC by default; without this the picture_* widget
     # family falls through to "broken image" tiles whenever a library
