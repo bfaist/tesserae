@@ -105,13 +105,14 @@ jobs:
         # fails the build while normal churn doesn't. Raise it as coverage
         # climbs.
         #
-        # From 2026-10-20 the runner was lost at 95-99% of this step on both
-        # ubuntu-24.04 and 26.04 with no test failing ("lost communication
-        # with the server ... starves it for CPU/Memory"); locally the same
-        # run peaks near 3 GB over four workers. pytest runs under nice so the
-        # runner agent keeps its CPU share, and a sampler prints memory, disk,
-        # load and the largest processes once a minute into this log, which
-        # streams up to the moment a runner dies, so a repeat names its cause.
+        # From 2026-10-20 the runner was lost at 95-99% of this step with no
+        # test failing. The sampler below showed why: each worker grew past
+        # 7 GB until the 16 GB runner ran out. create_app registered bound
+        # stop methods with atexit, which pinned every app a test built
+        # (fixed in 0.471.3, tests/test_app_not_pinned.py). The sampler stays:
+        # it prints memory, disk, load and the largest processes once a minute
+        # into this log, which streams up to the moment a runner dies. pytest
+        # runs under nice so the runner agent keeps its CPU share.
         env:
           COVERAGE_CORE: sysmon
         run: |
@@ -185,7 +186,10 @@ jobs:
         # pillow 12), and with setuptools upgraded above nothing else is
         # reported. A new advisory now fails the build until it is upgraded
         # past or ignored here with --ignore-vuln and a reason.
-        run: pip-audit --progress-spinner off
+        # --skip-editable: the app itself is installed editable and isn't on
+        # PyPI; auditing it asked pypi.org about "tesserae <version>", which
+        # failed the job on a PyPI 503 (2026-10-20).
+        run: pip-audit --progress-spinner off --skip-editable
 
   mypy:
     name: mypy (strict modules)

@@ -19,10 +19,13 @@ clients can hit /settings without juggling sessions.
 
 from __future__ import annotations
 
+import atexit
 import logging
 import mimetypes
 import os
 import time
+import weakref
+from collections.abc import Callable
 from datetime import tzinfo
 from pathlib import Path
 from typing import Any
@@ -220,6 +223,22 @@ def _resolve_app_timezone(app: Flask) -> tzinfo | None:
     except Exception:
         return None
     return tz if isinstance(tz, tzinfo) else None
+
+
+def _stop_at_exit(method: Callable[[], object]) -> None:
+    """Run a bound ``stop``/``shutdown`` on interpreter exit without keeping
+    its object alive. ``atexit`` holds what it is given until exit, so a
+    plain ``atexit.register(obj.stop)`` pins ``obj`` and, through it, the
+    whole app; every ``create_app`` in a test process then stayed in memory
+    for good, and the CI coverage job ran its 16 GB runner out of memory."""
+    ref = weakref.WeakMethod(method)
+
+    def _call() -> None:
+        bound = ref()
+        if bound is not None:
+            bound()
+
+    atexit.register(_call)
 
 
 def create_app(
@@ -959,9 +978,7 @@ def create_app(
         # Shut Chromium down cleanly on Python exit so the worker thread,
         # child Chromium process, and the playwright event loop unwind in
         # order. atexit fires for waitress + the dev reloader child alike.
-        import atexit as _atexit
-
-        _atexit.register(_browser_pool.stop)
+        _stop_at_exit(_browser_pool.stop)
 
     # Transport + push manager are (re)built from current broker settings.
     # Holding the rebuilder in app.config lets settings_routes call it on a
@@ -1246,13 +1263,8 @@ def create_app(
     )
     companion_jobs = CompanionJobs(app, companion_job_store)
     app.config["COMPANION_JOBS"] = companion_jobs
-    # Own local import: the ``_atexit`` alias above lives inside the
-    # browser-pool branch, which is skipped under ``testing``, so it isn't
-    # bound here on every path.
-    import atexit
-
-    atexit.register(companion_jobs.shutdown)
-    atexit.register(data_change_coordinator.stop)
+    _stop_at_exit(companion_jobs.shutdown)
+    _stop_at_exit(data_change_coordinator.stop)
     companion_api.register(app)
 
     if not testing:
