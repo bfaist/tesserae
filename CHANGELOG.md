@@ -6,6 +6,17 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ## [Unreleased]
 
+### Security
+
+- The Docker image now refreshes its CA certificates at build time.
+  The pinned Playwright base image is never rebuilt, so its trust store
+  was frozen at that image's build date. It still trusted emSign ECC
+  Root CA - G3 and Comodo AAA Services, the two roots distrusted after
+  the October 2026 eMudhra intermediate key compromise
+  (https://emudhra.we-have-a-problem.com/). Widgets and other outbound
+  HTTPS calls now use Ubuntu's current bundle, which no longer includes
+  them.
+
 ## [0.470.1], 2026-10-20
 
 ### Fixed

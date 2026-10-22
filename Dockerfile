@@ -67,10 +67,18 @@ WORKDIR /app
 # back to regional-indicator letter pairs in boxes. ~12 MB on top
 # of the existing image, paid once for every emoji widget.
 #
+# ``ca-certificates`` is already in the base image, but naming it here
+# upgrades it to the current Ubuntu package. The pinned Playwright tag
+# is never rebuilt, so its CA bundle is frozen at the tag's build date
+# and misses root distrusts, e.g. emSign ECC Root CA - G3 and Comodo
+# AAA Services after the October 2026 eMudhra key compromise. Python's
+# HTTP clients trust this bundle, so a stale one means Tesserae
+# accepts certificates the rest of the world has stopped trusting.
+#
 # Keep this stable system layer ahead of dependency and source copies:
 # an app-only release should not make operators pull it again.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gosu fonts-noto-color-emoji \
+    && apt-get install -y --no-install-recommends gosu fonts-noto-color-emoji ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && gosu nobody true
 
