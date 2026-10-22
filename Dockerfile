@@ -67,18 +67,10 @@ WORKDIR /app
 # back to regional-indicator letter pairs in boxes. ~12 MB on top
 # of the existing image, paid once for every emoji widget.
 #
-# ``ca-certificates`` is already in the base image, but naming it here
-# upgrades it to the current Ubuntu package. The pinned Playwright tag
-# is never rebuilt, so its CA bundle is frozen at the tag's build date
-# and misses root distrusts, e.g. emSign ECC Root CA - G3 and Comodo
-# AAA Services after the October 2026 eMudhra key compromise. Python's
-# HTTP clients trust this bundle, so a stale one means Tesserae
-# accepts certificates the rest of the world has stopped trusting.
-#
 # Keep this stable system layer ahead of dependency and source copies:
 # an app-only release should not make operators pull it again.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gosu fonts-noto-color-emoji ca-certificates \
+    && apt-get install -y --no-install-recommends gosu fonts-noto-color-emoji \
     && rm -rf /var/lib/apt/lists/* \
     && gosu nobody true
 
@@ -123,6 +115,18 @@ COPY static/     /app/static/
 # site-packages where none of those folders live. Editable keeps
 # REPO_ROOT = /app so the loaders find their content.
 RUN pip install -e /app --no-deps
+
+# Refresh the CA bundle. The pinned Playwright tag is never rebuilt, so
+# its ``ca-certificates`` is frozen at the tag's build date and misses
+# root distrusts, e.g. emSign ECC Root CA - G3 and Comodo AAA Services
+# after the October 2026 eMudhra key compromise. Tesserae's outbound
+# HTTPS goes through urllib, which trusts this bundle. This sits after
+# the source copy on purpose: the build cache reuses every layer above
+# it, so placed there it would refresh once and then go stale again.
+# Here it reruns on every build as one small extra layer to pull.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends --only-upgrade ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # Persistent state, settings.json, pages, schedules, events DB, render
 # cache, gallery photos, backups. Tesserae's default data_root is

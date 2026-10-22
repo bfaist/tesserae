@@ -8,7 +8,7 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ### Security
 
-- The Docker image now refreshes its CA certificates at build time.
+- The Docker image now refreshes its CA certificates on every build.
   The pinned Playwright base image is never rebuilt, so its trust store
   was frozen at that image's build date. It still trusted emSign ECC
   Root CA - G3 and Comodo AAA Services, the two roots distrusted after
