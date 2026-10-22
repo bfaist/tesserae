@@ -116,6 +116,18 @@ COPY static/     /app/static/
 # REPO_ROOT = /app so the loaders find their content.
 RUN pip install -e /app --no-deps
 
+# Refresh the CA bundle. The pinned Playwright tag is never rebuilt, so
+# its ``ca-certificates`` is frozen at the tag's build date and misses
+# root distrusts, e.g. emSign ECC Root CA - G3 and Comodo AAA Services
+# after the October 2026 eMudhra key compromise. Tesserae's outbound
+# HTTPS goes through urllib, which trusts this bundle. This sits after
+# the source copy on purpose: the build cache reuses every layer above
+# it, so placed there it would refresh once and then go stale again.
+# Here it reruns on every build as one small extra layer to pull.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends --only-upgrade ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 # Persistent state, settings.json, pages, schedules, events DB, render
 # cache, gallery photos, backups. Tesserae's default data_root is
 # REPO_ROOT/data, which inside the image is /app/data. Mounting a
