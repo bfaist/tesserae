@@ -6,6 +6,18 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+
+- A widget's select option can show a picture per choice. A choice with
+  an `image` (a path under the plugin's `static/` folder, or an https
+  URL) turns the option into a picture picker: a row with the chosen
+  picture and name that opens a grid of every choice with a filter box.
+  Each picture's corner button opens it large (`image_large`, else the
+  picture itself), to step through with the arrows and choose from.
+  The hidden native select still holds the value, so saving and
+  `show_if` work as before; older servers ignore the field and show the
+  plain dropdown.
+
 ### Security
 
 - The Docker image now refreshes its CA certificates on every build.

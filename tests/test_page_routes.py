@@ -2287,3 +2287,78 @@ def test_create_form_sits_behind_new_dashboard(app: Flask) -> None:
     assert 'id="dash-create" data-create-panel>' in client.get("/pages?create=1").get_data(
         as_text=True
     )
+
+
+def test_a_select_with_pictures_is_a_picture_picker(app: Flask) -> None:
+    """Choices with an ``image`` draw the picture picker: the chosen one's
+    picture and name on the row, a grid of the pictured choices, the rest as
+    text buttons, and the native select kept in the form, hidden, holding
+    the value. A request through Home Assistant's ingress prefixes the
+    pictures' paths."""
+    options = [
+        {
+            "value": "poster",
+            "label": "Vintage poster",
+            "image": "/plugins/w/static/styles/poster.jpg",
+            "image_large": "/plugins/w/static/styles/large/poster.jpg",
+        },
+        {
+            "value": "ink",
+            "label": "Black ink",
+            "image": "/plugins/w/static/styles/ink.jpg",
+            "group": "Drawn",
+        },
+        {"value": "custom", "label": "Your own prompt"},
+        {"value": "bad", "label": "No scheme", "image": "javascript:alert(1)"},
+    ]
+    tmpl = "{% from '_components.html' import select_field %}{{ select_field('f', 'style', 'Style', value=value, options=options) }}"
+    with app.test_request_context("/", headers={"X-Ingress-Path": "/api/hassio_ingress/tok"}):
+        html = app.jinja_env.from_string(tmpl).render(value="ink", options=options)
+    assert "data-pic-select" in html and "data-pic-native" in html and " hidden" in html
+    assert '<option value="ink" selected>Black ink</option>' in html, (
+        "the form still submits the select"
+    )
+    assert "data-pic-current-label>Black ink<" in html
+    assert (
+        'src="/plugins/w/static/styles/ink.jpg"' in html
+        or "/hassio_ingress/tok/plugins/w/static/styles/ink.jpg" in html
+    )
+    assert (
+        'data-pic-value="ink" data-pic-image=' in html
+        and 'aria-selected="true" data-pic-value="ink"' in html
+    )
+    assert '<div class="pic-group" data-pic-group>Drawn</div>' in html
+    assert 'class="pic-opt pic-opt-text"' in html and ">Your own prompt</button>" in html
+    assert "javascript:" not in html, "only server paths and http(s) pictures"
+    # each picture can be opened large: its own large copy, else the picture itself
+    assert (
+        'data-pic-large="/plugins/w/static/styles/large/poster.jpg"' in html
+        or "large/poster.jpg" in html
+    )
+    assert (
+        'data-pic-large="/api/hassio_ingress/tok/plugins/w/static/styles/ink.jpg"' in html
+        or 'data-pic-large="/plugins/w/static/styles/ink.jpg"' in html
+    )
+    assert html.count("data-pic-zoom") == 2 and 'aria-label="Enlarge Black ink"' in html
+    # without pictures, the plain select as before
+    with app.app_context():
+        plain = app.jinja_env.from_string(tmpl).render(
+            value="a", options=[{"value": "a", "label": "A"}]
+        )
+    assert "data-pic-select" not in plain and "hidden" not in plain
+
+
+def test_choice_image_takes_the_ingress_prefix(app: Flask) -> None:
+    ci = app.jinja_env.globals["choice_image"]
+    with app.test_request_context(
+        "/x", environ_overrides={"SCRIPT_NAME": "/api/hassio_ingress/tok"}
+    ):
+        assert ci("/plugins/w/static/a.jpg") == "/api/hassio_ingress/tok/plugins/w/static/a.jpg"
+        assert ci("https://example.com/a.jpg") == "https://example.com/a.jpg"
+        assert (
+            ci("//evil.example/a.jpg") == ""
+            and ci("data:image/png;base64,xx") == ""
+            and ci("") == ""
+        )
+    with app.app_context():
+        assert ci("/plugins/w/static/a.jpg") == "/plugins/w/static/a.jpg"

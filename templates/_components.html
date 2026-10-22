@@ -181,9 +181,62 @@ macro here instead.
   {% if value_key == option_value|string %}{% set selected.found = true %}{% endif %}
 {% endfor %}
 {% set has_value = value_key != '' %}
-<div class="field">
-  <label for="{{ field_id }}">{{ label }}{{ info_pop(help) }}</label>
-  <select id="{{ field_id }}" name="{{ name }}"
+{#- A choice may carry an ``image`` (a style's sample picture, say). When any
+    does, the select is drawn as a picture picker: a row with the chosen
+    one's picture and name that opens a grid of every choice, with a filter
+    box; each picture's corner button opens it large (``image_large`` when
+    the choice has one), to step through and choose from. The native select stays in the form, hidden, and the picker sets it
+    and fires its change, so saving, show_if and the dirty-form tracker see
+    the same control they always did. -#}
+{% set pics = namespace(any=false) %}
+{% for opt in options %}{% if opt is mapping and opt.get('image') and choice_image(opt.get('image')) %}{% set pics.any = true %}{% endif %}{% endfor %}
+<div class="field{% if pics.any %} pic-select{% endif %}"{% if pics.any %} data-pic-select{% endif %}>
+  <label for="{{ field_id }}"{% if pics.any %} id="{{ field_id }}-label"{% endif %}>{{ label }}{{ info_pop(help) }}</label>
+  {% if pics.any %}
+  {% set cur = namespace(label=(blank_label if (blank_label is not none and not has_value) else ('Unavailable: ' ~ value_key if has_value else '(not set)')), image='') %}
+  {% for opt in options %}
+    {% if opt is mapping %}{% set v = opt.value %}{% set l = opt.label %}{% else %}{% set v = opt[0] %}{% set l = opt[1] %}{% endif %}
+    {% if value_key == v|string %}{% set cur.label = l %}{% set cur.image = choice_image(opt.get('image')) if opt is mapping else '' %}{% endif %}
+  {% endfor %}
+  <button type="button" class="pic-trigger" data-pic-trigger aria-haspopup="listbox" aria-expanded="false" aria-labelledby="{{ field_id }}-label {{ field_id }}-current">
+    <span class="pic-thumb{% if not cur.image %} is-blank{% endif %}" data-pic-current-thumb aria-hidden="true">{% if cur.image %}<img src="{{ cur.image }}" alt="" decoding="async">{% endif %}</span>
+    <span class="pic-current" id="{{ field_id }}-current" data-pic-current-label>{{ cur.label }}</span>
+    <span class="pic-caret" aria-hidden="true"></span>
+  </button>
+  <div class="pic-pop" data-pic-pop hidden>
+    <input type="search" class="pic-filter" data-pic-filter placeholder="Find one" aria-label="Find a choice for {{ label }}" autocomplete="off">
+    <div class="pic-grid" role="listbox" aria-labelledby="{{ field_id }}-label">
+      {% set pg = namespace(group='') %}
+      {% for opt in options %}
+        {% if opt is mapping and choice_image(opt.get('image')) %}
+          {% set g = opt.get('group', '') %}
+          {% if g and g != pg.group %}<div class="pic-group" data-pic-group>{{ g }}</div>{% set pg.group = g %}{% endif %}
+          <div class="pic-cell">
+            <button type="button" class="pic-opt" role="option" aria-selected="{{ 'true' if value_key == opt.value|string else 'false' }}" data-pic-value="{{ opt.value }}" data-pic-image="{{ choice_image(opt.get('image')) }}" data-pic-large="{{ choice_image(opt.get('image_large')) or choice_image(opt.get('image')) }}">
+              <img src="{{ choice_image(opt.get('image')) }}" alt="" loading="lazy" decoding="async">
+              <span>{{ opt.label }}</span>
+            </button>
+            <button type="button" class="pic-zoom" data-pic-zoom aria-label="Enlarge {{ opt.label }}" title="Enlarge"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% set plain = namespace(n=0) %}
+    {% for opt in options %}{% if not (opt is mapping and choice_image(opt.get('image'))) %}{% set plain.n = plain.n + 1 %}{% endif %}{% endfor %}
+    {% if plain.n %}
+    <div class="pic-more">
+      {% for opt in options %}
+        {% if not (opt is mapping and choice_image(opt.get('image'))) %}
+          {% if opt is mapping %}{% set v = opt.value %}{% set l = opt.label %}{% else %}{% set v = opt[0] %}{% set l = opt[1] %}{% endif %}
+          <button type="button" class="pic-opt pic-opt-text" role="option" aria-selected="{{ 'true' if value_key == v|string else 'false' }}" data-pic-value="{{ v }}">{{ l }}</button>
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="pic-empty" data-pic-empty hidden>Nothing matches.</div>
+  </div>
+  {% endif %}
+  <select id="{{ field_id }}" name="{{ name }}"{% if pics.any %} class="pic-native" hidden data-pic-native{% endif %}
           {% if form %}form="{{ form }}"{% endif %}>
     {% if blank_label is not none %}
     <option value="" {% if not has_value %}selected{% endif %}>{{ blank_label }}</option>

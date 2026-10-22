@@ -89,7 +89,16 @@
               "required": ["value", "label"],
               "properties": {
                 "value": {},
-                "label": { "type": "string" }
+                "label": { "type": "string" },
+                "group": { "type": "string" },
+                "image": {
+                  "type": "string",
+                  "description": "A picture of the choice (a path on this server such as /plugins/<id>/static/x.jpg, or an https URL). When any choice of a select has one, the editor shows a picture picker instead of a plain dropdown."
+                },
+                "image_large": {
+                  "type": "string",
+                  "description": "A bigger copy of image, shown when the picker's picture is enlarged. Defaults to image."
+                }
               }
             }
           },

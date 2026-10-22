@@ -31,7 +31,15 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from flask import Flask, abort, redirect, request, send_from_directory, url_for
+from flask import (
+    Flask,
+    abort,
+    has_request_context,
+    redirect,
+    request,
+    send_from_directory,
+    url_for,
+)
 from flask.json.provider import DefaultJSONProvider
 from pydantic import BaseModel
 from werkzeug.wrappers import Response
@@ -1338,6 +1346,21 @@ def create_app(
     from app.option_conditions import option_visible as _option_visible
 
     app.jinja_env.globals["option_visible"] = _option_visible
+
+    def _choice_image(src: Any) -> str:
+        """A select choice's picture (``choices[].image``) as the browser
+        should ask for it: a path on this server (``/plugins/<id>/static/...``)
+        gets the URL prefix the request came through, so it still loads under
+        Home Assistant's ingress; an http(s) URL stays as it is; anything
+        else is no picture."""
+        s = str(src or "").strip()
+        if s.startswith(("https://", "http://")):
+            return s
+        if s.startswith("/") and not s.startswith("//"):
+            return (request.script_root.rstrip("/") if has_request_context() else "") + s
+        return ""
+
+    app.jinja_env.globals["choice_image"] = _choice_image
 
     def _device_base_url() -> str:
         """The address a panel reaches this server on, for setup text that

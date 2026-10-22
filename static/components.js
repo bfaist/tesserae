@@ -958,6 +958,249 @@
     init();
   }
 
+  // The picture picker (a select whose choices carry an ``image``, drawn by
+  // select_field): a row with the chosen picture that opens a grid. Bound
+  // once on the document, so a form the editor injects later works with no
+  // attach call. The hidden native select holds the value; choosing sets it
+  // and fires change and input on it, as a person picking from it would.
+  (function bindPicturePicker() {
+    const fieldOf = (el) => el && el.closest("[data-pic-select]");
+    const native = (f) => f.querySelector("[data-pic-native]");
+    const pop = (f) => f.querySelector("[data-pic-pop]");
+    const trigger = (f) => f.querySelector("[data-pic-trigger]");
+    const boxOf = (o) => o.closest(".pic-cell") || o;
+    const visibleOpts = (f) => Array.from(f.querySelectorAll(".pic-opt")).filter((o) => !boxOf(o).hidden);
+
+    function sync(f) {
+      const sel = native(f);
+      if (!sel) return;
+      let chosen = null;
+      f.querySelectorAll(".pic-opt").forEach((o) => {
+        const on = o.dataset.picValue === sel.value;
+        o.setAttribute("aria-selected", on ? "true" : "false");
+        if (on) chosen = o;
+      });
+      const opt = sel.options[sel.selectedIndex];
+      const label = f.querySelector("[data-pic-current-label]");
+      if (label) label.textContent = opt ? opt.textContent : "";
+      const thumb = f.querySelector("[data-pic-current-thumb]");
+      if (thumb) {
+        const src = chosen && chosen.dataset.picImage;
+        thumb.classList.toggle("is-blank", !src);
+        thumb.innerHTML = src ? `<img src="${_escapeHtml(src)}" alt="" decoding="async">` : "";
+      }
+    }
+    function open(f) {
+      document.querySelectorAll("[data-pic-select].is-open").forEach((o) => o !== f && close(o));
+      const p = pop(f);
+      if (!p) return;
+      sync(f);
+      p.hidden = false;
+      f.classList.add("is-open");
+      trigger(f).setAttribute("aria-expanded", "true");
+      const on = f.querySelector('.pic-opt[aria-selected="true"]') || visibleOpts(f)[0];
+      if (on) {
+        on.scrollIntoView({ block: "nearest" });
+        on.focus({ preventScroll: true });
+      }
+    }
+    function close(f, refocus) {
+      const p = pop(f);
+      if (!p || p.hidden) return;
+      p.hidden = true;
+      f.classList.remove("is-open");
+      trigger(f).setAttribute("aria-expanded", "false");
+      const q = f.querySelector("[data-pic-filter]");
+      if (q && q.value) {
+        q.value = "";
+        filter(f, "");
+      }
+      if (refocus) trigger(f).focus();
+    }
+    function choose(f, o) {
+      const sel = native(f);
+      if (!sel) return;
+      if (sel.value !== o.dataset.picValue) {
+        sel.value = o.dataset.picValue;
+        sel.dispatchEvent(new Event("input", { bubbles: true }));
+        sel.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      sync(f);
+      close(f, true);
+    }
+    function filter(f, text) {
+      const q = text.trim().toLowerCase();
+      let shown = 0;
+      f.querySelectorAll(".pic-opt").forEach((o) => {
+        const hit = !q || o.textContent.toLowerCase().includes(q);
+        boxOf(o).hidden = !hit;
+        if (hit) shown += 1;
+      });
+      // a group heading shows while one of its pictures does
+      f.querySelectorAll("[data-pic-group]").forEach((g) => {
+        let n = g.nextElementSibling;
+        let any = false;
+        while (n && !n.hasAttribute("data-pic-group")) {
+          if (!n.hidden) any = true;
+          n = n.nextElementSibling;
+        }
+        g.hidden = !any;
+      });
+      const empty = f.querySelector("[data-pic-empty]");
+      if (empty) empty.hidden = shown > 0;
+    }
+
+    // The enlarged view: one picture big, with its name, the ones before and
+    // after it (the pictured choices the filter leaves), and a button that
+    // chooses it. It sits over everything, the editor's drawer included.
+    let view = null;
+    function closeView() {
+      if (!view) return;
+      const back = view.back;
+      view.el.remove();
+      view = null;
+      if (back && back.isConnected) back.focus();
+    }
+    function showView(f, o, back) {
+      const pics = visibleOpts(f).filter((x) => x.dataset.picLarge);
+      if (!pics.length) return;
+      if (!view) {
+        const el = document.createElement("div");
+        el.className = "pic-view";
+        el.setAttribute("role", "dialog");
+        el.setAttribute("aria-modal", "true");
+        el.innerHTML =
+          '<div class="pic-view-box">' +
+          '<button type="button" class="pic-view-close" data-pv-close aria-label="Close"><i class="ph ph-x" aria-hidden="true"></i></button>' +
+          '<figure class="pic-view-fig"><img alt="" data-pv-img><figcaption><b data-pv-name></b><span data-pv-pos></span></figcaption></figure>' +
+          '<div class="pic-view-bar">' +
+          '<button type="button" class="pic-view-step" data-pv-step="-1" aria-label="Previous"><i class="ph ph-caret-left" aria-hidden="true"></i></button>' +
+          '<button type="button" class="primary pic-view-use" data-pv-use>Choose</button>' +
+          '<button type="button" class="pic-view-step" data-pv-step="1" aria-label="Next"><i class="ph ph-caret-right" aria-hidden="true"></i></button>' +
+          "</div></div>";
+        document.body.appendChild(el);
+        view = { el, f, back, at: 0, pics };
+      }
+      view.f = f;
+      view.pics = pics;
+      view.at = Math.max(0, pics.indexOf(o));
+      if (back) view.back = back;
+      paintView();
+      view.el.querySelector("[data-pv-use]").focus();
+    }
+    function paintView() {
+      const o = view.pics[view.at];
+      const name = o.querySelector("span") ? o.querySelector("span").textContent : "";
+      const img = view.el.querySelector("[data-pv-img]");
+      img.src = o.dataset.picLarge;
+      img.alt = name;
+      view.el.setAttribute("aria-label", name);
+      view.el.querySelector("[data-pv-name]").textContent = name;
+      view.el.querySelector("[data-pv-pos]").textContent = `${view.at + 1} of ${view.pics.length}`;
+      const use = view.el.querySelector("[data-pv-use]");
+      const chosen = o.getAttribute("aria-selected") === "true";
+      use.textContent = chosen ? "Chosen" : "Choose";
+      use.disabled = chosen;
+      // the one after is fetched ahead, so stepping is instant
+      const next = view.pics[(view.at + 1) % view.pics.length];
+      if (next && next !== o) new Image().src = next.dataset.picLarge;
+    }
+    function stepView(d) {
+      view.at = (view.at + d + view.pics.length) % view.pics.length;
+      paintView();
+    }
+
+    document.addEventListener("click", (ev) => {
+      const t = ev.target;
+      if (view && t.closest) {
+        if (t.closest("[data-pv-close]") || t === view.el) return closeView();
+        const st = t.closest("[data-pv-step]");
+        if (st) return stepView(Number(st.dataset.pvStep));
+        if (t.closest("[data-pv-use]")) {
+          const f = view.f;
+          const o = view.pics[view.at];
+          view.back = null;
+          closeView();
+          return choose(f, o);
+        }
+        if (view.el.contains(t)) return;
+      }
+      const zoom = t.closest && t.closest("[data-pic-zoom]");
+      if (zoom) {
+        const cell = zoom.closest(".pic-cell");
+        showView(fieldOf(zoom), cell.querySelector(".pic-opt"), zoom);
+        return;
+      }
+      const trig = t.closest && t.closest("[data-pic-trigger]");
+      if (trig) {
+        const f = fieldOf(trig);
+        if (f.classList.contains("is-open")) close(f);
+        else open(f);
+        return;
+      }
+      const o = t.closest && t.closest("[data-pic-select] .pic-opt");
+      if (o) {
+        choose(fieldOf(o), o);
+        return;
+      }
+      document.querySelectorAll("[data-pic-select].is-open").forEach((f) => {
+        if (!f.contains(t)) close(f);
+      });
+    });
+    document.addEventListener("input", (ev) => {
+      if (ev.target.matches && ev.target.matches("[data-pic-filter]")) filter(fieldOf(ev.target), ev.target.value);
+    });
+    // a value set from elsewhere (a reset, a preset) shows on the row
+    document.addEventListener("change", (ev) => {
+      if (ev.target.matches && ev.target.matches("[data-pic-native]")) sync(fieldOf(ev.target));
+    });
+    document.addEventListener("keydown", (ev) => {
+      if (view) {
+        if (ev.key === "Escape") {
+          ev.preventDefault();
+          ev.stopPropagation();
+          closeView();
+        } else if (ev.key === "ArrowLeft" || ev.key === "ArrowRight") {
+          ev.preventDefault();
+          stepView(ev.key === "ArrowLeft" ? -1 : 1);
+        } else if (ev.key === "Tab") {
+          // keep the focus inside the view while it is open
+          const items = Array.from(view.el.querySelectorAll("button:not([disabled])"));
+          const i = items.indexOf(document.activeElement);
+          const j = ev.shiftKey ? (i <= 0 ? items.length - 1 : i - 1) : i === items.length - 1 ? 0 : i + 1;
+          ev.preventDefault();
+          items[j].focus();
+        }
+        return;
+      }
+      const f = fieldOf(ev.target);
+      if (!f || !f.classList.contains("is-open")) return;
+      if (ev.key === "Escape") {
+        ev.preventDefault();
+        close(f, true);
+        return;
+      }
+      const opts = visibleOpts(f);
+      const at = opts.indexOf(ev.target);
+      if (ev.key === "Enter" && ev.target.matches("[data-pic-filter]") && opts.length) {
+        ev.preventDefault();
+        choose(f, opts[0]);
+        return;
+      }
+      const grid = f.querySelector(".pic-grid");
+      const cols = grid ? getComputedStyle(grid).gridTemplateColumns.split(" ").length : 1;
+      const step = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: cols, ArrowUp: -cols }[ev.key];
+      if (step && at >= 0) {
+        ev.preventDefault();
+        const next = opts[Math.max(0, Math.min(opts.length - 1, at + step))];
+        if (next) next.focus();
+      } else if (ev.key === "ArrowDown" && ev.target.matches("[data-pic-filter]") && opts.length) {
+        ev.preventDefault();
+        opts[0].focus();
+      }
+    });
+  })();
+
   // Observe future additions (the page editor swaps cell forms in/out on
   // plugin change). Skipping mutation observer for now since editor.js
   // currently full-reloads on plugin change, re-init isn't needed mid-page.

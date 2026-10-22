@@ -126,6 +126,16 @@ lowercase `[a-z0-9_]` is convention, not enforced. Name it `<family>_<role>`
   cross-widget shape selection. If a widget needs a genuine layout
   shape choice (e.g. `stack` vs `side`), name the option `layout` and
   use shape-describing values.
+* **Pictures on a `select`'s choices.** A choice may carry `image`, a
+  path on the server (`/plugins/<plugin_id>/static/styles/poster.jpg`,
+  served from the plugin's own `static/` folder) or an `https` URL. When
+  any choice has one, the editor draws the option as a picture picker: a
+  row with the chosen picture and name that opens a grid of every choice,
+  with a filter box; choices without a picture sit under the grid as text
+  buttons, and a choice's `group` heads a run of pictures. The saved value
+  and `show_if` work as for a plain select. Keep the pictures small (a
+  320x240 JPEG is plenty). Older servers ignore `image` and show the
+  plain dropdown.
 * **`secret` and `mask` on a cell option.** `secret: true` marks the
   value sensitive: it is stripped from the render context handed to the
   browser, and redacted on share to the catalog with an installer
