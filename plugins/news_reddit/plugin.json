@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "News, Reddit",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "kind": "widget",
   "locales": ["en", "cs", "de", "es", "fr", "it", "lt", "nb", "nl", "pl", "pt", "sk", "sv", "zh-CN", "zh-TW"],
   "description": "Top posts from a subreddit using the free .json endpoint (no API key, no OAuth). Pick the subreddit and time window per cell.",
@@ -17,8 +17,9 @@
     {
       "name": "subreddit",
       "type": "string",
-      "label": "Subreddit (without /r/)",
-      "default": "programming"
+      "label": "Subreddit",
+      "default": "programming",
+      "help": "Without /r/."
     },
     {
       "name": "sort",
@@ -43,8 +44,11 @@
     {
       "name": "window",
       "type": "select",
-      "label": "Window (top only)",
+      "label": "Window",
       "default": "day",
+      "show_if": {
+        "sort": "top"
+      },
       "choices": [
         {
           "value": "hour",
@@ -75,7 +79,7 @@
     {
       "name": "max_items",
       "type": "number",
-      "label": "Max posts",
+      "label": "How many",
       "default": 8
     }
   ],

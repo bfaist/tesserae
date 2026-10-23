@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "Clock, Analog",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "kind": "widget",
   "description": "Analog clock face. Pure SVG, no network. Five face styles, pick the one that suits the rest of your dashboard.",
   "icon": "ph-clock",
@@ -10,30 +10,70 @@
     {
       "name": "face",
       "type": "select",
-      "label": "Face style",
+      "label": "Style",
       "default": "minimalist",
       "choices": [
-        { "value": "minimalist", "label": "Minimalist, hour ticks only" },
-        { "value": "swiss",      "label": "Swiss railway, chunky red second hand" },
-        { "value": "bauhaus",    "label": "Bauhaus, geometric, primary triad" },
-        { "value": "brutalist",  "label": "Brutalist, heavy bars + numerals" },
-        { "value": "skeleton",   "label": "Skeleton, just the hands" }
+        {
+          "value": "minimalist",
+          "label": "Minimalist, hour ticks only"
+        },
+        {
+          "value": "swiss",
+          "label": "Swiss railway, chunky red second hand"
+        },
+        {
+          "value": "bauhaus",
+          "label": "Bauhaus, geometric, primary triad"
+        },
+        {
+          "value": "brutalist",
+          "label": "Brutalist, heavy bars + numerals"
+        },
+        {
+          "value": "skeleton",
+          "label": "Skeleton, just the hands"
+        }
       ]
     },
-    { "name": "show_seconds", "type": "boolean", "label": "Show second hand", "default": true },
     {
       "name": "numerals",
       "type": "select",
       "label": "Numerals",
       "default": "arabic",
       "choices": [
-        { "value": "arabic", "label": "Arabic, 12 / 3 / 6 / 9" },
-        { "value": "roman", "label": "Roman, XII / III / VI / IX" },
-        { "value": "dots", "label": "Dots only" }
+        {
+          "value": "arabic",
+          "label": "Arabic, 12 / 3 / 6 / 9"
+        },
+        {
+          "value": "roman",
+          "label": "Roman, XII / III / VI / IX"
+        },
+        {
+          "value": "dots",
+          "label": "Dots only"
+        }
       ]
     },
-    { "name": "show_date", "type": "boolean", "label": "Show date plate", "default": true },
-    { "name": "show_am_pm", "type": "boolean", "label": "Show sun/moon AM-PM indicator", "default": true }
+    {
+      "name": "show_seconds",
+      "type": "boolean",
+      "label": "Second hand",
+      "default": true
+    },
+    {
+      "name": "show_date",
+      "type": "boolean",
+      "label": "Date plate",
+      "default": true
+    },
+    {
+      "name": "show_am_pm",
+      "type": "boolean",
+      "label": "AM/PM indicator",
+      "default": true,
+      "help": "A sun or moon for the half of the day."
+    }
   ],
   "render": { "dither": "none", "needs_network": false },
   "requires": []

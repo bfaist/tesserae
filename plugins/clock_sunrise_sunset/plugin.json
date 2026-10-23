@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "Clock, Sunrise / Sunset",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "kind": "widget",
   "locales": ["en", "cs", "de", "es", "fr", "it", "lt", "nb", "nl", "pl", "pt", "sk", "sv", "zh-CN", "zh-TW"],
   "description": "Today's sunrise, sunset, golden hour, and day length for a chosen lat/lon. The hero shows a sun-arc visualisation with the current position marked. Data from Open-Meteo (no key).",
@@ -17,34 +17,35 @@
     {
       "name": "location",
       "type": "location_search",
-      "label": "Location",
+      "label": "Place",
       "default": "",
-      "help": "Search a city, or paste a 'lat, lon' pair ('-37.85, 144.94'), to set the location. The latitude / longitude that drive the weather data come from the picked result; the Label below auto-fills with the city name (or the coordinates)."
+      "help": "Search a city, or paste a 'lat, lon' pair ('-37.85, 144.94'), to set the location. The latitude / longitude that drive the weather data come from the picked result; the Place name below auto-fills with the city name (or the coordinates)."
     },
     {
       "name": "label",
       "type": "string",
-      "label": "Label",
+      "label": "Place name",
       "default": "",
-      "help": "Auto-filled from the location pick; edit to customise (e.g. 'Home' instead of 'Berlin')."
+      "help": "Auto-filled from the place you pick; edit it to customise (for example 'Home' instead of 'Berlin')."
     },
     {
       "name": "show_arc",
       "type": "boolean",
-      "label": "Show sun-path arc",
+      "label": "Sun path",
       "default": true
     },
     {
       "name": "show_golden",
       "type": "boolean",
-      "label": "Tint golden-hour bands",
+      "label": "Golden hour",
       "default": true
     },
     {
       "name": "show_twilight",
       "type": "boolean",
-      "label": "Tint twilight bands beyond the horizon (civil / nautical / astronomical)",
-      "default": true
+      "label": "Twilight",
+      "default": true,
+      "help": "Tints the civil, nautical and astronomical twilight bands beyond the horizon."
     }
   ],
   "render": {

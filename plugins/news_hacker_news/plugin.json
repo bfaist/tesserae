@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "News, Hacker News",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "kind": "widget",
   "locales": ["en", "cs", "de", "es", "fr", "it", "lt", "nb", "nl", "pl", "pt", "sk", "sv", "zh-CN", "zh-TW"],
   "description": "Top / new / best / show / ask stories from Hacker News. Uses the free Firebase API (no auth, no key). Click-through opens the story; the lightbox doesn't apply.",
@@ -45,7 +45,7 @@
     {
       "name": "max_items",
       "type": "number",
-      "label": "Max stories",
+      "label": "How many",
       "default": 10
     }
   ],

@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "Webpage",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "kind": "widget",
   "locales": ["en", "cs", "de", "es", "fr", "it", "lt", "nb", "nl", "pl", "pt", "sk", "sv", "zh-CN", "zh-TW"],
   "description": "Embed an external URL in a cell. The composer captures whatever the iframe renders, handy for status pages, public dashboards, or any site that doesn't deny embedding. A URL that points straight at an image (PNG, GIF, JPEG, WebP, SVG) is drawn as an image and scaled to the cell rather than embedded, so tall charts keep their bottom edge. Same headless-render path as the Send tab is used when the panel renders. Pages that fetch their data with JavaScript get a short settle delay after load so the content is captured, not a blank frame; raise it for slow pages. Sites that set X-Frame-Options:DENY or strict CSP cannot be embedded. A page behind header-based auth (bearer token, API key) can be reached by setting Request headers; the server attaches them when the panel renders, scoped to that URL's own origin only.",
@@ -22,11 +22,26 @@
       "default": "fit",
       "help": "Applies to embedded pages. A direct image URL is framed by Image fit instead.",
       "choices": [
-        { "value": "fit",  "label": "Fit to cell (no scroll)" },
-        { "value": "100",  "label": "100% (native, may scroll)" },
-        { "value": "75",   "label": "75%" },
-        { "value": "50",   "label": "50%" },
-        { "value": "25",   "label": "25%" }
+        {
+          "value": "fit",
+          "label": "Fit to cell (no scroll)"
+        },
+        {
+          "value": "100",
+          "label": "100% (native, may scroll)"
+        },
+        {
+          "value": "75",
+          "label": "75%"
+        },
+        {
+          "value": "50",
+          "label": "50%"
+        },
+        {
+          "value": "25",
+          "label": "25%"
+        }
       ]
     },
     {
@@ -36,47 +51,66 @@
       "default": "fit",
       "help": "How a direct image URL is framed in the cell. Ignored for pages.",
       "choices": [
-        { "value": "fit",     "label": "Fit, letterbox (keep aspect)" },
-        { "value": "fill",    "label": "Fill, crop to cover" },
-        { "value": "stretch", "label": "Stretch, squash to exact dims" },
-        { "value": "center",  "label": "Center, no scaling" },
-        { "value": "blur",    "label": "Center + blurred background" }
+        {
+          "value": "fit",
+          "label": "Fit, letterbox (keep aspect)"
+        },
+        {
+          "value": "fill",
+          "label": "Fill, crop to cover"
+        },
+        {
+          "value": "stretch",
+          "label": "Stretch, squash to exact dims"
+        },
+        {
+          "value": "center",
+          "label": "Center, no scaling"
+        },
+        {
+          "value": "blur",
+          "label": "Center + blurred background"
+        }
       ]
     },
     {
       "name": "viewport_w",
       "type": "number",
-      "label": "Render width (px)",
-      "help": "Logical viewport width the page sees. Use a desktop width for responsive sites that hide content on narrow viewports.",
+      "label": "Render width",
+      "help": "Logical viewport width the page sees, in pixels. Use a desktop width for responsive sites that hide content on narrow viewports.",
       "default": 1280,
+      "advanced": true,
       "min": 200,
       "max": 4096
     },
     {
-      "name": "refresh_seconds",
+      "name": "settle_seconds",
       "type": "number",
-      "label": "Auto-refresh interval (seconds)",
-      "help": "0 disables auto-refresh. Useful for status pages that change without a hard reload.",
-      "default": 0,
+      "label": "Settle delay",
+      "help": "Seconds to wait after the page loads before capture, so scripts that fetch data and then update the page (weather pages, dashboards, SPAs) have time to render. Raise it for slow pages; 0 captures the instant the page finishes loading.",
+      "default": 2,
+      "advanced": true,
       "min": 0,
-      "max": 86400
+      "max": 12
     },
     {
       "name": "headers",
       "type": "textarea",
-      "label": "Request headers (JSON object, optional)",
-      "help": "For a page behind a bearer token or API key, e.g. {\"Authorization\": \"Bearer …\"}. Applied by the server when the panel renders, and sent only to this URL's own origin, never to a redirect elsewhere or to third-party resources the page loads. User-Agent is honoured here for services that reject unknown clients. Headers can't reach the live preview in your browser, so a cell may show a 401 in the editor and still render correctly on the panel.",
+      "label": "Request headers",
+      "help": "Normally blank. A JSON object, for a page behind a bearer token or API key, e.g. {\"Authorization\": \"Bearer …\"}. Applied by the server when the panel renders, and sent only to this URL's own origin, never to a redirect elsewhere or to third-party resources the page loads. User-Agent is honoured here for services that reject unknown clients. Headers can't reach the live preview in your browser, so a cell may show a 401 in the editor and still render correctly on the panel.",
       "default": "",
+      "advanced": true,
       "secret": true
     },
     {
-      "name": "settle_seconds",
+      "name": "refresh_seconds",
       "type": "number",
-      "label": "Settle delay (seconds)",
-      "help": "Extra wait after the page loads before capture, so scripts that fetch data and then update the page (weather pages, dashboards, SPAs) have time to render. Raise it for slow pages; 0 captures the instant the page finishes loading.",
-      "default": 2,
+      "label": "Refresh",
+      "help": "Seconds between reloads. 0 turns auto-refresh off. Useful for status pages that change without a hard reload.",
+      "default": 0,
+      "advanced": true,
       "min": 0,
-      "max": 12
+      "max": 86400
     }
   ],
   "render": { "dither": "ordered", "needs_network": true }

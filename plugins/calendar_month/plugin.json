@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "Calendar, Month",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "kind": "widget",
   "description": "Month-grid view with tunable dashboard title/day-number/event text sizing, cell spacing, and a location toggle for text-display mode. Each feed's colour drives the bar / dot / stripe colour.",
   "icon": "ph-calendar",
@@ -14,19 +14,16 @@
   },
   "cell_options": [
     {
-      "name": "week_start",
-      "type": "select",
-      "label": "Week starts on",
-      "default": "monday",
-      "choices": [
-        {"value": "sunday", "label": "Sunday"},
-        {"value": "monday", "label": "Monday"}
-      ]
+      "name": "feeds_filter",
+      "type": "string",
+      "label": "Calendars",
+      "default": "",
+      "help": "Feed IDs, separated by commas. Blank shows every enabled calendar."
     },
     {
       "name": "rolling_weeks",
       "type": "select",
-      "label": "Rolling weeks",
+      "label": "Window",
       "default": "month",
       "choices": [
         {"value": "month", "label": "Month"},
@@ -37,24 +34,29 @@
         {"value": "5", "label": "5 weeks"},
         {"value": "6", "label": "6 weeks"}
       ],
-      "help": "A number of weeks starts at the week containing today and rolls forward week by week."
+      "help": "Month shows the calendar month. A number of weeks starts at the week containing today and rolls forward week by week."
     },
     {
-      "name": "feeds_filter",
-      "type": "string",
-      "label": "Feed IDs (comma-separated; blank = all enabled)",
-      "default": ""
+      "name": "week_start",
+      "type": "select",
+      "label": "Week starts on",
+      "default": "monday",
+      "choices": [
+        {"value": "sunday", "label": "Sunday"},
+        {"value": "monday", "label": "Monday"}
+      ]
     },
     {
       "name": "max_events_per_day",
       "type": "number",
-      "label": "Max event chips per day",
-      "default": 3
+      "label": "How many",
+      "default": 3,
+      "help": "Event chips per day."
     },
     {
       "name": "event_display",
       "type": "select",
-      "label": "Event style",
+      "label": "Style",
       "default": "bars",
       "choices": [
         {"value": "bars", "label": "Coloured bars"},
@@ -62,34 +64,37 @@
       ]
     },
     {
+      "name": "show_location",
+      "type": "boolean",
+      "label": "Event locations",
+      "default": false,
+      "show_if": {"event_display": "text"},
+      "help": "Appends '· location' after each event title. Off by default since month cells are the tightest on space of any calendar widget."
+    },
+    {
       "name": "event_title_lines",
       "type": "slider",
-      "show_if": {"event_display": "text"},
       "label": "Event title lines",
       "default": 1,
+      "advanced": true,
       "min": 1,
       "max": 4,
       "step": 1,
-      "help": "Text-display mode only: how many lines an event title may wrap onto before it is cut. 1 = single line with an ellipsis."
+      "help": "How many lines an event title may wrap onto before it is cut. 1 = single line with an ellipsis."
     },
     {
       "name": "heatmap",
       "type": "boolean",
-      "label": "Heat-tint busy days",
-      "default": true
-    },
-    {
-      "name": "show_location",
-      "type": "boolean",
-      "label": "Show event locations",
-      "default": false,
-      "help": "Text-display mode only: appends '· location' after each event title. Off by default since month cells are the tightest on space of any calendar widget."
+      "label": "Tint busy days",
+      "default": true,
+      "advanced": true
     },
     {
       "name": "date_label_style",
       "type": "select",
-      "label": "Weekday label style",
+      "label": "Day names",
       "default": "short",
+      "advanced": true,
       "choices": [
         {"value": "full", "label": "Full word (Monday, Tuesday)"},
         {"value": "short", "label": "Short (Mon, Tue)"},
@@ -99,15 +104,17 @@
     {
       "name": "show_week_start",
       "type": "boolean",
-      "label": "Show \"Week starts\" label",
+      "label": "Week starts label",
       "default": false,
+      "advanced": true,
       "help": "Off by default: the weekday column headers already show which day the week starts on. Worth turning on with a minimal or single-letter weekday style, where it is less obvious."
     },
     {
       "name": "title_scale",
       "type": "slider",
-      "label": "Dashboard title size",
+      "label": "Title size",
       "default": 1.0,
+      "advanced": true,
       "min": 0.01,
       "max": 10.0,
       "step": 0.05,
@@ -119,6 +126,7 @@
       "type": "slider",
       "label": "Day number size",
       "default": 1.0,
+      "advanced": true,
       "min": 0.01,
       "max": 10.0,
       "step": 0.05,
@@ -130,6 +138,7 @@
       "type": "slider",
       "label": "Event text size",
       "default": 1.0,
+      "advanced": true,
       "min": 0.01,
       "max": 10.0,
       "step": 0.05,
@@ -141,6 +150,7 @@
       "type": "slider",
       "label": "Cell spacing",
       "default": 0.0,
+      "advanced": true,
       "min": 0.0,
       "max": 3.0,
       "step": 0.05,

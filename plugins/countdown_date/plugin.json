@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "Countdown, Date",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "kind": "widget",
   "locales": ["en", "cs", "de", "es", "fr", "it", "lt", "nb", "nl", "pl", "pt", "sk", "sv", "zh-CN", "zh-TW"],
   "description": "Days remaining until a target date. Glanceable single-number hero with an optional label. Pure client-side, no network.",
@@ -11,26 +11,30 @@
     {
       "name": "target_date",
       "type": "string",
-      "label": "Target date (YYYY-MM-DD)",
-      "default": ""
+      "label": "Date",
+      "default": "",
+      "help": "YYYY-MM-DD."
     },
     {
       "name": "label",
       "type": "string",
-      "label": "Label (e.g. 'Holiday', 'Deadline')",
-      "default": ""
+      "label": "Title",
+      "default": "",
+      "help": "For example Holiday or Deadline."
     },
     {
       "name": "show_hours_under_a_day",
       "type": "boolean",
-      "label": "Show hours when less than a day remains",
-      "default": true
+      "label": "Hours on the last day",
+      "default": true,
+      "help": "Shows hours once less than a day remains."
     },
     {
       "name": "show_past",
       "type": "boolean",
-      "label": "Keep counting after the date passes ('5 days ago')",
-      "default": true
+      "label": "Count on afterwards",
+      "default": true,
+      "help": "Keeps counting after the date passes ('5 days ago')."
     },
     {
       "name": "accent",
@@ -38,11 +42,26 @@
       "label": "Accent colour",
       "default": "terracotta",
       "choices": [
-        { "value": "terracotta", "label": "Terracotta" },
-        { "value": "ochre",       "label": "Ochre"      },
-        { "value": "moss",        "label": "Moss"       },
-        { "value": "teal",        "label": "Teal"       },
-        { "value": "slate",       "label": "Slate blue" }
+        {
+          "value": "terracotta",
+          "label": "Terracotta"
+        },
+        {
+          "value": "ochre",
+          "label": "Ochre"
+        },
+        {
+          "value": "moss",
+          "label": "Moss"
+        },
+        {
+          "value": "teal",
+          "label": "Teal"
+        },
+        {
+          "value": "slate",
+          "label": "Slate blue"
+        }
       ]
     }
   ],

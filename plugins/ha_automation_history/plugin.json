@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "Home Assistant, Automation History",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "kind": "widget",
   "locales": ["en", "cs", "de", "es", "fr", "it", "lt", "nb", "nl", "pl", "pt", "sk", "sv", "zh-CN", "zh-TW"],
   "description": "Which Home Assistant automations fired, when, and how often. Ranks the most- vs least-fired automation this week, streams a most-recent-first trigger feed, tallies 1h / 24h / 7d trigger counts, and flags any tracked automation that hasn't fired within an expected cadence. Reads automation.* logbook history via the Home Assistant Core plugin.",
@@ -16,15 +16,9 @@
   },
   "cell_options": [
     {
-      "name": "title",
-      "type": "string",
-      "label": "Title (blank = \"Automations\")",
-      "default": ""
-    },
-    {
       "name": "automations",
       "type": "multiselect",
-      "label": "Automations (blank = all)",
+      "label": "Automations",
       "default": [],
       "choices_from": "entity",
       "help": "Leave blank to track every automation; the busiest ~12 are read in detail each refresh."
@@ -32,9 +26,16 @@
     {
       "name": "stale_hours",
       "type": "number",
-      "label": "Stale alert after (hours, blank = off)",
+      "label": "Stale after",
       "default": "",
-      "help": "Flag a tracked automation that hasn't fired within this many hours. Leave blank to disable."
+      "help": "Hours. Flags a tracked automation that hasn't fired within this many hours. Leave blank to turn it off."
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "label": "Title",
+      "default": "",
+      "help": "Blank uses Automations."
     },
     {
       "name": "refresh",
@@ -42,9 +43,18 @@
       "label": "Refresh",
       "default": "60",
       "choices": [
-        { "value": "60", "label": "Every minute" },
-        { "value": "300", "label": "Every 5 min" },
-        { "value": "900", "label": "Every 15 min" }
+        {
+          "value": "60",
+          "label": "Every minute"
+        },
+        {
+          "value": "300",
+          "label": "Every 5 min"
+        },
+        {
+          "value": "900",
+          "label": "Every 15 min"
+        }
       ]
     }
   ],

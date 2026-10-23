@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "Home Assistant (service)",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "kind": "service",
   "description": "Non-placeable data source that exposes the whole Home Assistant REST API to a code element, reusing the connection configured in Settings → Widgets → Home Assistant Core (base URL + token). Not shown in the canvas picker; source it from a code/data element by its key 'ha_service'. Probe with an empty scope to get a map of scopes (states, entity, history, services, config, raw). 'states' returns every entity; 'entity' one entity's full state; 'history' a series; 'raw' fetches any GET /api path you name.",
   "icon": "ph-house-line",
@@ -13,18 +13,77 @@
       "label": "Scope",
       "default": "",
       "choices": [
-        { "value": "", "label": "(discovery: list scopes)" },
-        { "value": "states", "label": "All entity states (optional domain filter)" },
-        { "value": "entity", "label": "One entity (full state + attributes)" },
-        { "value": "history", "label": "History series for one entity" },
-        { "value": "services", "label": "Available services" },
-        { "value": "config", "label": "HA config" },
-        { "value": "raw", "label": "Raw GET of any /api path" }
+        {
+          "value": "",
+          "label": "(discovery: list scopes)"
+        },
+        {
+          "value": "states",
+          "label": "All entity states (optional domain filter)"
+        },
+        {
+          "value": "entity",
+          "label": "One entity (full state + attributes)"
+        },
+        {
+          "value": "history",
+          "label": "History series for one entity"
+        },
+        {
+          "value": "services",
+          "label": "Available services"
+        },
+        {
+          "value": "config",
+          "label": "HA config"
+        },
+        {
+          "value": "raw",
+          "label": "Raw GET of any /api path"
+        }
       ]
     },
-    { "name": "entity_id", "type": "string", "label": "Entity id (entity / history scope)", "default": "" },
-    { "name": "domain", "type": "string", "label": "Domain filter (states scope, e.g. light,sensor)", "default": "" },
-    { "name": "hours", "type": "number", "label": "History window (hours)", "default": 24 },
-    { "name": "path", "type": "string", "label": "API path (raw scope, e.g. /api/states)", "default": "" }
+    {
+      "name": "entity_id",
+      "type": "string",
+      "label": "Entity id",
+      "default": "",
+      "show_if": {
+        "scope": [
+          "entity",
+          "history"
+        ]
+      }
+    },
+    {
+      "name": "hours",
+      "type": "number",
+      "label": "Hours",
+      "default": 24,
+      "show_if": {
+        "scope": "history"
+      },
+      "help": "How far back the history goes."
+    },
+    {
+      "name": "domain",
+      "type": "string",
+      "label": "Domain filter",
+      "default": "",
+      "show_if": {
+        "scope": "states"
+      },
+      "help": "For example light,sensor."
+    },
+    {
+      "name": "path",
+      "type": "string",
+      "label": "API path",
+      "default": "",
+      "show_if": {
+        "scope": "raw"
+      },
+      "help": "For example /api/states."
+    }
   ]
 }

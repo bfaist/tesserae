@@ -318,7 +318,7 @@ def choices(name: str) -> list[dict[str, str]]:
     if name != "stops":
         return []
     data_dir = _data_dir()
-    out: list[dict[str, str]] = [{"value": "", "label": "— use the Stop ID field below —"}]
+    out: list[dict[str, str]] = [{"value": "", "label": "Use the Stop ID field"}]
     building = False
     # Budget for building a cold index inline. Downloading + indexing BART is
     # ~0.5s and the MTA ~4s, so the editor waits once and the dropdown is

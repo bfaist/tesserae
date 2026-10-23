@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "News, Wikipedia On This Day",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "kind": "widget",
   "locales": ["en", "cs", "de", "es", "fr", "it", "lt", "nb", "nl", "pl", "pt", "sk", "sv", "zh-CN", "zh-TW"],
   "description": "Wikipedia 'On this day', featured historical events for today's date. Uses the free Wikimedia REST API (no key).",
@@ -41,7 +41,7 @@
     {
       "name": "max_items",
       "type": "number",
-      "label": "Max entries",
+      "label": "How many",
       "default": 6
     }
   ],

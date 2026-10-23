@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "Picture, NASA APOD",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "kind": "widget",
   "locales": [
     "en",
@@ -31,18 +31,6 @@
   },
   "cell_options": [
     {
-      "name": "show_caption",
-      "type": "boolean",
-      "label": "Show title + copyright overlay",
-      "default": true
-    },
-    {
-      "name": "show_day_badge",
-      "type": "boolean",
-      "label": "Show day-of-month badge in the corner",
-      "default": true
-    },
-    {
       "name": "scale",
       "type": "select",
       "label": "Scale",
@@ -65,6 +53,20 @@
           "label": "Fit with blurred background"
         }
       ]
+    },
+    {
+      "name": "show_caption",
+      "type": "boolean",
+      "label": "Caption",
+      "default": true,
+      "help": "The picture's title and copyright over the image."
+    },
+    {
+      "name": "show_day_badge",
+      "type": "boolean",
+      "label": "Day badge",
+      "default": true,
+      "help": "The day of the month in a corner badge."
     }
   ],
   "render": {

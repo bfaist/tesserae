@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "News, RSS / Atom",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "kind": "widget",
   "locales": ["en", "cs", "de", "es", "fr", "it", "lt", "nb", "nl", "pl", "pt", "sk", "sv", "zh-CN", "zh-TW"],
   "description": "Latest N headlines from any RSS 2.0 or Atom 1.0 feed. Paste a feed URL; the widget parses both formats with the stdlib XML parser (no extra deps).",
@@ -23,14 +23,8 @@
     {
       "name": "max_items",
       "type": "number",
-      "label": "Max headlines",
+      "label": "How many",
       "default": 8
-    },
-    {
-      "name": "show_source",
-      "type": "boolean",
-      "label": "Show feed title in header",
-      "default": true
     },
     {
       "name": "excerpt_lines",
@@ -56,6 +50,13 @@
           "label": "3 lines"
         }
       ]
+    },
+    {
+      "name": "show_source",
+      "type": "boolean",
+      "label": "Feed title",
+      "default": true,
+      "help": "The feed's title in the header."
     }
   ],
   "render": {

@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "Home Assistant, Sensor",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "kind": "widget",
   "locales": ["en", "cs", "de", "es", "fr", "it", "lt", "nb", "nl", "pl", "pt", "sk", "sv", "zh-CN", "zh-TW"],
   "description": "One or more Home Assistant entities as bold value blocks. A single entity fills the cell as a hero number with a trend arrow + 24h sparkline beneath; several lay out as a list with per-row trend + hairline sparkline. Lead glyph picks up the device-class (temperature → thermometer, CO₂ → wind, current → wave-sine, money → coin, etc.). For a full chart with labelled axes use the Home Assistant, History widget. Requires the Home Assistant Core plugin.",
@@ -16,19 +16,6 @@
   },
   "cell_options": [
     {
-      "name": "title",
-      "type": "string",
-      "label": "Title (blank = entity name / \"Sensors\")",
-      "default": ""
-    },
-    {
-      "name": "show_title",
-      "type": "boolean",
-      "label": "Show title row",
-      "default": true,
-      "help": "Off hides the whole title row (icon + name), so a single entity shows just its value."
-    },
-    {
       "name": "entities",
       "type": "multiselect",
       "label": "Entities",
@@ -38,44 +25,68 @@
     {
       "name": "overrides",
       "type": "entity_overrides",
-      "label": "Custom names + icons + number format",
+      "label": "Names, icons and formats",
       "default": "",
       "formats": true,
       "help": "One row per ticked entity. Leave the name blank to keep the auto label; pick \"No icon\" to keep the auto icon. The format box overrides the widget number format for that entity (blank = use the widget default)."
+    },
+    {
+      "name": "show_sparkline",
+      "type": "boolean",
+      "label": "Sparkline",
+      "default": true,
+      "help": "A small unlabelled 24-hour trend line under the value. For a full chart with axes, min/max markers and a fixed value range, use the Home Assistant, History widget instead."
+    },
+    {
+      "name": "show_title",
+      "type": "boolean",
+      "label": "Title line",
+      "default": true,
+      "advanced": true,
+      "help": "Off hides the whole title row (icon + name), so a single entity shows just its value."
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "label": "Title",
+      "default": "",
+      "show_if": {
+        "show_title": true
+      },
+      "advanced": true,
+      "help": "Blank uses the entity name, or Sensors for several."
     },
     {
       "name": "number_format",
       "type": "string",
       "label": "Number format",
       "default": "",
+      "advanced": true,
       "placeholder": "auto (e.g. 0, 0.0, 0.00)",
-      "help": "How numeric values are shown. Blank rounds to 2 decimals and trims trailing zeros (21.00 → 21). Use 0 for whole numbers, 0.0 for one decimal, 0.00 for two, and so on. Per-entity overrides live in the row above."
+      "help": "How numeric values are shown. Blank rounds to 2 decimals and trims trailing zeros (21.00 → 21). Use 0 for whole numbers, 0.0 for one decimal, 0.00 for two, and so on. Per-entity formats live in Names, icons and formats."
     },
     {
       "name": "show_unit",
       "type": "boolean",
-      "label": "Show units",
-      "default": true
+      "label": "Units",
+      "default": true,
+      "advanced": true
     },
     {
       "name": "show_names",
       "type": "boolean",
-      "label": "Show entity names (list rows)",
+      "label": "Names",
       "default": true,
+      "advanced": true,
       "help": "Off hides the per-row entity name when several entities are listed, leaving icon + value."
     },
     {
       "name": "show_trend",
       "type": "boolean",
-      "label": "Show trend arrow (up / down / flat vs 24h)",
-      "default": true
-    },
-    {
-      "name": "show_sparkline",
-      "type": "boolean",
-      "label": "Show 24h sparkline",
+      "label": "Trend arrow",
       "default": true,
-      "help": "A small unlabelled trend line under the value. For a full chart with axes, min/max markers and a fixed value range, use the Home Assistant, History widget instead."
+      "advanced": true,
+      "help": "Up, down or flat against 24 hours ago."
     }
   ],
   "fragments": [

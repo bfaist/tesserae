@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "GTFS / GTFS-RT",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "kind": "widget",
   "locales": ["en", "cs", "de", "es", "fr", "it", "lt", "nb", "nl", "pl", "pt", "sk", "sv", "zh-CN", "zh-TW"],
   "description": "Approaching vehicles at a stop (or two), from any GTFS feed. Presets for the NYC Subway and BART, live times and delays from GTFS-RT TripUpdates, service alerts, vehicle positions, and an optional split-by-direction board.",
@@ -18,9 +18,9 @@
     {
       "name": "preset",
       "type": "select",
-      "label": "Feed preset",
+      "label": "Feed",
       "default": "custom",
-      "help": "Pick a known agency feed and the URL fields below are ignored — the preset supplies the static feed, the matching realtime feed and the alerts feed. The MTA publishes one realtime feed per line group, so pick the group your station is on.",
+      "help": "Pick a known agency feed and it supplies the static feed, the matching realtime feed and the alerts feed. Custom shows the URL fields. The MTA publishes one realtime feed per line group, so pick the group your station is on.",
       "choices": [
         {
           "value": "custom",
@@ -65,11 +65,188 @@
       ]
     },
     {
+      "name": "gtfs_url",
+      "type": "string",
+      "label": "GTFS feed URL",
+      "default": "",
+      "show_if": {
+        "preset": "custom"
+      },
+      "help": "Link to the agency's static GTFS .zip (e.g. https://rrgtfsfeeds.s3.amazonaws.com/gtfs_subway.zip). Downloaded and distilled to just this stop's timetable, then cached for 12 hours. Set it to 'demo:delayed' (or demo:mixed / on_time / buses / no_service / cancellations) to paint a canned board with no network.",
+      "fill_from": {
+        "option": "preset",
+        "map": {
+          "bart": "https://www.bart.gov/dev/schedules/google_transit.zip",
+          "mta_ace": "https://rrgtfsfeeds.s3.amazonaws.com/gtfs_subway.zip",
+          "mta_bdfm": "https://rrgtfsfeeds.s3.amazonaws.com/gtfs_subway.zip",
+          "mta_g": "https://rrgtfsfeeds.s3.amazonaws.com/gtfs_subway.zip",
+          "mta_jz": "https://rrgtfsfeeds.s3.amazonaws.com/gtfs_subway.zip",
+          "mta_nqrw": "https://rrgtfsfeeds.s3.amazonaws.com/gtfs_subway.zip",
+          "mta_l": "https://rrgtfsfeeds.s3.amazonaws.com/gtfs_subway.zip",
+          "mta_123456": "https://rrgtfsfeeds.s3.amazonaws.com/gtfs_subway.zip",
+          "mta_sir": "https://rrgtfsfeeds.s3.amazonaws.com/gtfs_subway.zip"
+        }
+      }
+    },
+    {
+      "name": "rt_url",
+      "type": "string",
+      "label": "TripUpdates URL",
+      "default": "",
+      "show_if": {
+        "preset": "custom"
+      },
+      "help": "Optional. Protobuf TripUpdates feed; arrivals it covers show a live marker and use the predicted time. Some agencies require an API key in the URL.",
+      "fill_from": {
+        "option": "preset",
+        "map": {
+          "bart": "https://api.bart.gov/gtfsrt/tripupdate.aspx",
+          "mta_ace": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-ace",
+          "mta_bdfm": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-bdfm",
+          "mta_g": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-g",
+          "mta_jz": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-jz",
+          "mta_nqrw": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-nqrw",
+          "mta_l": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-l",
+          "mta_123456": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs",
+          "mta_sir": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-si"
+        }
+      }
+    },
+    {
+      "name": "alerts_url",
+      "type": "string",
+      "label": "ServiceAlerts URL",
+      "default": "",
+      "show_if": {
+        "preset": "custom"
+      },
+      "help": "Optional. Protobuf ServiceAlerts feed; an alert naming this stop or one of its routes shows in the widget's title bar. Often the same base URL as TripUpdates with a different path.",
+      "fill_from": {
+        "option": "preset",
+        "map": {
+          "bart": "https://api.bart.gov/gtfsrt/alerts.aspx",
+          "mta_ace": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts",
+          "mta_bdfm": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts",
+          "mta_g": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts",
+          "mta_jz": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts",
+          "mta_nqrw": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts",
+          "mta_l": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts",
+          "mta_123456": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts",
+          "mta_sir": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts"
+        }
+      }
+    },
+    {
+      "name": "vehicles_url",
+      "type": "string",
+      "label": "VehiclePositions URL",
+      "default": "",
+      "show_if": {
+        "preset": "custom"
+      },
+      "help": "Optional. Protobuf VehiclePositions feed, for agencies that publish vehicles separately from TripUpdates (most do; the MTA bundles them). Turn on Show stops away under More options to see it: stops out when the feed counts them, straight-line distance from the stop when it only reports coordinates.",
+      "fill_from": {
+        "option": "preset",
+        "map": {
+          "bart": "",
+          "mta_ace": "",
+          "mta_bdfm": "",
+          "mta_g": "",
+          "mta_jz": "",
+          "mta_nqrw": "",
+          "mta_l": "",
+          "mta_123456": "",
+          "mta_sir": ""
+        }
+      }
+    },
+    {
+      "name": "stop",
+      "type": "select",
+      "label": "Stop",
+      "default": "",
+      "choices_from": "stops",
+      "help": "Stops on the preset feeds, labelled with the routes that call there. Using a custom feed instead? Leave this blank and fill in Stop ID. The list is built from the feed the first time you open this editor."
+    },
+    {
+      "name": "stop_id",
+      "type": "string",
+      "label": "Stop ID",
+      "default": "",
+      "show_if": {
+        "stop": ""
+      },
+      "help": "stop_id from the feed's stops.txt, for feeds the Stop dropdown doesn't cover. A parent station ID picks up all its platforms (e.g. 'A34' = Canal St A/C/E); comma-separate to pick specific platforms ('A34N,A34S'). The Stop Finder at /plugins/gtfs/ looks these up for any feed."
+    },
+    {
+      "name": "direction",
+      "type": "select",
+      "label": "Direction",
+      "default": "any",
+      "help": "Which way to show. GTFS direction_id means whatever the agency decided and differs per route, so 0 and 1 can't be labelled meaningfully here. Try one, and if the board shows the wrong way round, pick the other. The Stop Finder at /plugins/gtfs/ lists the destinations behind each for a given stop if you'd rather look it up.",
+      "choices": [
+        {
+          "value": "any",
+          "label": "Both directions"
+        },
+        {
+          "value": "0",
+          "label": "Direction 0"
+        },
+        {
+          "value": "1",
+          "label": "Direction 1"
+        }
+      ]
+    },
+    {
+      "name": "layout",
+      "type": "select",
+      "label": "Layout",
+      "default": "list",
+      "show_if": {
+        "direction": "any"
+      },
+      "help": "Split shows two columns grouped by direction, each headed by where those trains go. Only applies to a large cell; anywhere else it falls back to the single list.",
+      "choices": [
+        {
+          "value": "list",
+          "label": "Single list"
+        },
+        {
+          "value": "split",
+          "label": "Split by direction (large cells)"
+        }
+      ]
+    },
+    {
+      "name": "horizon",
+      "type": "number",
+      "label": "Within",
+      "default": 90,
+      "help": "Minutes ahead. Arrivals further out than this are left off."
+    },
+    {
+      "name": "stop_2",
+      "type": "select",
+      "label": "Second stop",
+      "default": "",
+      "advanced": true,
+      "choices_from": "stops",
+      "help": "Adds a second station to the same board, merged by time, for example the subway entrance on one corner and the one round the block. Rows show which stop each train leaves from once two are set."
+    },
+    {
       "name": "preset_2",
       "type": "select",
-      "label": "Second realtime feed (optional)",
+      "label": "Second stop's realtime feed",
       "default": "",
-      "help": "Agencies split realtime by line group — the MTA publishes one feed per group. If your second stop is on a different group (say A/C/E and the 1), name that group here so both halves of the board get live times. Same static timetable either way.",
+      "show_if": {
+        "stop_2": {
+          "not": ""
+        }
+      },
+      "advanced": true,
+      "help": "Agencies split realtime by line group: the MTA publishes one feed per group. If your second stop is on a different group (say A/C/E and the 1), name that group here so both halves of the board get live times. Same static timetable either way.",
       "choices": [
         {
           "value": "",
@@ -114,78 +291,27 @@
       ]
     },
     {
-      "name": "stop",
-      "type": "select",
-      "label": "Stop",
-      "default": "",
-      "choices_from": "stops",
-      "help": "Stops on the preset feeds, labelled with the routes that call there. Using a custom feed instead? Leave this blank and fill in Stop ID below. The list is built from the feed the first time you open this editor."
-    },
-    {
-      "name": "stop_2",
-      "type": "select",
-      "label": "Second stop (optional)",
-      "default": "",
-      "choices_from": "stops",
-      "help": "Adds a second station to the same board, merged by time — e.g. the subway entrance on one corner and the one round the block. Rows show which stop each train leaves from once two are set."
-    },
-    {
-      "name": "stop_id",
-      "type": "string",
-      "label": "Stop ID (custom feeds)",
-      "default": "",
-      "help": "stop_id from the feed's stops.txt, for feeds the Stop dropdown doesn't cover. A parent station ID picks up all its platforms (e.g. 'A34' = Canal St A/C/E); comma-separate to pick specific platforms ('A34N,A34S'). The Stop Finder at /plugins/gtfs/ looks these up for any feed."
-    },
-    {
-      "name": "direction",
-      "type": "select",
-      "label": "Direction",
-      "default": "any",
-      "help": "Which way to show. GTFS direction_id means whatever the agency decided and differs per route, so 0 and 1 can't be labelled meaningfully here — try one, and if the board shows the wrong way round, pick the other. The Stop Finder at /plugins/gtfs/ lists the destinations behind each for a given stop if you'd rather look it up.",
-      "choices": [
-        {
-          "value": "any",
-          "label": "Both directions"
-        },
-        {
-          "value": "0",
-          "label": "Direction 0"
-        },
-        {
-          "value": "1",
-          "label": "Direction 1"
-        }
-      ]
-    },
-    {
       "name": "routes",
       "type": "string",
       "label": "Routes",
       "default": "",
+      "advanced": true,
       "help": "Comma-separated route names to show ('A,C'), matching what the badges display. Blank shows every route calling at the stop."
     },
     {
-      "name": "layout",
-      "type": "select",
-      "label": "Layout",
-      "default": "list",
-      "help": "Split shows two columns grouped by direction, each headed by where those trains go. Only applies to a large cell with both directions on the board — anywhere else it falls back to the single list.",
-      "choices": [
-        {
-          "value": "list",
-          "label": "Single list"
-        },
-        {
-          "value": "split",
-          "label": "Split by direction (large cells)"
-        }
-      ]
+      "name": "walk_minutes",
+      "type": "number",
+      "label": "Walk time",
+      "default": 0,
+      "advanced": true,
+      "help": "Minutes to walk to the stop. Hides anything you could no longer catch, and turns the small-cell hero into a 'leave in N min' countdown instead of an arrival time. 0 shows everything from now."
     },
     {
       "name": "time_basis",
       "type": "select",
       "label": "Time shown",
       "default": "arrival",
+      "advanced": true,
       "help": "Arrival is right for a stop you pass through. At a terminus, where trains sit before running back, departure is the time you can actually board.",
       "choices": [
         {
@@ -199,115 +325,11 @@
       ]
     },
     {
-      "name": "gtfs_url",
-      "type": "string",
-      "label": "GTFS feed URL",
-      "default": "",
-      "help": "Link to the agency's static GTFS .zip (e.g. https://rrgtfsfeeds.s3.amazonaws.com/gtfs_subway.zip). Downloaded and distilled to just this stop's timetable, then cached for 12 hours. Filled in and locked while a preset is selected. Set it to 'demo:delayed' (or demo:mixed / on_time / buses / no_service / cancellations) to paint a canned board with no network.",
-      "fill_from": {
-        "option": "preset",
-        "map": {
-          "bart": "https://www.bart.gov/dev/schedules/google_transit.zip",
-          "mta_ace": "https://rrgtfsfeeds.s3.amazonaws.com/gtfs_subway.zip",
-          "mta_bdfm": "https://rrgtfsfeeds.s3.amazonaws.com/gtfs_subway.zip",
-          "mta_g": "https://rrgtfsfeeds.s3.amazonaws.com/gtfs_subway.zip",
-          "mta_jz": "https://rrgtfsfeeds.s3.amazonaws.com/gtfs_subway.zip",
-          "mta_nqrw": "https://rrgtfsfeeds.s3.amazonaws.com/gtfs_subway.zip",
-          "mta_l": "https://rrgtfsfeeds.s3.amazonaws.com/gtfs_subway.zip",
-          "mta_123456": "https://rrgtfsfeeds.s3.amazonaws.com/gtfs_subway.zip",
-          "mta_sir": "https://rrgtfsfeeds.s3.amazonaws.com/gtfs_subway.zip"
-        }
-      }
-    },
-    {
-      "name": "rt_url",
-      "type": "string",
-      "label": "GTFS-RT TripUpdates URL",
-      "default": "",
-      "help": "Optional. Protobuf TripUpdates feed; arrivals it covers show a live marker and use the predicted time. Some agencies require an API key in the URL. Filled in and locked while a preset is selected.",
-      "fill_from": {
-        "option": "preset",
-        "map": {
-          "bart": "https://api.bart.gov/gtfsrt/tripupdate.aspx",
-          "mta_ace": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-ace",
-          "mta_bdfm": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-bdfm",
-          "mta_g": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-g",
-          "mta_jz": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-jz",
-          "mta_nqrw": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-nqrw",
-          "mta_l": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-l",
-          "mta_123456": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs",
-          "mta_sir": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-si"
-        }
-      }
-    },
-    {
-      "name": "alerts_url",
-      "type": "string",
-      "label": "GTFS-RT ServiceAlerts URL",
-      "default": "",
-      "help": "Optional. Protobuf ServiceAlerts feed; an alert naming this stop or one of its routes shows in the widget's title bar. Often the same base URL as TripUpdates with a different path. Filled in and locked while a preset is selected.",
-      "fill_from": {
-        "option": "preset",
-        "map": {
-          "bart": "https://api.bart.gov/gtfsrt/alerts.aspx",
-          "mta_ace": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts",
-          "mta_bdfm": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts",
-          "mta_g": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts",
-          "mta_jz": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts",
-          "mta_nqrw": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts",
-          "mta_l": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts",
-          "mta_123456": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts",
-          "mta_sir": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts"
-        }
-      }
-    },
-    {
-      "name": "vehicles_url",
-      "type": "string",
-      "label": "GTFS-RT VehiclePositions URL",
-      "default": "",
-      "help": "Optional. Protobuf VehiclePositions feed, for agencies that publish vehicles separately from TripUpdates (most do; the MTA bundles them). Turn on 'Show stops away' below to see it: stops out when the feed counts them, straight-line distance from the stop when it only reports coordinates. Blank and locked while a preset is selected.",
-      "fill_from": {
-        "option": "preset",
-        "map": {
-          "bart": "",
-          "mta_ace": "",
-          "mta_bdfm": "",
-          "mta_g": "",
-          "mta_jz": "",
-          "mta_nqrw": "",
-          "mta_l": "",
-          "mta_123456": "",
-          "mta_sir": ""
-        }
-      }
-    },
-    {
-      "name": "title",
-      "type": "string",
-      "label": "Title",
-      "default": "",
-      "help": "Overrides the stop name from the feed (e.g. 'Home stop'). Named 'title' rather than 'label' on purpose: the host fills a widget's 'label' option from the app-level Settings location, which would put your city name above a transit board."
-    },
-    {
-      "name": "horizon",
-      "type": "number",
-      "label": "Look-ahead (minutes)",
-      "default": 90,
-      "help": "Ignore arrivals further out than this."
-    },
-    {
-      "name": "walk_minutes",
-      "type": "number",
-      "label": "Walk time (minutes)",
-      "default": 0,
-      "help": "Minutes to walk to the stop. Hides anything you could no longer catch, and turns the small-cell hero into a 'leave in N min' countdown instead of an arrival time. 0 shows everything from now."
-    },
-    {
       "name": "show_track",
       "type": "boolean",
       "label": "Show track",
       "default": false,
+      "advanced": true,
       "help": "Show the track each vehicle arrives on, when the feed publishes one (the MTA does, via the NYCT GTFS-RT extension). Off by default: NYC subway track IDs like 'A2' are operational, not the signage riders read. Worth turning on for commuter rail, where the track is the thing you need."
     },
     {
@@ -315,13 +337,18 @@
       "type": "boolean",
       "label": "Show stops away",
       "default": false,
-      "help": "Show how far out each vehicle is, from the realtime feed's vehicle positions: 'N stops' when the feed reports a stop sequence, '1.4 km' from the stop when it only reports coordinates. Needs a VehiclePositions URL above, unless the TripUpdates feed already carries vehicles (the MTA's does). The platform-sign metric; on a board where everything is a stop or two away it's mostly noise, so it's off by default."
+      "advanced": true,
+      "help": "Show how far out each vehicle is, from the realtime feed's vehicle positions: 'N stops' when the feed reports a stop sequence, '1.4 km' from the stop when it only reports coordinates. Needs a VehiclePositions URL, unless the TripUpdates feed already carries vehicles (the MTA's does). The platform-sign metric; on a board where everything is a stop or two away it's mostly noise, so it's off by default."
     },
     {
       "name": "distance_units",
       "type": "select",
       "label": "Distance units",
       "default": "metric",
+      "show_if": {
+        "show_stops_away": true
+      },
+      "advanced": true,
       "help": "How the distance-away chip reads when the vehicle feed only gives coordinates.",
       "choices": [
         {
@@ -333,6 +360,14 @@
           "label": "Imperial (mi / ft)"
         }
       ]
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "label": "Title",
+      "default": "",
+      "advanced": true,
+      "help": "Overrides the stop name from the feed (e.g. 'Home stop'). Named 'title' rather than 'label' on purpose: the host fills a widget's 'label' option from the app-level Settings location, which would put your city name above a transit board."
     }
   ],
   "render": {

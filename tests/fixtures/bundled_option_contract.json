@@ -1,0 +1,1052 @@
+{
+  "calendar_day": {
+    "hours_ahead": {
+      "default": 24
+    },
+    "max_events": {
+      "default": 0
+    },
+    "feeds_filter": {
+      "default": ""
+    },
+    "day_start_hour": {
+      "default": -1
+    },
+    "day_end_hour": {
+      "default": -1
+    },
+    "show_location": {
+      "default": true
+    },
+    "show_density": {
+      "default": true
+    },
+    "overlap_style": {
+      "default": "columns",
+      "choices": [
+        "columns",
+        "callouts"
+      ]
+    },
+    "date_label_style": {
+      "default": "full",
+      "choices": [
+        "full",
+        "short",
+        "minimal"
+      ]
+    },
+    "header_scale": {
+      "default": 1.0
+    },
+    "axis_label_scale": {
+      "default": 1.0
+    },
+    "event_title_scale": {
+      "default": 1.0
+    },
+    "event_time_scale": {
+      "default": 1.0
+    },
+    "event_location_scale": {
+      "default": 1.0
+    },
+    "event_row_padding_em": {
+      "default": 0.0
+    }
+  },
+  "calendar_month": {
+    "week_start": {
+      "default": "monday",
+      "choices": [
+        "sunday",
+        "monday"
+      ]
+    },
+    "rolling_weeks": {
+      "default": "month",
+      "choices": [
+        "month",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ]
+    },
+    "feeds_filter": {
+      "default": ""
+    },
+    "max_events_per_day": {
+      "default": 3
+    },
+    "event_display": {
+      "default": "bars",
+      "choices": [
+        "bars",
+        "text"
+      ]
+    },
+    "event_title_lines": {
+      "default": 1
+    },
+    "heatmap": {
+      "default": true
+    },
+    "show_location": {
+      "default": false
+    },
+    "date_label_style": {
+      "default": "short",
+      "choices": [
+        "full",
+        "short",
+        "minimal"
+      ]
+    },
+    "show_week_start": {
+      "default": false
+    },
+    "title_scale": {
+      "default": 1.0
+    },
+    "header_scale": {
+      "default": 1.0
+    },
+    "event_title_scale": {
+      "default": 1.0
+    },
+    "event_row_padding_em": {
+      "default": 0.0
+    }
+  },
+  "calendar_week": {
+    "feeds_filter": {
+      "default": ""
+    },
+    "range_mode": {
+      "default": "calendar_week",
+      "choices": [
+        "calendar_week",
+        "rolling_7"
+      ]
+    },
+    "week_start": {
+      "default": "monday",
+      "choices": [
+        "sunday",
+        "monday"
+      ]
+    },
+    "day_start_hour": {
+      "default": -1
+    },
+    "day_end_hour": {
+      "default": -1
+    },
+    "hide_labels": {
+      "default": false
+    },
+    "show_location": {
+      "default": false
+    },
+    "show_day_counts": {
+      "default": true
+    },
+    "date_label_style": {
+      "default": "short",
+      "choices": [
+        "full",
+        "short",
+        "minimal"
+      ]
+    },
+    "title_scale": {
+      "default": 1.0
+    },
+    "header_scale": {
+      "default": 1.0
+    },
+    "axis_label_scale": {
+      "default": 1.0
+    },
+    "event_title_scale": {
+      "default": 1.0
+    },
+    "event_location_scale": {
+      "default": 1.0
+    },
+    "event_row_padding_em": {
+      "default": 0.0
+    }
+  },
+  "clock_analog": {
+    "face": {
+      "default": "minimalist",
+      "choices": [
+        "minimalist",
+        "swiss",
+        "bauhaus",
+        "brutalist",
+        "skeleton"
+      ]
+    },
+    "show_seconds": {
+      "default": true
+    },
+    "numerals": {
+      "default": "arabic",
+      "choices": [
+        "arabic",
+        "roman",
+        "dots"
+      ]
+    },
+    "show_date": {
+      "default": true
+    },
+    "show_am_pm": {
+      "default": true
+    }
+  },
+  "clock_sunrise_sunset": {
+    "location": {
+      "default": ""
+    },
+    "label": {
+      "default": ""
+    },
+    "show_arc": {
+      "default": true
+    },
+    "show_golden": {
+      "default": true
+    },
+    "show_twilight": {
+      "default": true
+    }
+  },
+  "clock_word": {
+    "show_seconds_dot": {
+      "default": true
+    },
+    "show_tone": {
+      "default": true
+    },
+    "show_phase_badge": {
+      "default": true
+    }
+  },
+  "countdown_date": {
+    "target_date": {
+      "default": ""
+    },
+    "label": {
+      "default": ""
+    },
+    "show_hours_under_a_day": {
+      "default": true
+    },
+    "show_past": {
+      "default": true
+    },
+    "accent": {
+      "default": "terracotta",
+      "choices": [
+        "terracotta",
+        "ochre",
+        "moss",
+        "teal",
+        "slate"
+      ]
+    }
+  },
+  "device_battery": {
+    "limit": {
+      "default": 8
+    },
+    "show_prediction": {
+      "default": true
+    }
+  },
+  "gtfs": {
+    "preset": {
+      "default": "custom",
+      "choices": [
+        "custom",
+        "bart",
+        "mta_ace",
+        "mta_bdfm",
+        "mta_g",
+        "mta_jz",
+        "mta_nqrw",
+        "mta_l",
+        "mta_123456",
+        "mta_sir"
+      ]
+    },
+    "preset_2": {
+      "default": "",
+      "choices": [
+        "",
+        "bart",
+        "mta_ace",
+        "mta_bdfm",
+        "mta_g",
+        "mta_jz",
+        "mta_nqrw",
+        "mta_l",
+        "mta_123456",
+        "mta_sir"
+      ]
+    },
+    "stop": {
+      "default": ""
+    },
+    "stop_2": {
+      "default": ""
+    },
+    "stop_id": {
+      "default": ""
+    },
+    "direction": {
+      "default": "any",
+      "choices": [
+        "any",
+        "0",
+        "1"
+      ]
+    },
+    "routes": {
+      "default": ""
+    },
+    "layout": {
+      "default": "list",
+      "choices": [
+        "list",
+        "split"
+      ]
+    },
+    "time_basis": {
+      "default": "arrival",
+      "choices": [
+        "arrival",
+        "departure"
+      ]
+    },
+    "gtfs_url": {
+      "default": ""
+    },
+    "rt_url": {
+      "default": ""
+    },
+    "alerts_url": {
+      "default": ""
+    },
+    "vehicles_url": {
+      "default": ""
+    },
+    "title": {
+      "default": ""
+    },
+    "horizon": {
+      "default": 90
+    },
+    "walk_minutes": {
+      "default": 0
+    },
+    "show_track": {
+      "default": false
+    },
+    "show_stops_away": {
+      "default": false
+    },
+    "distance_units": {
+      "default": "metric",
+      "choices": [
+        "metric",
+        "imperial"
+      ]
+    }
+  },
+  "ha_automation_history": {
+    "title": {
+      "default": ""
+    },
+    "automations": {
+      "default": []
+    },
+    "stale_hours": {
+      "default": ""
+    },
+    "refresh": {
+      "default": "60",
+      "choices": [
+        "60",
+        "300",
+        "900"
+      ]
+    }
+  },
+  "ha_battery": {
+    "label": {
+      "default": "Batteries"
+    },
+    "entities": {
+      "default": []
+    },
+    "low_threshold": {
+      "default": 20
+    },
+    "critical_threshold": {
+      "default": 10
+    },
+    "limit": {
+      "default": 12
+    }
+  },
+  "ha_camera": {
+    "entity_id": {
+      "default": ""
+    },
+    "entities": {
+      "default": []
+    },
+    "label": {
+      "default": "Camera"
+    },
+    "full_bleed": {
+      "default": false
+    }
+  },
+  "ha_climate": {
+    "title": {
+      "default": ""
+    },
+    "entities": {
+      "default": []
+    }
+  },
+  "ha_dashboard": {
+    "path": {
+      "default": "lovelace/0"
+    },
+    "zoom": {
+      "default": "1",
+      "choices": [
+        "0.75",
+        "1",
+        "1.25",
+        "1.5",
+        "2"
+      ]
+    },
+    "dark_mode": {
+      "default": false
+    },
+    "kiosk": {
+      "default": true
+    },
+    "settle_seconds": {
+      "default": 2
+    },
+    "refresh_seconds": {
+      "default": 300
+    }
+  },
+  "ha_energy": {
+    "solar_entity": {
+      "default": ""
+    },
+    "grid_entity": {
+      "default": ""
+    },
+    "battery_entity": {
+      "default": ""
+    },
+    "house_entity": {
+      "default": ""
+    },
+    "battery_soc_entity": {
+      "default": ""
+    },
+    "solar_today_entity": {
+      "default": ""
+    },
+    "show_solar_yesterday": {
+      "default": false
+    },
+    "label": {
+      "default": "Home"
+    }
+  },
+  "ha_entities": {
+    "title": {
+      "default": "Entities"
+    },
+    "show_title": {
+      "default": true
+    },
+    "show_names": {
+      "default": true
+    },
+    "show_last_updated": {
+      "default": true
+    },
+    "entities": {
+      "default": []
+    },
+    "overrides": {
+      "default": ""
+    },
+    "number_format": {
+      "default": ""
+    }
+  },
+  "ha_history": {
+    "title": {
+      "default": ""
+    },
+    "entities": {
+      "default": []
+    },
+    "number_format": {
+      "default": ""
+    },
+    "value_style": {
+      "default": "legend",
+      "choices": [
+        "legend",
+        "headline"
+      ]
+    },
+    "threshold": {
+      "default": ""
+    },
+    "y_min": {
+      "default": ""
+    },
+    "y_max": {
+      "default": ""
+    },
+    "show_min_max": {
+      "default": true
+    },
+    "show_profile": {
+      "default": true
+    },
+    "window": {
+      "default": "24",
+      "choices": [
+        "6",
+        "12",
+        "24",
+        "72",
+        "168",
+        "336",
+        "720",
+        "2160"
+      ]
+    }
+  },
+  "ha_lights": {
+    "entities": {
+      "default": []
+    },
+    "label": {
+      "default": "Home"
+    }
+  },
+  "ha_locks": {
+    "label": {
+      "default": "Doors & locks"
+    },
+    "entities": {
+      "default": []
+    },
+    "include_doors": {
+      "default": true
+    },
+    "include_windows": {
+      "default": true
+    },
+    "limit": {
+      "default": 12
+    }
+  },
+  "ha_media": {
+    "entity_id": {
+      "default": ""
+    },
+    "show_progress": {
+      "default": true
+    },
+    "show_waveform": {
+      "default": true
+    },
+    "show_art_bleed": {
+      "default": true
+    }
+  },
+  "ha_sensor": {
+    "title": {
+      "default": ""
+    },
+    "show_title": {
+      "default": true
+    },
+    "entities": {
+      "default": []
+    },
+    "overrides": {
+      "default": ""
+    },
+    "number_format": {
+      "default": ""
+    },
+    "show_unit": {
+      "default": true
+    },
+    "show_names": {
+      "default": true
+    },
+    "show_trend": {
+      "default": true
+    },
+    "show_sparkline": {
+      "default": true
+    }
+  },
+  "ha_service": {
+    "scope": {
+      "default": "",
+      "choices": [
+        "",
+        "states",
+        "entity",
+        "history",
+        "services",
+        "config",
+        "raw"
+      ]
+    },
+    "entity_id": {
+      "default": ""
+    },
+    "domain": {
+      "default": ""
+    },
+    "hours": {
+      "default": 24
+    },
+    "path": {
+      "default": ""
+    }
+  },
+  "ha_todo": {
+    "entity_id": {
+      "default": ""
+    },
+    "title": {
+      "default": ""
+    },
+    "max_items": {
+      "default": 8
+    },
+    "include_completed": {
+      "default": false
+    }
+  },
+  "ha_zones": {
+    "label": {
+      "default": "Home"
+    },
+    "entities": {
+      "default": []
+    },
+    "limit": {
+      "default": 8
+    }
+  },
+  "news_hacker_news": {
+    "feed": {
+      "default": "top",
+      "choices": [
+        "top",
+        "new",
+        "best",
+        "show",
+        "ask"
+      ]
+    },
+    "max_items": {
+      "default": 10
+    }
+  },
+  "news_reddit": {
+    "subreddit": {
+      "default": "programming"
+    },
+    "sort": {
+      "default": "top",
+      "choices": [
+        "top",
+        "hot",
+        "new"
+      ]
+    },
+    "window": {
+      "default": "day",
+      "choices": [
+        "hour",
+        "day",
+        "week",
+        "month",
+        "year",
+        "all"
+      ]
+    },
+    "max_items": {
+      "default": 8
+    }
+  },
+  "news_rss": {
+    "url": {
+      "default": "https://news.ycombinator.com/rss"
+    },
+    "max_items": {
+      "default": 8
+    },
+    "show_source": {
+      "default": true
+    },
+    "excerpt_lines": {
+      "default": "0",
+      "choices": [
+        "0",
+        "1",
+        "2",
+        "3"
+      ]
+    }
+  },
+  "news_wikipedia_otd": {
+    "type": {
+      "default": "events",
+      "choices": [
+        "events",
+        "births",
+        "deaths",
+        "holidays"
+      ]
+    },
+    "max_items": {
+      "default": 6
+    }
+  },
+  "openmeteo_service": {
+    "scope": {
+      "default": "",
+      "choices": [
+        "",
+        "current",
+        "hourly",
+        "daily",
+        "air_quality",
+        "marine"
+      ]
+    },
+    "latitude": {
+      "default": 0
+    },
+    "longitude": {
+      "default": 0
+    },
+    "variables": {
+      "default": ""
+    },
+    "forecast_days": {
+      "default": 3
+    },
+    "timezone": {
+      "default": "auto"
+    }
+  },
+  "picture_apod": {
+    "show_caption": {
+      "default": true
+    },
+    "show_day_badge": {
+      "default": true
+    },
+    "scale": {
+      "default": "fit",
+      "choices": [
+        "fit",
+        "fill",
+        "stretch",
+        "blurred"
+      ]
+    }
+  },
+  "picture_gallery": {
+    "folder": {
+      "default": ""
+    },
+    "orientation": {
+      "default": "any",
+      "choices": [
+        "any",
+        "portrait",
+        "landscape",
+        "square"
+      ]
+    },
+    "mode": {
+      "default": "random",
+      "choices": [
+        "random",
+        "sequential"
+      ]
+    },
+    "scale": {
+      "default": "fit",
+      "choices": [
+        "fit",
+        "fill",
+        "stretch",
+        "center",
+        "blurred"
+      ]
+    },
+    "show_filename": {
+      "default": false
+    },
+    "show_folder_chip": {
+      "default": true
+    },
+    "show_count": {
+      "default": true
+    }
+  },
+  "rest_service": {
+    "url": {
+      "default": ""
+    },
+    "headers": {
+      "default": ""
+    }
+  },
+  "tesserae_status": {
+    "mode": {
+      "default": "bar",
+      "choices": [
+        "bar",
+        "block"
+      ]
+    },
+    "chipMode": {
+      "default": "icon-text",
+      "choices": [
+        "icon-text",
+        "icon-only",
+        "text-only"
+      ]
+    },
+    "dashboardName": {
+      "default": ""
+    },
+    "leadingIcon": {
+      "default": true
+    },
+    "panelBg": {
+      "default": "#1B1A16"
+    },
+    "show_time": {
+      "default": true
+    },
+    "time_format": {
+      "default": "24h",
+      "choices": [
+        "24h",
+        "12h"
+      ]
+    },
+    "show_temperature": {
+      "default": true
+    },
+    "units": {
+      "default": "metric",
+      "choices": [
+        "metric",
+        "imperial"
+      ]
+    },
+    "show_humidity": {
+      "default": true
+    },
+    "show_battery": {
+      "default": true
+    },
+    "show_wifi": {
+      "default": true
+    },
+    "show_broker": {
+      "default": true
+    },
+    "broker_label": {
+      "default": "HA"
+    },
+    "check_for_updates": {
+      "default": false
+    },
+    "show_firmware_updates": {
+      "default": true
+    }
+  },
+  "todo": {
+    "list_id": {
+      "default": null
+    },
+    "show_completed": {
+      "default": true
+    },
+    "max_items": {
+      "default": 0
+    }
+  },
+  "weather_forecast": {
+    "location": {
+      "default": ""
+    },
+    "label": {
+      "default": ""
+    },
+    "units": {
+      "default": "metric",
+      "choices": [
+        "metric",
+        "imperial"
+      ]
+    }
+  },
+  "weather_hourly": {
+    "location": {
+      "default": ""
+    },
+    "label": {
+      "default": ""
+    },
+    "units": {
+      "default": "metric",
+      "choices": [
+        "metric",
+        "imperial"
+      ]
+    },
+    "hours": {
+      "default": "12",
+      "choices": [
+        "12",
+        "24",
+        "48"
+      ]
+    }
+  },
+  "weather_now": {
+    "location": {
+      "default": ""
+    },
+    "label": {
+      "default": ""
+    },
+    "units": {
+      "default": "metric",
+      "choices": [
+        "metric",
+        "imperial"
+      ]
+    }
+  },
+  "weather_now_scenic": {
+    "location": {
+      "default": ""
+    },
+    "label": {
+      "default": ""
+    },
+    "units": {
+      "default": "metric",
+      "choices": [
+        "metric",
+        "imperial"
+      ]
+    }
+  },
+  "webpage": {
+    "url": {
+      "default": ""
+    },
+    "scale": {
+      "default": "fit",
+      "choices": [
+        "fit",
+        "100",
+        "75",
+        "50",
+        "25"
+      ]
+    },
+    "image_fit": {
+      "default": "fit",
+      "choices": [
+        "fit",
+        "fill",
+        "stretch",
+        "center",
+        "blur"
+      ]
+    },
+    "viewport_w": {
+      "default": 1280
+    },
+    "refresh_seconds": {
+      "default": 0
+    },
+    "headers": {
+      "default": ""
+    },
+    "settle_seconds": {
+      "default": 2
+    }
+  },
+  "year_progress": {
+    "mode": {
+      "default": "year",
+      "choices": [
+        "year",
+        "life-weeks"
+      ]
+    },
+    "birth_year": {
+      "default": ""
+    },
+    "life_expectancy_years": {
+      "default": 80
+    },
+    "show_percentage": {
+      "default": true
+    },
+    "accent": {
+      "default": "terracotta",
+      "choices": [
+        "terracotta",
+        "ochre",
+        "moss",
+        "teal",
+        "slate"
+      ]
+    }
+  }
+}

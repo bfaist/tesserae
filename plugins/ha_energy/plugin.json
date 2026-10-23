@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "Home Assistant, Energy",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "kind": "widget",
   "locales": ["en", "cs", "de", "es", "fr", "it", "lt", "nb", "nl", "pl", "pt", "sk", "sv", "zh-CN", "zh-TW"],
   "description": "Live solar / grid / battery / house-consumption snapshot from your HA energy dashboard, with today's totals, optional yesterday's solar total, and a 24-hour sparkline. Wires to the same sensor.* entities you've already configured under HA's Energy panel.",
@@ -17,56 +17,80 @@
     {
       "name": "solar_entity",
       "type": "select",
-      "label": "Solar power entity",
+      "label": "Solar power",
       "default": "",
       "choices_from": "entity"
     },
     {
       "name": "grid_entity",
       "type": "select",
-      "label": "Grid power entity (+ import / − export)",
+      "label": "Grid power",
       "default": "",
-      "choices_from": "entity"
+      "choices_from": "entity",
+      "help": "Positive while importing, negative while exporting."
     },
     {
       "name": "battery_entity",
       "type": "select",
-      "label": "Battery power entity (+ charge / − discharge)",
+      "label": "Battery power",
       "default": "",
-      "choices_from": "entity"
+      "choices_from": "entity",
+      "help": "Positive while charging, negative while discharging."
     },
     {
       "name": "house_entity",
       "type": "select",
-      "label": "House consumption entity",
-      "default": "",
-      "choices_from": "entity"
-    },
-    {
-      "name": "battery_soc_entity",
-      "type": "select",
-      "label": "Battery SoC entity (optional)",
+      "label": "House consumption",
       "default": "",
       "choices_from": "entity"
     },
     {
       "name": "solar_today_entity",
       "type": "select",
-      "label": "Solar energy today (kWh) entity (optional)",
+      "label": "Solar energy today",
       "default": "",
-      "choices_from": "entity"
+      "show_if": {
+        "solar_entity": {
+          "not": ""
+        }
+      },
+      "advanced": true,
+      "choices_from": "entity",
+      "help": "Optional. Today's solar production, in kWh."
     },
     {
       "name": "show_solar_yesterday",
       "type": "boolean",
-      "label": "Show yesterday's solar production",
-      "default": false
+      "label": "Yesterday's solar",
+      "default": false,
+      "show_if": {
+        "solar_today_entity": {
+          "not": ""
+        }
+      },
+      "advanced": true,
+      "help": "Yesterday's solar production beside today's."
+    },
+    {
+      "name": "battery_soc_entity",
+      "type": "select",
+      "label": "Battery charge",
+      "default": "",
+      "show_if": {
+        "battery_entity": {
+          "not": ""
+        }
+      },
+      "advanced": true,
+      "choices_from": "entity",
+      "help": "Optional. The battery's state of charge, in percent."
     },
     {
       "name": "label",
       "type": "string",
-      "label": "Place label",
-      "default": "Home"
+      "label": "Place name",
+      "default": "Home",
+      "advanced": true
     }
   ],
   "fragments": [

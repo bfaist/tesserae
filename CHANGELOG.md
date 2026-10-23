@@ -29,6 +29,25 @@ All notable changes to Tesserae are recorded here. Format loosely follows
   HTTPS calls now use Ubuntu's current bundle, which no longer includes
   them.
 
+## [0.474.0], 2026-10-23
+
+### Changed
+
+- Every bundled widget's options panel is shorter. At most five options
+  show before anything is picked; the rest appear under the choice that
+  makes them relevant (the GTFS feed URLs under a custom feed, a second
+  stop's realtime feed once there is a second stop, the calendar week's
+  start day under the calendar-week window, Home Assistant battery
+  charge under a battery entity), and fine-tuning such as text sizes,
+  refresh intervals, titles and title lines, number formats and request
+  headers sits in the collapsed More options section. Labels are short
+  and read the same across widgets (Place, Place name, Title, Title
+  line, Within, How many, Window, Style, Refresh), with the detail moved
+  into each option's help, and the options are listed in the order the
+  panel reads. No option name, choice value or default changed, so
+  saved dashboards keep working, and a test now holds every bundled
+  manifest to these rules.
+
 ## [0.473.0], 2026-10-23
 
 ### Added

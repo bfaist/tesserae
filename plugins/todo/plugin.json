@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "Todo",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "kind": "widget",
   "locales": ["en", "cs", "de", "es", "fr", "it", "lt", "nb", "nl", "pl", "pt", "sk", "sv", "zh-CN", "zh-TW"],
   "description": "Persistent todo lists. Create lists and add items on the admin page (Widgets \u2192 Todo); the widget cell renders the chosen list as a read-only checklist. Completed items auto-prune after 24 hours so the list doesn't grow indefinitely.",
@@ -22,16 +22,18 @@
       "choices_from": "lists"
     },
     {
-      "name": "show_completed",
-      "type": "boolean",
-      "label": "Show recently-completed items (last 24h)",
-      "default": true
-    },
-    {
       "name": "max_items",
       "type": "number",
-      "label": "Max items shown (0 = all)",
-      "default": 0
+      "label": "How many",
+      "default": 0,
+      "help": "0 shows every item."
+    },
+    {
+      "name": "show_completed",
+      "type": "boolean",
+      "label": "Completed items",
+      "default": true,
+      "help": "Items completed in the last 24 hours."
     }
   ],
   "render": {

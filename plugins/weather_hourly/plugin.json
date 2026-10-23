@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "Weather, Hourly",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "kind": "widget",
   "description": "Hourly temperature line with a shaded area + condition-icon strip across the top. Defaults to the next 12 hours; configurable to 24 or 48. Data from Open-Meteo (no API key).",
   "icon": "ph-chart-line",
@@ -18,16 +18,36 @@
     {
       "name": "location",
       "type": "location_search",
-      "label": "Location",
+      "label": "Place",
       "default": "",
-      "help": "Search a city, or paste a 'lat, lon' pair ('-37.85, 144.94'), to set the location. The latitude / longitude that drive the weather data come from the picked result; the Label below auto-fills with the city name (or the coordinates)."
+      "help": "Search a city, or paste a 'lat, lon' pair ('-37.85, 144.94'), to set the location. The latitude / longitude that drive the weather data come from the picked result; the Place name below auto-fills with the city name (or the coordinates)."
     },
     {
       "name": "label",
       "type": "string",
-      "label": "Label",
+      "label": "Place name",
       "default": "",
-      "help": "Auto-filled from the location pick; edit to customise (e.g. 'Home' instead of 'Berlin')."
+      "help": "Auto-filled from the place you pick; edit it to customise (for example 'Home' instead of 'Berlin')."
+    },
+    {
+      "name": "hours",
+      "type": "select",
+      "label": "Within",
+      "default": "12",
+      "choices": [
+        {
+          "value": "12",
+          "label": "12 hours"
+        },
+        {
+          "value": "24",
+          "label": "24 hours"
+        },
+        {
+          "value": "48",
+          "label": "48 hours"
+        }
+      ]
     },
     {
       "name": "units",
@@ -42,26 +62,6 @@
         {
           "value": "imperial",
           "label": "Imperial (°F)"
-        }
-      ]
-    },
-    {
-      "name": "hours",
-      "type": "select",
-      "label": "Window",
-      "default": "12",
-      "choices": [
-        {
-          "value": "12",
-          "label": "12 hours"
-        },
-        {
-          "value": "24",
-          "label": "24 hours"
-        },
-        {
-          "value": "48",
-          "label": "48 hours"
         }
       ]
     }

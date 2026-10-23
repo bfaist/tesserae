@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "Weather, Forecast",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "kind": "widget",
   "description": "5-day forecast as a row of theme-aware cards: day name, condition icon, high / low temps, and rain probability. Data from Open-Meteo (no API key).",
   "icon": "ph-calendar-dots",
@@ -17,16 +17,16 @@
     {
       "name": "location",
       "type": "location_search",
-      "label": "Location",
+      "label": "Place",
       "default": "",
-      "help": "Search a city, or paste a 'lat, lon' pair ('-37.85, 144.94'), to set the location. The latitude / longitude that drive the weather data come from the picked result; the Label below auto-fills with the city name (or the coordinates)."
+      "help": "Search a city, or paste a 'lat, lon' pair ('-37.85, 144.94'), to set the location. The latitude / longitude that drive the weather data come from the picked result; the Place name below auto-fills with the city name (or the coordinates)."
     },
     {
       "name": "label",
       "type": "string",
-      "label": "Label",
+      "label": "Place name",
       "default": "",
-      "help": "Auto-filled from the location pick; edit to customise (e.g. 'Home' instead of 'Berlin')."
+      "help": "Auto-filled from the place you pick; edit it to customise (for example 'Home' instead of 'Berlin')."
     },
     {
       "name": "units",

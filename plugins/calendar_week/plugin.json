@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "Calendar, Week",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "kind": "widget",
   "description": "Seven-day strip timetable with tunable event text sizing/spacing, configurable visible hour range, and a location toggle. Each event's colour comes from its feed (Widgets → Calendar Feeds).",
   "icon": "ph-calendar",
@@ -17,36 +17,72 @@
     {
       "name": "feeds_filter",
       "type": "string",
-      "label": "Feed IDs (comma-separated; blank = all enabled)",
-      "default": ""
+      "label": "Calendars",
+      "default": "",
+      "help": "Feed IDs, separated by commas. Blank shows every enabled calendar."
     },
     {
       "name": "range_mode",
       "type": "select",
-      "label": "7-day window",
+      "label": "Window",
       "default": "calendar_week",
       "choices": [
         {"value": "calendar_week", "label": "Current calendar week (fixed start day)"},
         {"value": "rolling_7", "label": "Next 7 days (rolling from today)"}
       ],
-      "help": "Calendar week always starts on 'Week starts on' below, so it jumps back once today isn't that day. Rolling always starts today."
+      "help": "Calendar week always starts on the day set in Week starts on, so it jumps back once today isn't that day. Rolling always starts today."
     },
     {
       "name": "week_start",
       "type": "select",
       "label": "Week starts on",
       "default": "monday",
+      "show_if": {"range_mode": "calendar_week"},
       "choices": [
         {"value": "sunday", "label": "Sunday"},
         {"value": "monday", "label": "Monday"}
-      ],
-      "help": "Only used when '7-day window' above is set to Current calendar week."
+      ]
+    },
+    {
+      "name": "show_location",
+      "type": "boolean",
+      "label": "Event locations",
+      "default": false,
+      "help": "Off by default: seven narrow columns rarely have room for a location line. When on, the location wraps to as many lines as fit under the title."
+    },
+    {
+      "name": "hide_labels",
+      "type": "boolean",
+      "label": "Colour bars only",
+      "default": false,
+      "help": "Hides event titles and shows each event as a bar in its calendar's colour."
+    },
+    {
+      "name": "show_day_counts",
+      "type": "boolean",
+      "label": "Daily event counts",
+      "default": true,
+      "advanced": true,
+      "help": "The small per-day count chip under each date. Turn off to save header height."
+    },
+    {
+      "name": "date_label_style",
+      "type": "select",
+      "label": "Day and month names",
+      "default": "short",
+      "advanced": true,
+      "choices": [
+        {"value": "full", "label": "Full word (Monday, January)"},
+        {"value": "short", "label": "Short (MON, JAN)"},
+        {"value": "minimal", "label": "Minimal (M, JA)"}
+      ]
     },
     {
       "name": "day_start_hour",
       "type": "slider",
       "label": "Day starts at",
       "default": -1,
+      "advanced": true,
       "min": -1,
       "max": 24,
       "step": 1,
@@ -58,6 +94,7 @@
       "type": "slider",
       "label": "Day ends at",
       "default": -1,
+      "advanced": true,
       "min": -1,
       "max": 24,
       "step": 1,
@@ -65,41 +102,11 @@
       "help": "Hour the visible timetable ends (0-24). -1 = auto-fit to events. Set to 24 (with Day starts at = 0) to always show the whole day."
     },
     {
-      "name": "hide_labels",
-      "type": "boolean",
-      "label": "Hide event labels (show colour bars only)",
-      "default": false
-    },
-    {
-      "name": "show_location",
-      "type": "boolean",
-      "label": "Show event locations",
-      "default": false,
-      "help": "Off by default: seven narrow columns rarely have room for a location line. When on, the location wraps to as many lines as fit under the title."
-    },
-    {
-      "name": "show_day_counts",
-      "type": "boolean",
-      "label": "Show daily event counts",
-      "default": true,
-      "help": "The small per-day count chip under each date. Turn off to save header height."
-    },
-    {
-      "name": "date_label_style",
-      "type": "select",
-      "label": "Weekday / month label style",
-      "default": "short",
-      "choices": [
-        {"value": "full", "label": "Full word (Monday, January)"},
-        {"value": "short", "label": "Short (MON, JAN)"},
-        {"value": "minimal", "label": "Minimal (M, JA)"}
-      ]
-    },
-    {
       "name": "title_scale",
       "type": "slider",
-      "label": "Dashboard title size",
+      "label": "Title size",
       "default": 1.0,
+      "advanced": true,
       "min": 0.01,
       "max": 10.0,
       "step": 0.05,
@@ -111,6 +118,7 @@
       "type": "slider",
       "label": "Day header size",
       "default": 1.0,
+      "advanced": true,
       "min": 0.01,
       "max": 10.0,
       "step": 0.05,
@@ -122,6 +130,7 @@
       "type": "slider",
       "label": "Time axis label size",
       "default": 1.0,
+      "advanced": true,
       "min": 0.01,
       "max": 10.0,
       "step": 0.05,
@@ -133,6 +142,7 @@
       "type": "slider",
       "label": "Event title size",
       "default": 1.0,
+      "advanced": true,
       "min": 0.01,
       "max": 10.0,
       "step": 0.05,
@@ -144,6 +154,8 @@
       "type": "slider",
       "label": "Event location size",
       "default": 1.0,
+      "show_if": {"show_location": true},
+      "advanced": true,
       "min": 0.01,
       "max": 10.0,
       "step": 0.05,
@@ -153,8 +165,9 @@
     {
       "name": "event_row_padding_em",
       "type": "slider",
-      "label": "Event block spacing",
+      "label": "Event spacing",
       "default": 0.0,
+      "advanced": true,
       "min": 0.0,
       "max": 3.0,
       "step": 0.05,

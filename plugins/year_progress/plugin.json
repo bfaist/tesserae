@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "Year, Progress",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "kind": "widget",
   "locales": ["en", "cs", "de", "es", "fr", "it", "lt", "nb", "nl", "pl", "pt", "sk", "sv", "zh-CN", "zh-TW"],
   "description": "How far through the year you are. Two modes: the current calendar year as a row of weekly dots, or 'life in weeks' as a long-form grid (give a birth year). Pure client-side, no network.",
@@ -14,26 +14,39 @@
       "label": "Mode",
       "default": "year",
       "choices": [
-        { "value": "year",       "label": "Year in weeks"  },
-        { "value": "life-weeks", "label": "Life in weeks"  }
+        {
+          "value": "year",
+          "label": "Year in weeks"
+        },
+        {
+          "value": "life-weeks",
+          "label": "Life in weeks"
+        }
       ]
     },
     {
       "name": "birth_year",
       "type": "number",
-      "label": "Birth year (for 'life in weeks' mode)",
-      "default": ""
+      "label": "Birth year",
+      "default": "",
+      "show_if": {
+        "mode": "life-weeks"
+      }
     },
     {
       "name": "life_expectancy_years",
       "type": "number",
-      "label": "Life expectancy in years (for 'life in weeks' mode)",
-      "default": 80
+      "label": "Life expectancy",
+      "default": 80,
+      "show_if": {
+        "mode": "life-weeks"
+      },
+      "help": "In years."
     },
     {
       "name": "show_percentage",
       "type": "boolean",
-      "label": "Show percentage number",
+      "label": "Percentage",
       "default": true
     },
     {
@@ -42,11 +55,26 @@
       "label": "Accent colour",
       "default": "terracotta",
       "choices": [
-        { "value": "terracotta", "label": "Terracotta" },
-        { "value": "ochre",       "label": "Ochre"      },
-        { "value": "moss",        "label": "Moss"       },
-        { "value": "teal",        "label": "Teal"       },
-        { "value": "slate",       "label": "Slate blue" }
+        {
+          "value": "terracotta",
+          "label": "Terracotta"
+        },
+        {
+          "value": "ochre",
+          "label": "Ochre"
+        },
+        {
+          "value": "moss",
+          "label": "Moss"
+        },
+        {
+          "value": "teal",
+          "label": "Teal"
+        },
+        {
+          "value": "slate",
+          "label": "Slate blue"
+        }
       ]
     }
   ],
