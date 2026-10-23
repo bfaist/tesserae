@@ -681,6 +681,26 @@ macro here instead.
 </div>
 {%- endmacro -%}
 
+{#- The collapsed "More options" disclosure that closes a widget's options
+   form: options marked ``"advanced": true`` render inside it, in manifest
+   order (app/option_conditions.py, ``option_sections``). A caller emits
+   ``options_more_open`` before the first advanced field and
+   ``options_more_close`` after the last, so one loop renders both sections.
+   ``visible`` is False when no advanced option's ``show_if`` holds; the
+   disclosure then starts hidden, its fields still submitted. attachShowIf
+   (static/components.js) keeps it in step, remembers whether it was left
+   open, and opens it when a field inside fails validation or the URL's
+   hash targets one. -#}
+{%- macro options_more_open(visible=True) -%}
+<details class="opt-more" data-opt-more{% if not visible %} hidden{% endif %}>
+  <summary>More options</summary>
+  <div class="opt-more-body">
+{%- endmacro -%}
+{%- macro options_more_close() -%}
+  </div>
+</details>
+{%- endmacro -%}
+
 {#- ``readonly``: render the control uneditable but still submitted. Used
    when another option owns this field's value (e.g. a feed preset that
    supplies the URLs below it), so the value stays visible and stays in the

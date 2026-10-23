@@ -5,14 +5,17 @@
    source is configured with the exact same controls as a grid cell. The
    drawer submits this form to ``panels.source_options``, which parses it back
    into an options dict via the shared per-cell coercion. #}
-{% from "_components.html" import auto_field %}
+{% from "_components.html" import auto_field, options_more_open, options_more_close %}
 {% if opts %}
   <div data-opt-scope>
-  {% for opt in opts %}
+  {% set opt_sections = option_sections(opts, values) %}
+  {% for opt in opt_sections.basic + opt_sections.advanced %}
+    {% if loop.index0 == opt_sections.basic|length %}{{ options_more_open(opt_sections.more_visible) }}{% endif %}
     {% set field_id = 'src-' ~ sid ~ '-opt-' ~ opt.name %}
     {% set value = values.get(opt.name, opt.get('default', '')) %}
     {{ auto_field(field_id, 'opt_' ~ opt.name, opt, value, visible=option_visible(opt, values, opts)) }}
   {% endfor %}
+  {% if opt_sections.advanced %}{{ options_more_close() }}{% endif %}
   </div>
 {% else %}
   <p class="note" style="padding:8px 2px">This widget has no configurable options.</p>

@@ -244,6 +244,8 @@ DATA SOURCES (how every data-bearing element pulls from widgets):
     1. Pick the widget key from list_widgets().
     2. Configure it with get_widget_options(key) -> set "options". An option with "show_if"
        only matters while the named options match (e.g. {"layout":"cluster"}); skip it otherwise.
+       An option with "advanced": true is fine-tuning (refresh, title, text size, sort order...):
+       its default is normally right, so leave it out unless the request is about it.
     3. probe_widget_data(key, options) -> returns "data_source" (live|sample|error), the real
        "data", and a "fields" list of bindable dot-paths with sample values. Do this BEFORE
        choosing a "field" / writing code, so you use paths that exist.
@@ -631,7 +633,10 @@ source. Returns {services: [{key, name, description, options}]}.""",
 Get the configurable options for one widget, so you can fill an element's
 "options" correctly (e.g. a weather widget's location). Also returns the
 widget's full "desc" (list_widgets carries only its first sentence). Each
-option carries a "format" hint for its type. Big choice lists (HA entity
+option carries a "format" hint for its type. An option with "show_if" only
+applies while the named options match; one with "advanced": true is
+fine-tuning the editor folds under "More options", normally fine at its
+default. Big choice lists (HA entity
 pickers) are omitted by default (the option shows "choices_count" + a
 "choices_endpoint"); pass include_choices=True to inline them, or call
 get_widget_choices() to page.""",

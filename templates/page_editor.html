@@ -1,5 +1,5 @@
 {% extends "_base.html" %}
-{% from "_components.html" import text_input, slider, switch, select_field, color_input, button, auto_field, card_head, textarea_field %}
+{% from "_components.html" import text_input, slider, switch, select_field, color_input, button, auto_field, card_head, textarea_field, options_more_open, options_more_close %}
 {% from "_schedule_form.html" import schedule_form, schedule_form_scripts %}
 {% block title %}{{ page.name }}, Dashboard editor, Tesserae{% endblock %}
 
@@ -228,7 +228,11 @@
          option's current value is looked up in the map, and a hit fills the
          dependent field and locks it (still submitted, just not editable).
          Widgets use it for "pick a preset and the URLs follow". -#}
-      {% for opt in cell_opts %}
+      {#- Options marked ``advanced`` render last, in manifest order, inside
+         the collapsed "More options" disclosure (option_sections). -#}
+      {% set opt_sections = option_sections(cell_opts, cell.options) %}
+      {% for opt in opt_sections.basic + opt_sections.advanced %}
+        {% if loop.index0 == opt_sections.basic|length %}{{ options_more_open(opt_sections.more_visible) }}{% endif %}
         {% set field_id = 'cell-' ~ cell.id ~ '-opt-' ~ opt.name %}
         {% set fill = opt.get('fill_from') %}
         {% set filled = fill.get('map', {}).get(cell.options.get(fill.get('option'))) if fill else none %}
@@ -236,6 +240,7 @@
         {{ auto_field(field_id, 'opt_' ~ opt.name, opt, value, readonly=filled is not none,
                       visible=option_visible(opt, cell.options, cell_opts)) }}
       {% endfor %}
+      {% if opt_sections.advanced %}{{ options_more_close() }}{% endif %}
     </fieldset>
     {% endif %}
 

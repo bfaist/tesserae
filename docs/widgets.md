@@ -153,7 +153,8 @@ lowercase `[a-z0-9_]` is convention, not enforced. Name it `<family>_<role>`
 * **`settings`**, plugin-wide knobs (one set across all cells using
   this widget). Surfaces in `/settings/plugins/<id>`. `secret: true`
   stores under `<name>_secret` in `settings.json` so an on-disk grep
-  for `secret` reveals every sensitive value.
+  for `secret` reveals every sensitive value. `advanced: true` folds a
+  setting into the card's "More options" section, as on cell options.
 * **`icon`**, Phosphor name used in the editor's widget picker.
 * **`render.needs_network`**, hint for the renderer (not enforced).
 * **`updates.on_change`**, optional data-change sources this widget knows how
@@ -312,7 +313,72 @@ settings at once.
 `show_if` works in the grid editor and the canvas editor's Configure drawer,
 and `get_widget_options` passes it through to agents. Servers older than
 0.452 ignore the key and show every field, so it is safe to ship before your
-users update.
+users update. Its companion for fine-tuning is `advanced`, below.
+
+### Fine-tuning under "More options", `advanced`
+
+An option a typical user never needs to touch can carry `"advanced": true`.
+The editor renders those options last, in manifest order, inside a collapsed
+**More options** section at the end of the form.
+
+```jsonc
+{ "name": "refresh_minutes", "type": "number", "label": "Refresh",
+  "default": 15, "advanced": true },
+{ "name": "cluster_every", "type": "select", "label": "Every",
+  "show_if": { "cluster_style": "blend" }, "advanced": true }
+```
+
+- The section starts closed. The editor remembers, per browser, whether it
+  was last left open, and opens it by itself when a field inside fails
+  validation or a link's `#` names one of its fields.
+- `advanced` and `show_if` combine. An advanced option whose condition is
+  false stays hidden inside the section, and the section itself hides when
+  none of its options would show.
+- As with `show_if`, folding is only visual: every option is still in the
+  form, still saved, and still reaches `fetch()` and `client.js`.
+- `settings` entries accept `advanced` the same way, on the widget's
+  settings card.
+- `get_widget_options` reports `"advanced": true`, so an agent knows the
+  option is fine-tuning and normally leaves it at its default.
+
+Servers older than 0.473 ignore the key and show the option in place, so
+order the manifest the way it should read on either (see below).
+
+### Keep the options panel short
+
+A good options panel shows the handful of choices that decide what the
+widget is, and gets everything else out of the way until it matters. Some
+guidance for laying one out:
+
+1. **Few options up front.** Aim for about five that are always visible (no
+   `show_if`, no `advanced`). Where they apply, pick them in this order:
+   where the data comes from (source, address, place, account, feed), what
+   the widget shows (page, layout, mode), how many, pictures (when there is
+   a picture choice), and one look option (paper, or the widget's main
+   look). A widget with five options or fewer in total is already there.
+2. **Nest what depends on a choice.** An option that only matters for one
+   value of another gets `show_if`: connection details under their source,
+   layout-specific options under their layout, AI painting options under the
+   pictures choice.
+3. **Put fine-tuning under More options.** Mark `advanced` the options most
+   people never change: refresh interval, minimum confidence, tokens that
+   are normally blank, title, title line, foot of the page, text size,
+   typeface, panel type, sort order, label lines, marks, exclusions, AI
+   model, scale, packing and the like.
+4. **Short, plain labels.** Leave the context to `show_if` rather than
+   prefixing a label with its mode ("Cluster: style"), and put explanations
+   in `help`, not in a parenthesis in the label. Use the same words for the
+   same thing across widgets: Typeface, Text size, Title, Title line, Foot of
+   the page, Paper, Panel, Refresh, Place, Within, How many, Layout,
+   Pictures, Style.
+5. **Order the list as it reads.** Essentials first, each followed directly
+   by the options it reveals, then the rest of the look, then the advanced
+   options last. That keeps the panel sensible on a server that ignores
+   `advanced`.
+6. **Never break saved cells.** Tidying a panel must not rename or remove an
+   option's `name`, change a choice's `value`, or change a `default`.
+   Reorder, relabel, rewrite help, and add `show_if` or `advanced`; saved
+   cells keep working exactly as before.
 
 ### Companion `_core` plugins
 

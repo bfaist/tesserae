@@ -29,6 +29,22 @@ All notable changes to Tesserae are recorded here. Format loosely follows
   HTTPS calls now use Ubuntu's current bundle, which no longer includes
   them.
 
+## [0.473.0], 2026-10-23
+
+### Added
+
+- A widget option can carry `"advanced": true` to mark it as
+  fine-tuning. The grid editor's cell form, the canvas editor's
+  Configure drawer and a widget's settings card render those options
+  last, in manifest order, inside a collapsed "More options" section.
+  It remembers in the browser whether it was left open, and opens by
+  itself when a field inside fails validation or a link's `#` names one.
+  `show_if` still applies inside it, the section hides while none of its
+  options would show, and every field is still saved. The plugin schema
+  accepts the key, `get_widget_options` reports it to agents, and
+  docs/widgets.md gains guidance on keeping the options panel short.
+  Older servers ignore the key and show the option in place.
+
 ## [0.470.1], 2026-10-20
 
 ### Fixed

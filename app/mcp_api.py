@@ -623,7 +623,9 @@ def widget_options(key: str) -> Response:
     Big ``choices`` lists (HA entity pickers) are omitted by default to keep the
     response small: an option with a long list shows ``choices_count`` and a
     ``choices_endpoint`` instead. Pass ``?include_choices=true`` to inline them
-    anyway. Each option also carries a ``format`` hint for its type.
+    anyway. Each option also carries a ``format`` hint for its type, and
+    ``advanced: true`` when the manifest marks it as fine-tuning (the editor's
+    "More options"); any other ``advanced`` value is dropped.
 
     Also returns this widget's full ``desc``. ``/catalog`` carries only the
     first sentence, so this is where the rest of it lives."""
@@ -635,6 +637,8 @@ def widget_options(key: str) -> Response:
     for opt in _pr._materialised_options(plugin):
         o = dict(opt)
         otype = str(o.get("type") or "")
+        if o.get("advanced") is not True:
+            o.pop("advanced", None)
         if otype in _TYPE_HINTS and not o.get("format"):
             o["format"] = _TYPE_HINTS[otype]
         choices = o.get("choices")

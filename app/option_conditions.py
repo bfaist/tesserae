@@ -18,6 +18,12 @@ submitted with its value, so switching back restores what was there and
 the widget's saved options never lose a key. This module answers the
 first render on the server (so nothing flashes); ``static/components.js``
 (``attachShowIf``) keeps the form in step as the operator edits.
+
+An option can also carry ``"advanced": true``: fine-tuning a typical user
+never touches. Forms render those last, in manifest order, inside a
+collapsed "More options" disclosure (``option_sections``). ``show_if``
+still applies inside it, and the disclosure hides when none of its options
+would show.
 """
 
 from __future__ import annotations
@@ -81,3 +87,27 @@ def option_visible(
         if not _matches(actual, expected):
             return False
     return True
+
+
+def is_advanced(spec: Mapping[str, Any]) -> bool:
+    """Whether ``spec`` is fine-tuning (``"advanced": true``), shown in the
+    collapsed "More options" section at the end of the form."""
+    return spec.get("advanced") is True
+
+
+def option_sections(
+    specs: Iterable[Mapping[str, Any]],
+    values: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Split a widget's options into the form's two sections.
+
+    ``basic`` keeps manifest order and renders first; ``advanced`` keeps
+    manifest order and renders inside the "More options" disclosure.
+    ``more_visible`` is False when every advanced option's ``show_if`` is
+    false, so the disclosure itself starts hidden (its fields are still in
+    the form and still submitted). ``attachShowIf`` keeps it in step."""
+    all_specs = [s for s in specs if isinstance(s, Mapping)]
+    basic = [s for s in all_specs if not is_advanced(s)]
+    advanced = [s for s in all_specs if is_advanced(s)]
+    more_visible = any(option_visible(s, values, all_specs) for s in advanced)
+    return {"basic": basic, "advanced": advanced, "more_visible": more_visible}

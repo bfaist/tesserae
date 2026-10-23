@@ -145,6 +145,10 @@
               ]
             }
           },
+          "advanced": {
+            "type": "boolean",
+            "description": "Fine-tuning a typical user never needs to touch (refresh interval, title, text size, typeface, sort order and the like). Tesserae renders these last, in manifest order, inside a collapsed \"More options\" section at the end of the options form. show_if still applies inside it. An older Tesserae ignores the key and shows the option as usual. See docs/widgets.md."
+          },
           "help": { "type": "string" }
         }
       }
@@ -161,6 +165,10 @@
           "secret": {
             "type": "boolean",
             "description": "When true, this field is saved to settings.json as '<name>_secret' so disk-grepping reveals which values are sensitive."
+          },
+          "advanced": {
+            "type": "boolean",
+            "description": "As on cell_options: render this setting last, inside the collapsed \"More options\" section of the widget's settings card."
           },
           "default": {}
         }

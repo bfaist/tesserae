@@ -288,13 +288,94 @@
       });
       if (!changed) break;
     }
+    // The "More options" disclosure shows while any field in it would:
+    // one with no show_if always does, a conditional one when its wrap is
+    // not hidden. Hiding it leaves its fields in the form, still submitted.
+    scope.querySelectorAll("[data-opt-more]").forEach((more) => {
+      const body = more.querySelector(".opt-more-body") || more;
+      const visible = Array.from(body.querySelectorAll("input, select, textarea")).some(
+        (el) => {
+          const wrap = el.closest("[data-show-if]");
+          return !wrap || !more.contains(wrap) || !wrap.hidden;
+        },
+      );
+      more.hidden = !visible;
+    });
+  }
+
+  // "More options" (options marked ``advanced``): closed by default, left
+  // open or closed as the person last had it (this browser), and opened
+  // when a field inside fails validation or the URL's hash names one, so a
+  // problem or a link never lands on something folded away.
+  const OPT_MORE_KEY = "tesserae.optionsMore.open";
+
+  function optMoreStored() {
+    try {
+      return window.localStorage.getItem(OPT_MORE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  function optMoreStore(open) {
+    try {
+      window.localStorage.setItem(OPT_MORE_KEY, open ? "1" : "0");
+    } catch {
+      /* storage blocked: the disclosure just starts closed next time */
+    }
+  }
+
+  function openOptMore(more) {
+    if (!more || more.open) return;
+    more.dataset.optMoreAuto = "1";
+    more.open = true;
+  }
+
+  function optMoreFromHash(root) {
+    let id = "";
+    try {
+      id = decodeURIComponent((window.location.hash || "").slice(1));
+    } catch {
+      return;
+    }
+    if (!id) return;
+    const target = document.getElementById(id);
+    const more = target && target.closest("[data-opt-more]");
+    if (!more || !root.contains(more)) return;
+    openOptMore(more);
+    target.scrollIntoView({ block: "center" });
+  }
+
+  function attachOptMore(root) {
+    root.querySelectorAll("[data-opt-more]").forEach((more) => {
+      if (more.dataset.optMoreBound) return;
+      more.dataset.optMoreBound = "1";
+      if (optMoreStored()) more.open = true;
+      more.addEventListener("toggle", () => {
+        // Opened for a validation error or a link: not the person's choice.
+        if (more.dataset.optMoreAuto) {
+          delete more.dataset.optMoreAuto;
+          return;
+        }
+        optMoreStore(more.open);
+      });
+      // ``invalid`` does not bubble; capture it so the browser can focus and
+      // flag the field once the disclosure around it is open.
+      more.addEventListener("invalid", () => openOptMore(more), true);
+    });
+    optMoreFromHash(root);
+    if (!document.documentElement.dataset.optMoreHash) {
+      document.documentElement.dataset.optMoreHash = "1";
+      window.addEventListener("hashchange", () => optMoreFromHash(document));
+    }
   }
 
   function attachShowIf(root) {
     const scopes = new Set();
-    root.querySelectorAll("[data-show-if]").forEach((wrap) => {
+    root.querySelectorAll("[data-show-if], [data-opt-more]").forEach((wrap) => {
       scopes.add(wrap.closest("[data-opt-scope]") || wrap.parentElement);
     });
+    attachOptMore(root);
     scopes.forEach((scope) => {
       if (!scope) return;
       applyShowIf(scope);

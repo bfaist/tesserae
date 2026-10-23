@@ -124,6 +124,44 @@
   line-height: 1.5;
 }
 
+/* "More options": the collapsed section that closes a widget's options
+   form and holds the options marked ``advanced`` (fine-tuning). Same
+   dashed fold as the grid editor's per-cell "Advanced" block, with a caret
+   that turns as it opens. */
+.opt-more {
+  border: 1px dashed var(--t-border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin: 12px 0 0;
+}
+.opt-more[hidden] { display: none; }
+.opt-more > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 2px 0;
+  color: var(--t-muted);
+}
+.opt-more > summary::-webkit-details-marker { display: none; }
+.opt-more > summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 140ms ease-out;
+  flex: none;
+}
+.opt-more[open] > summary::before { transform: rotate(45deg); }
+.opt-more > summary:hover { color: var(--t-fg); }
+.opt-more[open] > summary { margin-bottom: 6px; }
+.opt-more-body { padding: 4px 0 2px; }
+
 .actions {
   display: flex;
   gap: var(--t-space-2);

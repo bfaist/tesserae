@@ -12,7 +12,7 @@
    existing JS shows/hides off the ``embedded_enabled`` switch.
    Preserved here as-is. #}
 
-{% from "_components.html" import auto_field with context %}
+{% from "_components.html" import auto_field, options_more_open, options_more_close with context %}
 
 {% set icon_name = section.icon or KIND_ICONS.get(section.kind, 'gear-six') %}
 
@@ -71,8 +71,12 @@
       {# Fields. Switches render as toggle rows; everything else uses
          auto_field. Broker's external/embedded groups stay wrapped so
          the existing show/hide JS keeps working. #}
+      {#- A widget's own settings can mark fine-tuning ``advanced`` the same
+         way its cell options do: those render last, inside "More options". -#}
       {% set ns = namespace(group=none) %}
-      {% for field in section.fields %}
+      {% set opt_sections = option_sections(section.fields, section.state) if section.kind == 'plugin' else none %}
+      {% for field in (opt_sections.basic + opt_sections.advanced if opt_sections else section.fields) %}
+        {% if opt_sections and opt_sections.advanced and loop.index0 == opt_sections.basic|length %}{{ options_more_open() }}{% endif %}
         {% set value = section.state.get(field.name, field.get('default', '')) %}
         {% set field_id = section.id ~ '-' ~ field.name %}
 
@@ -112,6 +116,7 @@
         {% endif %}
       {% endfor %}
       {% if ns.group %}</div>{% endif %}
+      {% if opt_sections and opt_sections.advanced %}{{ options_more_close() }}{% endif %}
 
     </div>{# /dx-section-body #}
 
