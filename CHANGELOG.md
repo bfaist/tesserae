@@ -6,6 +6,8 @@ All notable changes to Tesserae are recorded here. Format loosely follows
 
 ## [Unreleased]
 
+## [0.475.0], 2026-10-24
+
 ### Added
 
 - A widget's select option can show a picture per choice. A choice with
@@ -17,6 +19,15 @@ All notable changes to Tesserae are recorded here. Format loosely follows
   The hidden native select still holds the value, so saving and
   `show_if` work as before; older servers ignore the field and show the
   plain dropdown.
+
+### Fixed
+
+- The "Restart required" prompt in the Paper sidebar is now a full-width
+  notice row with a reason line ("Loads your widget changes"), its icon in
+  line with the rows around it. On the folded sidebar it is a centred
+  square with a dot, where before it sat against the left edge.
+- The Month and Week calendar size sliders start at 0.05, so the default
+  of 1.0 sits on a step instead of snapping to 1.01 in the editor.
 
 ### Security
 

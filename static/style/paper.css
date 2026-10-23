@@ -160,6 +160,30 @@
      title and its buttons never sit under it at rest. */
   :root[data-ui="paper"] body:has(.topbar > .topbar-batteries--topbar) main.page { padding-top: 68px; }
   :root[data-ui="paper"] .topbar-optin { flex-direction: column; align-items: stretch; gap: 4px; width: 100%; }
+  /* Restart prompt: a full-width notice row, its icon in line with the
+     sidebar's other icons (the 3px rule eats into the left padding). */
+  :root[data-ui="paper"] .topbar > .topbar-restart-form { align-self: stretch; margin: 6px 0; }
+  :root[data-ui="paper"] .topbar-restart-form .topbar-restart {
+    width: 100%;
+    height: auto;
+    min-height: 52px;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 8px var(--t-space-3) 8px calc(var(--t-space-3) - 3px);
+    border: 0;
+    border-left: 3px solid var(--t-warn);
+    border-radius: 0;
+    background: color-mix(in srgb, var(--t-warn) 10%, transparent);
+    text-align: left;
+  }
+  :root[data-ui="paper"] .topbar-restart-form .topbar-restart:hover,
+  :root[data-ui="paper"] .topbar-restart-form .topbar-restart:focus-visible {
+    background: color-mix(in srgb, var(--t-warn) 18%, transparent);
+  }
+  :root[data-ui="paper"] .topbar-restart-form .topbar-restart .ph-bold { font-size: 19px; }
+  :root[data-ui="paper"] .topbar-restart-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  :root[data-ui="paper"] .topbar-restart-form .topbar-restart-label { font-size: 13px; font-weight: 600; line-height: 1.25; }
+  :root[data-ui="paper"] .topbar-restart-sub { display: block; color: var(--t-fg-soft); font-size: 12px; font-weight: 400; line-height: 1.3; }
 
   /* Pages that stick to the top no longer need to clear a top bar. */
   :root[data-ui="paper"] .editor-header { top: 0; }
@@ -277,6 +301,20 @@
   /* The design switch is just its track. */
   :root[data-ui="paper"].sidebar-collapsed .topnav .ui-switch--nav { border-radius: 0; }
   :root[data-ui="paper"].sidebar-collapsed .topnav .theme-toggle--drawer { margin-top: auto; }
+  /* Restart: a tinted square centred on the rail, a dot on its corner. */
+  :root[data-ui="paper"].sidebar-collapsed .topbar > .topbar-restart-form { align-self: center; margin: 4px 0; }
+  :root[data-ui="paper"].sidebar-collapsed .topbar-restart-form .topbar-restart { border-left: 0; }
+  :root[data-ui="paper"].sidebar-collapsed .topbar-restart-sub { display: none; }
+  :root[data-ui="paper"].sidebar-collapsed .topbar-restart-form .topbar-restart::after {
+    content: "";
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--t-warn);
+  }
   /* The opt-in prompt becomes two icon buttons, one under the other. */
   :root[data-ui="paper"].sidebar-collapsed .topbar-optin { width: 44px; align-self: center; align-items: center; }
   :root[data-ui="paper"].sidebar-collapsed .topbar-optin button { width: 44px; height: 44px; padding: 0; justify-content: center; }

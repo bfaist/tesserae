@@ -1058,6 +1058,8 @@ body.modal-open { overflow: hidden; }
   background: color-mix(in srgb, var(--t-warn, #c98a00) 24%, transparent);
   border-color: var(--t-warn, #c98a00);
 }
+/* The reason line only shows in Paper's sidebar, where there's room. */
+.topbar-restart-sub { display: none; }
 .topbar-restart .ph,
 .topbar-restart .ph-bold {
   color: var(--t-warn, #c98a00);
